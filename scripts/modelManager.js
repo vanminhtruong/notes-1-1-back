@@ -6,6 +6,53 @@ class ModelManager {
     this.qi = sequelize.getQueryInterface();
   }
 
+  async createChatPreferenceTable() {
+    console.log('Creating ChatPreferences table if missing...');
+    await this.ensureTableExists(
+      'ChatPreferences',
+      {
+        id: {
+          type: DataTypes.INTEGER,
+          primaryKey: true,
+          autoIncrement: true,
+        },
+        userId: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: { model: 'Users', key: 'id' },
+          onDelete: 'CASCADE',
+        },
+        otherUserId: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: { model: 'Users', key: 'id' },
+          onDelete: 'CASCADE',
+        },
+        backgroundUrl: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+        createdAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
+        updatedAt: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW,
+        },
+      },
+      [
+        {
+          fields: ['userId', 'otherUserId'],
+          unique: true,
+          name: 'chatpreferences_user_other_unique',
+        },
+      ]
+    );
+  }
+
   async ensureColumnExists(tableName, columnName, columnDefinition) {
     try {
       const columns = await this.qi.describeTable(tableName);
@@ -95,6 +142,23 @@ class ModelManager {
     await this.ensureColumnExists('Users', 'avatar', {
       type: DataTypes.STRING,
       allowNull: true,
+    });
+
+    // New profile fields
+    await this.ensureColumnExists('Users', 'phone', {
+      type: DataTypes.STRING,
+      allowNull: true,
+    });
+
+    await this.ensureColumnExists('Users', 'birthDate', {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    });
+
+    await this.ensureColumnExists('Users', 'gender', {
+      type: DataTypes.ENUM('male', 'female', 'other', 'unspecified'),
+      allowNull: false,
+      defaultValue: 'unspecified',
     });
 
     await this.ensureColumnExists('Users', 'e2eeEnabled', {
@@ -335,6 +399,7 @@ class ModelManager {
       await this.updateUsersTable();
       await this.updateGroupsTable();
       await this.createReadTables();
+      await this.createChatPreferenceTable();
       await this.fixFriendshipIndexes();
 
       console.log('✅ All model migrations completed successfully!');

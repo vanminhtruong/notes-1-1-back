@@ -12,6 +12,7 @@ const defineGroupMessage = require('./groupMessage.model');
 const defineGroupInvite = require('./groupInvite.model');
 const defineMessageRead = require('./messageRead.model');
 const defineGroupMessageRead = require('./groupMessageRead.model');
+const defineChatPreference = require('./chatPreference.model');
 
 const Sample = defineSample(sequelize, DataTypes);
 const User = defineUser(sequelize, DataTypes);
@@ -25,6 +26,7 @@ const GroupMessage = defineGroupMessage(sequelize, DataTypes);
 const GroupInvite = defineGroupInvite(sequelize, DataTypes);
 const MessageRead = defineMessageRead(sequelize, DataTypes);
 const GroupMessageRead = defineGroupMessageRead(sequelize, DataTypes);
+const ChatPreference = defineChatPreference(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
@@ -72,6 +74,10 @@ GroupMessageRead.belongsTo(GroupMessage, { foreignKey: 'messageId', as: 'message
 GroupMessageRead.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(GroupMessageRead, { foreignKey: 'userId', as: 'groupMessageReads' });
 
+// ChatPreference associations
+ChatPreference.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+ChatPreference.belongsTo(User, { foreignKey: 'otherUserId', as: 'otherUser' });
+
 // GroupInvite associations
 GroupInvite.belongsTo(Group, { foreignKey: 'groupId', as: 'group' });
 GroupInvite.belongsTo(User, { foreignKey: 'inviterId', as: 'inviter' });
@@ -94,4 +100,5 @@ module.exports = {
   GroupInvite,
   MessageRead,
   GroupMessageRead,
+  ChatPreference,
 };

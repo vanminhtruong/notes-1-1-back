@@ -6,7 +6,9 @@ const {
   markMessagesAsRead,
   getUnreadCount,
   recallMessages,
-  deleteAllMessages
+  deleteAllMessages,
+  getChatBackground,
+  setChatBackground,
 } = require('../../controllers/chat.controller');
 const authenticate = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
@@ -42,5 +44,9 @@ router.put('/:senderId/read', validate(markAsReadSchema), markMessagesAsRead);
 
 // Delete all messages with a specific user
 router.delete('/:userId/messages', deleteAllMessages);
+
+// Per-chat background (1-1 only)
+router.get('/:userId/background', getChatBackground);
+router.put('/:userId/background', setChatBackground);
 
 module.exports = router;

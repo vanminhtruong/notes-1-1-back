@@ -16,6 +16,13 @@ const validateRegister = (req, res, next) => {
       'string.max': 'Tên không được quá 50 ký tự',
       'any.required': 'Tên là bắt buộc',
     }),
+    phone: Joi.string().pattern(/^[+[0-9]][0-9\s\-()]{5,20}$/).allow(null, '').messages({
+      'string.pattern.base': 'Số điện thoại không hợp lệ',
+    }),
+    birthDate: Joi.date().iso().allow(null).messages({
+      'date.format': 'Ngày sinh không hợp lệ',
+    }),
+    gender: Joi.string().valid('male', 'female', 'other', 'unspecified').optional(),
   });
 
   const { error } = schema.validate(req.body);
@@ -138,6 +145,33 @@ const validateResetPassword = (req, res, next) => {
   next();
 };
 
+// Validate updating profile fields
+const validateUpdateProfile = (req, res, next) => {
+  const schema = Joi.object({
+    name: Joi.string().min(2).max(50).optional().messages({
+      'string.min': 'Tên phải có ít nhất 2 ký tự',
+      'string.max': 'Tên không được quá 50 ký tự',
+    }),
+    avatar: Joi.string().uri().allow('', null).optional(),
+    phone: Joi.string().pattern(/^[+\d][\d\s\-()]{5,20}$/).allow(null, '').optional().messages({
+      'string.pattern.base': 'Số điện thoại không hợp lệ',
+    }),
+    birthDate: Joi.date().iso().allow(null).optional().messages({
+      'date.format': 'Ngày sinh không hợp lệ',
+    }),
+    gender: Joi.string().valid('male', 'female', 'other', 'unspecified').optional(),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
 module.exports = {
   validateRegister,
   validateLogin,
@@ -145,5 +179,6 @@ module.exports = {
   validateForgotPasswordRequest,
   validateVerifyOtp,
   validateResetPassword,
+  validateUpdateProfile,
 };
 

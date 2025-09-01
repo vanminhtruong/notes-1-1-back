@@ -141,7 +141,7 @@ const facebookLogin = async (req, res) => {
 
 const register = async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, phone, birthDate, gender } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
@@ -150,7 +150,15 @@ const register = async (req, res) => {
     }
 
     // Create new user
-    const user = await User.create({ email, password, name });
+    const user = await User.create({
+      email,
+      password,
+      name,
+      // Optional fields
+      phone: typeof phone === 'string' ? (phone.trim() || null) : (phone ?? null),
+      birthDate: birthDate ? birthDate : null,
+      gender: gender || 'unspecified',
+    });
     const token = generateToken(user);
 
     // Set theme and language cookies to prevent flash
@@ -240,7 +248,7 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { name, avatar } = req.body;
+    const { name, avatar, phone, birthDate, gender } = req.body;
     const user = req.user;
 
     const updates = {};
@@ -248,6 +256,15 @@ const updateProfile = async (req, res) => {
     if (typeof avatar === 'string') {
       const t = avatar.trim();
       updates.avatar = t ? t : null; // empty string clears avatar
+    }
+    if (typeof phone !== 'undefined') {
+      if (phone === '' || phone === null) updates.phone = null; else updates.phone = String(phone).trim();
+    }
+    if (typeof birthDate !== 'undefined') {
+      updates.birthDate = birthDate ? birthDate : null;
+    }
+    if (typeof gender === 'string') {
+      updates.gender = gender;
     }
 
     await user.update(updates);

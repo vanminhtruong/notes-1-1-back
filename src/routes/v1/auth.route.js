@@ -8,9 +8,10 @@ const {
   validateForgotPasswordRequest,
   validateVerifyOtp,
   validateResetPassword,
+  validateUpdateProfile,
 } = require('../../validators/auth.validator');
 
-// Public routes
+// Public routes   
 router.post('/register', validateRegister, authController.register);
 router.post('/login', validateLogin, authController.login);
 router.post('/google', authController.googleLogin);
@@ -23,7 +24,7 @@ router.post('/reset-password', validateResetPassword, authController.resetPasswo
 router.use(authMiddleware);
 router.post('/logout', authController.logout);
 router.get('/profile', authController.getProfile);
-router.put('/profile', authController.updateProfile);
+router.put('/profile', validateUpdateProfile, authController.updateProfile);
 router.put('/change-password', validateChangePassword, authController.changePassword);
 
 module.exports = router;

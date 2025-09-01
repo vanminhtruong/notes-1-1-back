@@ -9,11 +9,13 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "start:sync": "node src/db/autoSync.js && node src/server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "jest --runInBand",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "db:sync": "node src/db/autoSync.js"
   },
   "keywords": [],
   "author": "",

@@ -29,6 +29,26 @@ module.exports = (sequelize, DataTypes) => {
         len: [2, 50],
       },
     },
+    // Optional contact info
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        // basic phone validation; allow +, digits, spaces, hyphens, parentheses
+        is: /^[+\d][\d\s\-()]{5,20}$/,
+      },
+    },
+    // Optional birth date (no time component)
+    birthDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+    // Optional gender
+    gender: {
+      type: DataTypes.ENUM('male', 'female', 'other', 'unspecified'),
+      allowNull: false,
+      defaultValue: 'unspecified',
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
@@ -95,3 +115,4 @@ module.exports = (sequelize, DataTypes) => {
 
   return User;
 };
+

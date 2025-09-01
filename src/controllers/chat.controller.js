@@ -1,4 +1,4 @@
-const { User, Message, Friendship, MessageRead } = require('../models');
+const { User, Message, Friendship, MessageRead, ChatPreference } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { isUserOnline } = require('../socket/socketHandler');
@@ -225,8 +225,8 @@ const getChatList = asyncHandler(async (req, res) => {
       ]
     },
     include: [
-      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'lastSeenAt'] },
-      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'lastSeenAt'] }
+      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] },
+      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] }
     ]
   });
 
@@ -455,5 +455,54 @@ module.exports = {
     }
 
     return res.json({ success: true, data: { scope, messageIds } });
+  }),
+  // Get per-chat background for current user vs other user
+  getChatBackground: asyncHandler(async (req, res) => {
+    const currentUserId = req.user.id;
+    const { userId } = req.params;
+
+    // Ensure they are friends (accepted) to prevent probing
+    const friendship = await Friendship.findOne({
+      where: {
+        [Op.or]: [
+          { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
+          { requesterId: userId, addresseeId: currentUserId, status: 'accepted' }
+        ]
+      }
+    });
+    if (!friendship) {
+      return res.status(403).json({ success: false, message: 'You can only view preferences with friends' });
+    }
+
+    const pref = await ChatPreference.findOne({ where: { userId: currentUserId, otherUserId: userId } });
+    return res.json({ success: true, data: { backgroundUrl: pref?.backgroundUrl || null } });
+  }),
+  // Set per-chat background (null to reset)
+  setChatBackground: asyncHandler(async (req, res) => {
+    const currentUserId = req.user.id;
+    const { userId } = req.params;
+    const { backgroundUrl } = req.body || {};
+
+    // Ensure they are friends (accepted)
+    const friendship = await Friendship.findOne({
+      where: {
+        [Op.or]: [
+          { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
+          { requesterId: userId, addresseeId: currentUserId, status: 'accepted' }
+        ]
+      }
+    });
+    if (!friendship) {
+      return res.status(403).json({ success: false, message: 'You can only set preferences with friends' });
+    }
+
+    const [pref] = await ChatPreference.findOrCreate({
+      where: { userId: currentUserId, otherUserId: userId },
+      defaults: { userId: currentUserId, otherUserId: userId, backgroundUrl: backgroundUrl || null }
+    });
+    if (pref.backgroundUrl !== backgroundUrl) {
+      await pref.update({ backgroundUrl: backgroundUrl || null });
+    }
+    return res.json({ success: true, data: { backgroundUrl: pref.backgroundUrl || null } });
   })
 };
