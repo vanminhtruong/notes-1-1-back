@@ -194,6 +194,19 @@ class ModelManager {
       allowNull: false,
       defaultValue: 'vi',
     });
+
+    // Privacy flags
+    await this.ensureColumnExists('Users', 'hidePhone', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
+
+    await this.ensureColumnExists('Users', 'hideBirthDate', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
   }
 
   async updateGroupsTable() {

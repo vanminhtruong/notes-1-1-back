@@ -24,7 +24,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.findAll({
     where: whereClause,
     limit: parseInt(limit),
-    attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'createdAt', 'lastSeenAt'],
+    attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'createdAt', 'lastSeenAt', 'hidePhone', 'hideBirthDate'],
     order: [['name', 'ASC']]
   });
 
@@ -106,8 +106,8 @@ const sendFriendRequest = asyncHandler(async (req, res) => {
   // Get the friendship with user data
   const friendshipWithData = await Friendship.findByPk(friendship.id, {
     include: [
-      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] },
-      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] }
+      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] },
+      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] }
     ]
   });
 
@@ -128,7 +128,7 @@ const getFriendRequests = asyncHandler(async (req, res) => {
       status: 'pending'
     },
     include: [
-      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] }
+      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] }
     ],
     order: [['createdAt', 'DESC']]
   });
@@ -149,7 +149,7 @@ const getSentRequests = asyncHandler(async (req, res) => {
       status: 'pending'
     },
     include: [
-      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] }
+      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] }
     ],
     order: [['createdAt', 'DESC']]
   });
@@ -172,7 +172,7 @@ const acceptFriendRequest = asyncHandler(async (req, res) => {
       status: 'pending'
     },
     include: [
-      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] }
+      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] }
     ]
   });
 
@@ -265,8 +265,8 @@ const getFriends = asyncHandler(async (req, res) => {
       ]
     },
     include: [
-      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] },
-      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] }
+      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] },
+      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] }
     ]
   });
 
@@ -304,8 +304,8 @@ const removeFriend = asyncHandler(async (req, res) => {
       status: 'accepted'
     },
     include: [
-      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] },
-      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt'] }
+      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] },
+      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] }
     ]
   });
 

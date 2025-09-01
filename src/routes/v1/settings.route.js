@@ -1,6 +1,6 @@
 const express = require('express');
 const authenticate = require('../../middlewares/auth');
-const { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage } = require('../../controllers/settings.controller');
+const { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage, getPrivacy, updatePrivacy } = require('../../controllers/settings.controller');
 
 const router = express.Router();
 
@@ -16,5 +16,7 @@ router.get('/theme', getTheme);
 router.put('/theme', updateTheme);
 router.get('/language', getLanguage);
 router.put('/language', updateLanguage);
+router.get('/privacy', getPrivacy);
+router.put('/privacy', updatePrivacy);
 
 module.exports = router;

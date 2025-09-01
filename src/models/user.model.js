@@ -88,6 +88,17 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'vi',
     },
+    // Privacy flags
+    hidePhone: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    hideBirthDate: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   }, {
     hooks: {
       beforeCreate: async (user) => {

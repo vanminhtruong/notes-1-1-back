@@ -207,4 +207,37 @@ const updateLanguage = async (req, res) => {
   return res.json({ message: 'Updated', language: user.language });
 };
 
-module.exports = { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage };
+// GET /api/v1/settings/privacy
+const getPrivacy = async (req, res) => {
+  const user = req.user;
+  return res.json({ hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate });
+};
+
+// PUT /api/v1/settings/privacy { hidePhone?: boolean, hideBirthDate?: boolean }
+const updatePrivacy = async (req, res) => {
+  const user = req.user;
+  const { hidePhone, hideBirthDate } = req.body || {};
+
+  if (hidePhone != null && typeof hidePhone !== 'boolean') {
+    return res.status(400).json({ message: 'Invalid payload: hidePhone must be boolean if provided' });
+  }
+  if (hideBirthDate != null && typeof hideBirthDate !== 'boolean') {
+    return res.status(400).json({ message: 'Invalid payload: hideBirthDate must be boolean if provided' });
+  }
+
+  if (typeof hidePhone === 'boolean') user.hidePhone = hidePhone;
+  if (typeof hideBirthDate === 'boolean') user.hideBirthDate = hideBirthDate;
+  await user.save();
+
+  // Broadcast to user's other sessions
+  try {
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${user.id}`).emit('privacy_updated', { hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate });
+    }
+  } catch (e) {}
+
+  return res.json({ message: 'Updated', hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate });
+};
+
+module.exports = { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage, getPrivacy, updatePrivacy };
