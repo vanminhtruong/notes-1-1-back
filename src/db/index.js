@@ -1,0 +1,29 @@
+const { Sequelize } = require('sequelize');
+const fs = require('fs');
+const path = require('path');
+
+const isTest = process.env.NODE_ENV === 'test';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// For production on Render, use absolute path for persistent disk
+let storage;
+if (isTest) {
+  storage = ':memory:';
+} else if (isProduction && process.env.SQLITE_STORAGE) {
+  storage = process.env.SQLITE_STORAGE;
+} else {
+  storage = path.join('data', 'app.sqlite');
+}
+
+const logging = process.env.SEQUELIZE_LOG === 'true' ? console.log : false;
+
+if (!isTest && storage !== ':memory:') {
+  const dir = path.dirname(storage);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+const sequelize = new Sequelize({ dialect: 'sqlite', storage, logging });
+
+module.exports = { sequelize };

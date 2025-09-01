@@ -1,0 +1,445 @@
+const jwt = require('jsonwebtoken');
+const { User, Friendship, GroupMember, MessageRead, GroupMessageRead, Message, GroupMessage } = require('../models');
+
+const connectedUsers = new Map(); // Store connected users
+
+const authenticateSocket = async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      return next(new Error('Authentication error'));
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
+    
+    if (!user || !user.isActive) {
+      return next(new Error('Authentication error'));
+    }
+
+    socket.userId = user.id;
+    socket.user = user;
+    next();
+  } catch (error) {
+    next(new Error('Authentication error'));
+  }
+};
+
+const handleConnection = async (socket) => {
+  const userId = socket.userId;
+  
+  // Store connected user
+  connectedUsers.set(userId, {
+    socketId: socket.id,
+    user: socket.user,
+    connectedAt: new Date(),
+  });
+
+  // E2EE status sync across user's devices
+  socket.on('e2ee_status', (payload) => {
+    try {
+      const enabled = !!(payload && payload.enabled);
+      socket.to(`user_${userId}`).emit('e2ee_status', { enabled });
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  socket.on('e2ee_pin_updated', (payload) => {
+    try {
+      const pinHash = payload ? payload.pinHash || null : null;
+      socket.to(`user_${userId}`).emit('e2ee_pin_updated', { pinHash });
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  console.log(`User ${socket.user.name} connected (ID: ${userId})`);
+
+  // Join user to their personal room
+  socket.join(`user_${userId}`);
+
+  // Send welcome message
+  socket.emit('connected', {
+    message: 'Kết nối WebSocket thành công',
+    user: socket.user,
+  });
+
+  // Update message status to delivered for all undelivered messages sent to this user
+  try {
+    const undeliveredMessages = await Message.findAll({
+      where: {
+        receiverId: userId,
+        status: 'sent'
+      },
+      include: [{ model: User, as: 'sender', attributes: ['id'] }]
+    });
+
+    for (const message of undeliveredMessages) {
+      await message.update({ status: 'delivered' });
+      
+      // Notify sender about delivery
+      global.io && global.io.to(`user_${message.senderId}`).emit('message_delivered', {
+        messageId: message.id,
+        status: 'delivered'
+      });
+    }
+
+    // Do the same for group messages where this user is a member
+    const { GroupMember } = require('../models');
+    const userGroups = await GroupMember.findAll({
+      where: { userId },
+      attributes: ['groupId']
+    });
+    
+    const groupIds = userGroups.map(ug => ug.groupId);
+    
+    if (groupIds.length > 0) {
+      const undeliveredGroupMessages = await GroupMessage.findAll({
+        where: {
+          groupId: { [require('sequelize').Op.in]: groupIds },
+          status: 'sent',
+          senderId: { [require('sequelize').Op.ne]: userId } // Don't update own messages
+        }
+      });
+
+      for (const groupMessage of undeliveredGroupMessages) {
+        await groupMessage.update({ status: 'delivered' });
+        
+        // Notify sender about delivery
+        global.io && global.io.to(`user_${groupMessage.senderId}`).emit('group_message_delivered', {
+          messageId: groupMessage.id,
+          groupId: groupMessage.groupId,
+          status: 'delivered'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error updating delivered status on connection:', error);
+  }
+
+  // Notify all friends that this user is online
+  try {
+    const friendships = await Friendship.findAll({
+      where: {
+        [require('sequelize').Op.or]: [
+          { requesterId: userId, status: 'accepted' },
+          { addresseeId: userId, status: 'accepted' }
+        ]
+      }
+    });
+
+    for (const friendship of friendships) {
+      const friendId = friendship.requesterId === userId ? friendship.addresseeId : friendship.requesterId;
+      if (friendId) {
+        global.io && global.io.to(`user_${friendId}`).emit('user_online', {
+          userId,
+          name: socket.user.name
+        });
+      }
+    }
+  } catch (e) {
+    console.error('Error notifying friends about online status:', e);
+  }
+
+  // Handle note events
+  socket.on('note_created', (data) => {
+    // Broadcast to user's other devices/tabs
+    socket.to(`user_${userId}`).emit('note_created', data);
+  });
+
+  socket.on('note_updated', (data) => {
+    socket.to(`user_${userId}`).emit('note_updated', data);
+  });
+
+  socket.on('note_deleted', (data) => {
+    socket.to(`user_${userId}`).emit('note_deleted', data);
+  });
+
+  socket.on('note_archived', (data) => {
+    socket.to(`user_${userId}`).emit('note_archived', data);
+  });
+
+  // Handle chat events
+  socket.on('join_chat', (data) => {
+    const { receiverId } = data;
+    const chatRoom = `chat_${Math.min(userId, receiverId)}_${Math.max(userId, receiverId)}`;
+    socket.join(chatRoom);
+  });
+
+  socket.on('leave_chat', (data) => {
+    const { receiverId } = data;
+    const chatRoom = `chat_${Math.min(userId, receiverId)}_${Math.max(userId, receiverId)}`;
+    socket.leave(chatRoom);
+  });
+
+  socket.on('message_sent', (data) => {
+    const { receiverId, message } = data;
+    // Emit to receiver's personal room
+    socket.to(`user_${receiverId}`).emit('new_message', {
+      ...message,
+      senderId: userId,
+      senderName: socket.user.name
+    });
+  });
+
+  socket.on('typing_start', (data) => {
+    const { receiverId } = data;
+    socket.to(`user_${receiverId}`).emit('user_typing', {
+      userId: userId,
+      userName: socket.user.name,
+      isTyping: true
+    });
+  });
+
+  socket.on('typing_stop', (data) => {
+    const { receiverId } = data;
+    socket.to(`user_${receiverId}`).emit('user_typing', {
+      userId: userId,
+      userName: socket.user.name,
+      isTyping: false
+    });
+  });
+
+  // Group typing indicator: broadcast to all group members except the sender
+  socket.on('group_typing', async (data) => {
+    try {
+      const { groupId, isTyping } = data || {};
+      if (!groupId) return;
+      // Ensure the emitter is a member of the group
+      const membership = await GroupMember.findOne({ where: { groupId, userId } });
+      if (!membership) return;
+      const members = await GroupMember.findAll({ where: { groupId } });
+      for (const m of members) {
+        const memberId = m.userId;
+        if (memberId === userId) continue;
+        global.io && global.io.to(`user_${memberId}`).emit('group_typing', {
+          groupId,
+          userId,
+          isTyping: !!isTyping,
+        });
+      }
+    } catch (e) {
+      console.error('Error handling group_typing:', e);
+    }
+  });
+
+  // Handle message read receipts for 1:1 chats
+  socket.on('message_read', async (data) => {
+    try {
+      const { messageId, chatId } = data;
+      
+      // Check if BOTH users have read status enabled
+      const message = await Message.findByPk(messageId);
+      if (!message) return;
+      
+      const currentUser = await User.findByPk(userId);
+      const senderUser = await User.findByPk(message.senderId);
+      
+      if (!currentUser || !senderUser || !currentUser.readStatusEnabled || !senderUser.readStatusEnabled) {
+        return; // Don't send read receipts if either user has it disabled
+      }
+      
+      // Record read receipt in database
+      const [readRecord, created] = await MessageRead.findOrCreate({
+        where: { messageId, userId },
+        defaults: { 
+          messageId, 
+          userId, 
+          readAt: new Date() 
+        }
+      });
+
+      if (created || readRecord) {
+        // Update message status
+        await Message.update(
+          { status: 'read' },
+          { where: { id: messageId } }
+        );
+
+        // Get user info for avatar display
+        const user = await User.findByPk(userId, {
+          attributes: ['id', 'name', 'avatar']
+        });
+
+        // Notify sender about read receipt
+        socket.to(`user_${message.senderId}`).emit('message_read', {
+          messageId,
+          userId,
+          readAt: readRecord.readAt,
+          user
+        });
+      }
+    } catch (error) {
+      console.error('Error handling message_read:', error);
+    }
+  });
+
+  // Handle group message read receipts
+  socket.on('group_message_read', async (data) => {
+    try {
+      const { messageId, groupId } = data;
+      
+      // Check if BOTH current user and message sender have read status enabled
+      const message = await Message.findByPk(messageId);
+      if (!message) return;
+      
+      const currentUser = await User.findByPk(userId);
+      const senderUser = await User.findByPk(message.senderId);
+      
+      if (!currentUser || !senderUser || !currentUser.readStatusEnabled || !senderUser.readStatusEnabled) {
+        return; // Don't send read receipts if either user has it disabled
+      }
+      
+      // Verify user is group member
+      const membership = await GroupMember.findOne({ 
+        where: { groupId, userId } 
+      });
+      if (!membership) return;
+
+      // Record read receipt
+      const [readRecord, created] = await GroupMessageRead.findOrCreate({
+        where: { messageId, userId },
+        defaults: { 
+          messageId, 
+          userId, 
+          readAt: new Date() 
+        }
+      });
+
+      if (created || readRecord) {
+        // Update message status
+        await GroupMessage.update(
+          { status: 'read' },
+          { where: { id: messageId } }
+        );
+
+        // Get user info
+        const user = await User.findByPk(userId, {
+          attributes: ['id', 'name', 'avatar']
+        });
+
+        // Notify all group members about read receipt
+        const members = await GroupMember.findAll({ where: { groupId } });
+        for (const member of members) {
+          if (member.userId !== userId) {
+            global.io && global.io.to(`user_${member.userId}`).emit('group_message_read', {
+              messageId,
+              groupId,
+              userId,
+              readAt: readRecord.readAt,
+              user
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error handling group_message_read:', error);
+    }
+  });
+
+  // Handle friend request events
+  socket.on('friend_request_sent', (data) => {
+    const { receiverId, requester } = data;
+    socket.to(`user_${receiverId}`).emit('new_friend_request', {
+      requester: requester,
+      createdAt: new Date()
+    });
+  });
+
+  socket.on('friend_request_accepted', (data) => {
+    const { requesterId, acceptedBy } = data;
+    socket.to(`user_${requesterId}`).emit('friend_request_accepted', {
+      acceptedBy: acceptedBy,
+      acceptedAt: new Date()
+    });
+  });
+
+  socket.on('friend_request_rejected', (data) => {
+    const { requesterId, rejectedBy } = data;
+    socket.to(`user_${requesterId}`).emit('friend_request_rejected', {
+      rejectedBy: rejectedBy,
+      rejectedAt: new Date()
+    });
+  });
+
+  // Handle user status
+  socket.on('get_online_status', () => {
+    socket.emit('online_status', {
+      isOnline: true,
+      connectedAt: connectedUsers.get(userId)?.connectedAt,
+    });
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', async () => {
+    console.log(`User ${socket.user.name} disconnected (ID: ${userId})`);
+    connectedUsers.delete(userId);
+
+    // Update user's lastSeenAt timestamp
+    try {
+      await User.update(
+        { lastSeenAt: new Date() },
+        { where: { id: userId } }
+      );
+    } catch (e) {
+      console.error('Error updating lastSeenAt:', e);
+    }
+
+    // Notify all friends that this user is offline
+    try {
+      const friendships = await Friendship.findAll({
+        where: {
+          [require('sequelize').Op.or]: [
+            { requesterId: userId, status: 'accepted' },
+            { addresseeId: userId, status: 'accepted' }
+          ]
+        }
+      });
+
+      for (const friendship of friendships) {
+        const friendId = friendship.requesterId === userId ? friendship.addresseeId : friendship.requesterId;
+        if (friendId) {
+          global.io && global.io.to(`user_${friendId}`).emit('user_offline', {
+            userId,
+            name: socket.user.name,
+            lastSeenAt: new Date()
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error notifying friends about offline status:', e);
+    }
+  });
+
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+};
+
+const emitToUser = (userId, event, data) => {
+  const userConnection = connectedUsers.get(userId);
+  if (userConnection) {
+    global.io.to(`user_${userId}`).emit(event, data);
+  }
+};
+
+const getConnectedUsers = () => {
+  return Array.from(connectedUsers.values()).map(conn => ({
+    user: conn.user,
+    connectedAt: conn.connectedAt,
+  }));
+};
+
+const isUserOnline = (userId) => {
+  return connectedUsers.has(userId);
+};
+
+module.exports = {
+  authenticateSocket,
+  handleConnection,
+  emitToUser,
+  getConnectedUsers,
+  isUserOnline,
+};

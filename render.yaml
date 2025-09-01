@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: plant-backend
+    env: node
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SEQUELIZE_LOG
+        value: false
+      - key: SQLITE_STORAGE
+        value: /opt/render/project/src/data/app.sqlite
+    disk:
+      name: plant-backend-disk
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
