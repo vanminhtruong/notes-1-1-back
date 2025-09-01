@@ -3,18 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const isTest = process.env.NODE_ENV === 'test';
-const isProduction = process.env.NODE_ENV === 'production';
-
-// For production on Render, use absolute path for persistent disk
-let storage;
-if (isTest) {
-  storage = ':memory:';
-} else if (isProduction && process.env.SQLITE_STORAGE) {
-  storage = process.env.SQLITE_STORAGE;
-} else {
-  storage = path.join('data', 'app.sqlite');
-}
-
+const storage = isTest ? ':memory:' : process.env.SQLITE_STORAGE || path.join('data', 'app.sqlite');
 const logging = process.env.SEQUELIZE_LOG === 'true' ? console.log : false;
 
 if (!isTest && storage !== ':memory:') {

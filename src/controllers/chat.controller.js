@@ -54,7 +54,19 @@ const getChatMessages = asyncHandler(async (req, res) => {
     .map(m => m.toJSON())
     .filter(m => !(Array.isArray(m.deletedForUserIds) && m.deletedForUserIds.includes(currentUserId)));
 
-  // Mark messages as read using new status system - only if BOTH users have read status enabled
+  // Always mark messages as read for the receiver (backend source of truth for unread counts)
+  await Message.update(
+    { isRead: true },
+    {
+      where: {
+        senderId: userId,
+        receiverId: currentUserId,
+        isRead: false,
+      }
+    }
+  );
+
+  // Read receipts (MessageReads and status) remain opt-in: only if BOTH users enabled
   const currentUser = await User.findByPk(currentUserId);
   const otherUser = await User.findByPk(userId);
   
@@ -63,12 +75,12 @@ const getChatMessages = asyncHandler(async (req, res) => {
       where: {
         senderId: userId,
         receiverId: currentUserId,
-        status: ['sent', 'delivered']
+        isRead: true, // now marked read above; create receipts only once
       }
     });
 
     for (const message of unreadMessages) {
-      // Create read record
+      // Create read record (idempotent)
       await MessageRead.findOrCreate({
         where: { messageId: message.id, userId: currentUserId },
         defaults: { 
@@ -78,8 +90,10 @@ const getChatMessages = asyncHandler(async (req, res) => {
         }
       });
       
-      // Update message status
-      await message.update({ status: 'read' });
+      // Update message delivery status to 'read' for UX if you track it
+      if (message.status !== 'read') {
+        await message.update({ status: 'read' });
+      }
     }
   }
 
@@ -237,12 +251,12 @@ const getChatList = asyncHandler(async (req, res) => {
       ]
     });
 
-    // Count unread messages using new status system
+    // Count unread messages using isRead field
     const unreadCount = await Message.count({
       where: {
         senderId: friend.id,
         receiverId: userId,
-        status: ['sent', 'delivered']
+        isRead: false
       }
     });
 
@@ -270,27 +284,21 @@ const getChatList = asyncHandler(async (req, res) => {
   });
 });
 
-// Mark messages as read
+// Mark messages as read (always persist read state; read receipts handled elsewhere)
 const markMessagesAsRead = asyncHandler(async (req, res) => {
   const { senderId } = req.params;
   const receiverId = req.user.id;
 
-  // Only mark as read if BOTH users have read status enabled
-  const currentUser = await User.findByPk(receiverId);
-  const senderUser = await User.findByPk(senderId);
-  
-  if (currentUser && senderUser && currentUser.readStatusEnabled && senderUser.readStatusEnabled) {
-    await Message.update(
-      { isRead: true },
-      {
-        where: {
-          senderId,
-          receiverId,
-          isRead: false
-        }
+  await Message.update(
+    { isRead: true },
+    {
+      where: {
+        senderId,
+        receiverId,
+        isRead: false,
       }
-    );
-  }
+    }
+  );
 
   res.json({
     success: true,
@@ -305,7 +313,7 @@ const getUnreadCount = asyncHandler(async (req, res) => {
   const unreadCount = await Message.count({
     where: {
       receiverId: userId,
-      status: ['sent', 'delivered']
+      isRead: false
     }
   });
 

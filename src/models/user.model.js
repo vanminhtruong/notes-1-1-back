@@ -55,6 +55,19 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    theme: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'light',
+      validate: {
+        isIn: [['light', 'dark']],
+      },
+    },
+    language: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'vi',
+    },
   }, {
     hooks: {
       beforeCreate: async (user) => {

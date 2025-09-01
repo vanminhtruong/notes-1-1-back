@@ -9,9 +9,6 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "build": "echo 'Build completed - Node.js app ready'",
-    "postinstall": "npm run setup:production",
-    "setup:production": "node -e \"if(process.env.NODE_ENV==='production'){console.log('Production setup completed')}\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

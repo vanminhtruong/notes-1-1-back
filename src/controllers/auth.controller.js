@@ -53,6 +53,18 @@ const googleLogin = async (req, res) => {
 
     const token = generateToken(user);
 
+    // Set theme and language cookies to prevent flash
+    try {
+      res.cookie('theme', user.theme || 'light', {
+        httpOnly: false, sameSite: 'lax', secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
+      });
+      res.cookie('lang', user.language || 'vi', {
+        httpOnly: false, sameSite: 'lax', secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
+      });
+    } catch (e) {}
+
     return res.json({
       message: 'Đăng nhập Google thành công',
       user,
@@ -101,6 +113,18 @@ const facebookLogin = async (req, res) => {
 
     const token = generateToken(user);
 
+    // Set theme and language cookies to prevent flash
+    try {
+      res.cookie('theme', user.theme || 'light', {
+        httpOnly: false, sameSite: 'lax', secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
+      });
+      res.cookie('lang', user.language || 'vi', {
+        httpOnly: false, sameSite: 'lax', secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
+      });
+    } catch (e) {}
+
     return res.json({
       message: 'Đăng nhập Facebook thành công',
       user,
@@ -128,6 +152,18 @@ const register = async (req, res) => {
     // Create new user
     const user = await User.create({ email, password, name });
     const token = generateToken(user);
+
+    // Set theme and language cookies to prevent flash
+    try {
+      res.cookie('theme', user.theme || 'light', {
+        httpOnly: false, sameSite: 'lax', secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
+      });
+      res.cookie('lang', user.language || 'vi', {
+        httpOnly: false, sameSite: 'lax', secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
+      });
+    } catch (e) {}
 
     res.status(201).json({
       message: 'Đăng ký thành công',
@@ -161,6 +197,18 @@ const login = async (req, res) => {
     }
 
     const token = generateToken(user);
+
+    // Set theme and language cookies to prevent flash
+    try {
+      res.cookie('theme', user.theme || 'light', {
+        httpOnly: false, sameSite: 'lax', secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
+      });
+      res.cookie('lang', user.language || 'vi', {
+        httpOnly: false, sameSite: 'lax', secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000, path: '/',
+      });
+    } catch (e) {}
 
     res.json({
       message: 'Đăng nhập thành công',

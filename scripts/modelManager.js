@@ -118,6 +118,18 @@ class ModelManager {
       allowNull: false,
       defaultValue: true,
     });
+
+    await this.ensureColumnExists('Users', 'theme', {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'light',
+    });
+
+    await this.ensureColumnExists('Users', 'language', {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'vi',
+    });
   }
 
   async updateGroupsTable() {
