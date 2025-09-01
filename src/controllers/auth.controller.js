@@ -269,6 +269,40 @@ const updateProfile = async (req, res) => {
 
     await user.update(updates);
 
+    // Emit profile update to all connected friends for real-time sync
+    try {
+      const { Friendship } = require('../models');
+      const friendships = await Friendship.findAll({
+        where: {
+          [require('sequelize').Op.or]: [
+            { requesterId: user.id, status: 'accepted' },
+            { addresseeId: user.id, status: 'accepted' }
+          ]
+        }
+      });
+
+      for (const friendship of friendships) {
+        const friendId = friendship.requesterId === user.id ? friendship.addresseeId : friendship.requesterId;
+        if (friendId && global.io) {
+          global.io.to(`user_${friendId}`).emit('user_profile_updated', {
+            userId: user.id,
+            user: {
+              id: user.id,
+              name: user.name,
+              avatar: user.avatar,
+              phone: user.phone,
+              birthDate: user.birthDate,
+              gender: user.gender,
+              email: user.email,
+              isOnline: true // Assume online since they just updated
+            }
+          });
+        }
+      }
+    } catch (emitError) {
+      console.error('Error emitting profile update:', emitError);
+    }
+
     res.json({
       message: 'Cập nhật thông tin thành công',
       user,
