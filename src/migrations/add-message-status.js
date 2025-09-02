@@ -2,20 +2,30 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('Messages', 'status', {
-      type: Sequelize.ENUM('sent', 'delivered', 'read'),
-      defaultValue: 'sent',
-      allowNull: false
-    });
+    // Check Messages table
+    const messagesInfo = await queryInterface.describeTable('Messages');
+    if (!messagesInfo.status) {
+      await queryInterface.addColumn('Messages', 'status', {
+        type: Sequelize.ENUM('sent', 'delivered', 'read'),
+        defaultValue: 'sent',
+        allowNull: false
+      });
+    }
 
-    await queryInterface.addColumn('GroupMessages', 'status', {
-      type: Sequelize.ENUM('sent', 'delivered', 'read'),
-      defaultValue: 'sent',
-      allowNull: false
-    });
+    // Check GroupMessages table
+    const groupMessagesInfo = await queryInterface.describeTable('GroupMessages');
+    if (!groupMessagesInfo.status) {
+      await queryInterface.addColumn('GroupMessages', 'status', {
+        type: Sequelize.ENUM('sent', 'delivered', 'read'),
+        defaultValue: 'sent',
+        allowNull: false
+      });
+    }
 
     // Create MessageReads table for tracking who read each message
-    await queryInterface.createTable('MessageReads', {
+    const tables = await queryInterface.showAllTables();
+    if (!tables.includes('MessageReads')) {
+      await queryInterface.createTable('MessageReads', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -56,8 +66,11 @@ module.exports = {
       }
     });
 
+    }
+
     // Create GroupMessageReads table for tracking who read each group message
-    await queryInterface.createTable('GroupMessageReads', {
+    if (!tables.includes('GroupMessageReads')) {
+      await queryInterface.createTable('GroupMessageReads', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -98,16 +111,26 @@ module.exports = {
       }
     });
 
-    // Add indexes for performance
-    await queryInterface.addIndex('MessageReads', ['messageId', 'userId'], {
-      unique: true,
-      name: 'message_reads_unique'
-    });
+    }
 
-    await queryInterface.addIndex('GroupMessageReads', ['messageId', 'userId'], {
-      unique: true,
-      name: 'group_message_reads_unique'
-    });
+    // Add indexes for performance
+    try {
+      await queryInterface.addIndex('MessageReads', ['messageId', 'userId'], {
+        unique: true,
+        name: 'message_reads_unique'
+      });
+    } catch (err) {
+      if (!err.message.includes('already exists')) throw err;
+    }
+
+    try {
+      await queryInterface.addIndex('GroupMessageReads', ['messageId', 'userId'], {
+        unique: true,
+        name: 'group_message_reads_unique'
+      });
+    } catch (err) {
+      if (!err.message.includes('already exists')) throw err;
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

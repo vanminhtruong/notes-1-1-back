@@ -15,7 +15,14 @@
     "format": "prettier --write .",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
-    "db:sync": "node src/db/autoSync.js"
+    "db:sync": "node src/db/autoSync.js",
+    "db:migrate": "node src/db/migrate.js",
+    "db:migrate:fresh": "node -e \"const {sequelize} = require('./src/db'); sequelize.drop().then(() => require('./src/db/migrate').runMigrations())\"",
+    "db:reset": "node -e \"const {sequelize} = require('./src/db'); sequelize.drop().then(() => sequelize.sync({force: true}))\"",
+    "db:refresh": "npm run db:reset && npm run db:migrate",
+    "db:truncate": "node src/db/truncate.js",
+    "db:clear": "npm run db:truncate",
+    "db:fix-constraints": "node src/db/fixMessageReadsConstraint.js"
   },
   "keywords": [],
   "author": "",
