@@ -136,6 +136,15 @@ class ModelManager {
     });
   }
 
+  async updateNotesTable() {
+    console.log('Updating Notes table...');
+
+    await this.ensureColumnExists('Notes', 'imageUrl', {
+      type: DataTypes.STRING,
+      allowNull: true,
+    });
+  }
+
   async updateUsersTable() {
     console.log('Updating Users table...');
     
@@ -418,6 +427,7 @@ class ModelManager {
       await this.updateGroupMessageTable();
       await this.updateUsersTable();
       await this.updateGroupsTable();
+      await this.updateNotesTable();
       await this.createReadTables();
       await this.createChatPreferenceTable();
       await this.fixFriendshipIndexes();

@@ -4,12 +4,13 @@ const { emitToUser } = require('../socket/socketHandler');
 
 const createNote = async (req, res) => {
   try {
-    const { title, content, category, priority } = req.body;
+    const { title, content, imageUrl, category, priority } = req.body;
     const userId = req.user.id;
 
     const note = await Note.create({
       title,
       content,
+      imageUrl: imageUrl || null,
       category,
       priority,
       userId,
@@ -124,7 +125,7 @@ const getNoteById = async (req, res) => {
 const updateNote = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, category, priority, isArchived } = req.body;
+    const { title, content, imageUrl, category, priority, isArchived } = req.body;
     const userId = req.user.id;
 
     const note = await Note.findOne({ where: { id, userId } });
@@ -136,6 +137,7 @@ const updateNote = async (req, res) => {
     await note.update({
       title: title !== undefined ? title : note.title,
       content: content !== undefined ? content : note.content,
+      imageUrl: imageUrl !== undefined ? (imageUrl || null) : note.imageUrl,
       category: category !== undefined ? category : note.category,
       priority: priority !== undefined ? priority : note.priority,
       isArchived: isArchived !== undefined ? isArchived : note.isArchived,

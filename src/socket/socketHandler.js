@@ -224,6 +224,29 @@ const handleConnection = async (socket) => {
     }
   });
 
+  // Realtime per-chat background update (1-1 chat)
+  socket.on('chat_background_update', async (payload) => {
+    try {
+      const otherUserId = payload && payload.userId;
+      const backgroundUrl = payload ? payload.backgroundUrl ?? null : null;
+      if (!otherUserId) return;
+
+      // Notify the other user (their selectedChatId will be current user's id)
+      global.io && global.io.to(`user_${otherUserId}`).emit('chat_background_update', {
+        userId: userId,
+        backgroundUrl,
+      });
+
+      // Notify my other devices/tabs (their selectedChatId equals otherUserId)
+      socket.to(`user_${userId}`).emit('chat_background_update', {
+        userId: otherUserId,
+        backgroundUrl,
+      });
+    } catch (e) {
+      console.error('Error handling chat_background_update:', e);
+    }
+  });
+
   // Handle message read receipts for 1:1 chats
   socket.on('message_read', async (data) => {
     try {
