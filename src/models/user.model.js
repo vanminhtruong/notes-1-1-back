@@ -88,6 +88,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'vi',
     },
+    // Persisted preference: remember-me on login
+    rememberLogin: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     // Privacy flags
     hidePhone: {
       type: DataTypes.BOOLEAN,

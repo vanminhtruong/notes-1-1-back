@@ -195,6 +195,13 @@ class ModelManager {
       defaultValue: 'vi',
     });
 
+    // Remember-me preference persisted on backend
+    await this.ensureColumnExists('Users', 'rememberLogin', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
+
     // Privacy flags
     await this.ensureColumnExists('Users', 'hidePhone', {
       type: DataTypes.BOOLEAN,

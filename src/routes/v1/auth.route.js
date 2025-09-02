@@ -9,6 +9,7 @@ const {
   validateVerifyOtp,
   validateResetPassword,
   validateUpdateProfile,
+  validateRememberPref,
 } = require('../../validators/auth.validator');
 
 // Public routes   
@@ -19,6 +20,7 @@ router.post('/facebook', authController.facebookLogin);
 router.post('/forgot-password', validateForgotPasswordRequest, authController.forgotPasswordRequest);
 router.post('/verify-otp', validateVerifyOtp, authController.verifyOtp);
 router.post('/reset-password', validateResetPassword, authController.resetPassword);
+router.post('/remember-pref', validateRememberPref, authController.getRememberPreference);
 
 // Protected routes
 router.use(authMiddleware);

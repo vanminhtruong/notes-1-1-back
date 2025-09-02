@@ -5,12 +5,14 @@ const axios = require('axios');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { sendEmail } = require('../utils/email');
+const { sendSms } = require('../utils/sms');
 
-const generateToken = (user) => {
+const generateToken = (user, options = {}) => {
+  const expiresIn = options.expiresIn || process.env.JWT_EXPIRES_IN || '7d';
   return jwt.sign(
     { id: user.id, email: user.email },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn }
   );
 };
 
@@ -185,7 +187,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, remember } = req.body;
 
     // Find user by email
     const user = await User.findOne({ where: { email } });
@@ -218,6 +220,41 @@ const login = async (req, res) => {
       });
     } catch (e) {}
 
+    // Also set httpOnly cookie for server-managed sessions (frontend may still use bearer)
+    try {
+      const maxAgeMs = (remember ? 30 : 1) * 24 * 60 * 60 * 1000; // days -> ms
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: false,
+        maxAge: maxAgeMs,
+        path: '/',
+      });
+      // UI helper cookie to remember the checkbox state on the client without localStorage
+      res.cookie('remember_ui', remember ? '1' : '0', {
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+      // UI helper cookie to persist last used email for prefill
+      res.cookie('last_email', email, {
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: false,
+        maxAge: 365 * 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+    } catch (e) {}
+
+    // Persist remember preference on backend
+    try {
+      if (typeof remember !== 'undefined') {
+        await user.update({ rememberLogin: !!remember });
+      }
+    } catch (e) {}
+
     res.json({
       message: 'Đăng nhập thành công',
       user,
@@ -225,6 +262,19 @@ const login = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+// Public endpoint to fetch remember preference by email (returns false if not found)
+const getRememberPreference = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ where: { email } });
+    const remember = user ? !!user.rememberLogin : false;
+    // Always 200 with generic payload to reduce enumeration risk
+    return res.json({ remember });
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
   }
 };
 
@@ -332,11 +382,18 @@ const changePassword = async (req, res) => {
   }
 };
 
-// Forgot Password: request OTP via email
+// Helper to resolve user by email or phone
+const findUserByIdentifier = async ({ email, phone }) => {
+  if (email) return await User.findOne({ where: { email } });
+  if (phone) return await User.findOne({ where: { phone: String(phone).trim() } });
+  return null;
+};
+
+// Forgot Password: request OTP via email or phone (phone resolves to user's email)
 const forgotPasswordRequest = async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ where: { email } });
+    const { email, phone } = req.body;
+    const user = await findUserByIdentifier({ email, phone });
 
     // Always return success (email enumeration safe)
     const genericMsg = 'Nếu email tồn tại, mã OTP đã được gửi.';
@@ -359,11 +416,18 @@ const forgotPasswordRequest = async (req, res) => {
       attempts: 0,
     });
 
-    // Send email (dev falls back to console)
-    const subject = 'Mã OTP đặt lại mật khẩu';
-    const text = `Mã OTP của bạn là ${otp}. Mã sẽ hết hạn sau 10 phút.`;
-    const html = `<p>Chào ${user.name || ''},</p><p>Mã OTP đặt lại mật khẩu của bạn là <b>${otp}</b>. Mã sẽ hết hạn sau <b>10 phút</b>.</p>`;
-    await sendEmail({ to: user.email, subject, text, html });
+    // Send OTP via SMS if phone is used, otherwise via email
+    if (phone) {
+      const smsBody = `Ma OTP cua ban la ${otp}. Het han sau 10 phut.`;
+      const normalized = String(phone).replace(/[\s\-()]/g, '').trim();
+      await sendSms({ to: normalized, body: smsBody });
+    } else {
+      // Email fallback
+      const subject = 'Mã OTP đặt lại mật khẩu';
+      const text = `Mã OTP của bạn là ${otp}. Mã sẽ hết hạn sau 10 phút.`;
+      const html = `<p>Chào ${user.name || ''},</p><p>Mã OTP đặt lại mật khẩu của bạn là <b>${otp}</b>. Mã sẽ hết hạn sau <b>10 phút</b>.</p>`;
+      await sendEmail({ to: user.email, subject, text, html });
+    }
 
     return res.json({ message: genericMsg });
   } catch (error) {
@@ -371,18 +435,18 @@ const forgotPasswordRequest = async (req, res) => {
   }
 };
 
-// Verify OTP
+// Verify OTP with email or phone
 const verifyOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, phone, otp } = req.body;
 
-    const user = await User.findOne({ where: { email } });
+    const user = await findUserByIdentifier({ email, phone });
     if (!user) {
       return res.status(400).json({ message: 'OTP không hợp lệ hoặc đã hết hạn' });
     }
 
     const record = await PasswordReset.findOne({
-      where: { email, used: false },
+      where: { email: user.email, used: false },
       order: [['createdAt', 'DESC']],
     });
 
@@ -413,18 +477,18 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-// Reset password with OTP
+// Reset password with OTP (email or phone)
 const resetPassword = async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const { email, phone, otp, newPassword } = req.body;
 
-    const user = await User.findOne({ where: { email } });
+    const user = await findUserByIdentifier({ email, phone });
     if (!user) {
       return res.status(400).json({ message: 'OTP không hợp lệ hoặc đã hết hạn' });
     }
 
     const record = await PasswordReset.findOne({
-      where: { email, used: false },
+      where: { email: user.email, used: false },
       order: [['createdAt', 'DESC']],
     });
 
@@ -454,7 +518,10 @@ const resetPassword = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
-    // In a real-world app, you might want to blacklist the token
+    // Clear only server auth cookie; keep UI cookies (remember_ui, last_email)
+    try {
+      res.clearCookie('auth_token', { httpOnly: true, sameSite: 'lax', secure: false, path: '/' });
+    } catch {}
     res.json({ message: 'Đăng xuất thành công' });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -473,4 +540,5 @@ module.exports = {
   forgotPasswordRequest,
   verifyOtp,
   resetPassword,
+  getRememberPreference,
 };

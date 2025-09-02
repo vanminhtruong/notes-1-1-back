@@ -16,7 +16,7 @@ const validateRegister = (req, res, next) => {
       'string.max': 'Tên không được quá 50 ký tự',
       'any.required': 'Tên là bắt buộc',
     }),
-    phone: Joi.string().pattern(/^[+[0-9]][0-9\s\-()]{5,20}$/).allow(null, '').messages({
+    phone: Joi.string().pattern(/^[+\d][\d\s\-()]{5,20}$/).allow(null, '').messages({
       'string.pattern.base': 'Số điện thoại không hợp lệ',
     }),
     birthDate: Joi.date().iso().allow(null).messages({
@@ -44,6 +44,7 @@ const validateLogin = (req, res, next) => {
     password: Joi.string().required().messages({
       'any.required': 'Mật khẩu là bắt buộc',
     }),
+    remember: Joi.boolean().optional(),
   });
 
   const { error } = schema.validate(req.body);
@@ -80,13 +81,11 @@ const validateChangePassword = (req, res, next) => {
 
 const validateForgotPasswordRequest = (req, res, next) => {
   const schema = Joi.object({
-    email: Joi.string().email().required().messages({
-      'string.email': 'Email không hợp lệ',
-      'any.required': 'Email là bắt buộc',
-    }),
-  });
+    email: Joi.string().email(),
+    phone: Joi.string().pattern(/^[+\d][\d\s\-()]{5,20}$/),
+  }).or('email', 'phone');
 
-  const { error } = schema.validate(req.body);
+  const { error } = schema.validate(req.body, { abortEarly: true });
   if (error) {
     return res.status(400).json({
       message: 'Dữ liệu không hợp lệ',
@@ -98,17 +97,15 @@ const validateForgotPasswordRequest = (req, res, next) => {
 
 const validateVerifyOtp = (req, res, next) => {
   const schema = Joi.object({
-    email: Joi.string().email().required().messages({
-      'string.email': 'Email không hợp lệ',
-      'any.required': 'Email là bắt buộc',
-    }),
+    email: Joi.string().email(),
+    phone: Joi.string().pattern(/^[+\d][\d\s\-()]{5,20}$/),
     otp: Joi.string().pattern(/^\d{6}$/).required().messages({
       'string.pattern.base': 'OTP phải gồm 6 chữ số',
       'any.required': 'OTP là bắt buộc',
     }),
-  });
+  }).or('email', 'phone');
 
-  const { error } = schema.validate(req.body);
+  const { error } = schema.validate(req.body, { abortEarly: true });
   if (error) {
     return res.status(400).json({
       message: 'Dữ liệu không hợp lệ',
@@ -120,10 +117,8 @@ const validateVerifyOtp = (req, res, next) => {
 
 const validateResetPassword = (req, res, next) => {
   const schema = Joi.object({
-    email: Joi.string().email().required().messages({
-      'string.email': 'Email không hợp lệ',
-      'any.required': 'Email là bắt buộc',
-    }),
+    email: Joi.string().email(),
+    phone: Joi.string().pattern(/^[+\d][\d\s\-()]{5,20}$/),
     otp: Joi.string().pattern(/^\d{6}$/).required().messages({
       'string.pattern.base': 'OTP phải gồm 6 chữ số',
       'any.required': 'OTP là bắt buộc',
@@ -133,9 +128,9 @@ const validateResetPassword = (req, res, next) => {
       'string.max': 'Mật khẩu mới không được quá 100 ký tự',
       'any.required': 'Mật khẩu mới là bắt buộc',
     }),
-  });
+  }).or('email', 'phone');
 
-  const { error } = schema.validate(req.body);
+  const { error } = schema.validate(req.body, { abortEarly: true });
   if (error) {
     return res.status(400).json({
       message: 'Dữ liệu không hợp lệ',
@@ -180,5 +175,16 @@ module.exports = {
   validateVerifyOtp,
   validateResetPassword,
   validateUpdateProfile,
+  validateRememberPref: (req, res, next) => {
+    const schema = Joi.object({ email: Joi.string().email().required() });
+    const { error } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        message: 'Dữ liệu không hợp lệ',
+        errors: error.details.map(d => d.message),
+      });
+    }
+    next();
+  },
 };
 

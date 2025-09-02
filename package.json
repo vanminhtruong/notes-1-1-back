@@ -44,7 +44,8 @@
     "nodemailer": "^7.0.5",
     "sequelize": "^6.37.3",
     "socket.io": "^4.8.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "twilio": "^4.23.0"
   },
   "devDependencies": {
     "chokidar": "^4.0.3",
