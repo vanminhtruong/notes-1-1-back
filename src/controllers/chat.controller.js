@@ -474,8 +474,15 @@ module.exports = {
       return res.status(403).json({ success: false, message: 'You can only view preferences with friends' });
     }
 
-    const pref = await ChatPreference.findOne({ where: { userId: currentUserId, otherUserId: userId } });
-    return res.json({ success: true, data: { backgroundUrl: pref?.backgroundUrl || null } });
+    // Check both users' preferences - current user first, then the other user
+    const [myPref, theirPref] = await Promise.all([
+      ChatPreference.findOne({ where: { userId: currentUserId, otherUserId: userId } }),
+      ChatPreference.findOne({ where: { userId: userId, otherUserId: currentUserId } })
+    ]);
+
+    // Priority: my preference first, then their preference (for "background for both" scenario)
+    const backgroundUrl = myPref?.backgroundUrl || theirPref?.backgroundUrl || null;
+    return res.json({ success: true, data: { backgroundUrl } });
   }),
   // Set per-chat background (null to reset)
   setChatBackground: asyncHandler(async (req, res) => {
