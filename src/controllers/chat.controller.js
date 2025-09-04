@@ -54,6 +54,15 @@ const getChatMessages = asyncHandler(async (req, res) => {
     .map(m => m.toJSON())
     .filter(m => !(Array.isArray(m.deletedForUserIds) && m.deletedForUserIds.includes(currentUserId)));
 
+  // Find messages that are currently unread (so we can emit receipts only for these)
+  const toMarkRead = await Message.findAll({
+    where: {
+      senderId: userId,
+      receiverId: currentUserId,
+      isRead: false,
+    }
+  });
+
   // Always mark messages as read for the receiver (backend source of truth for unread counts)
   await Message.update(
     { isRead: true },
@@ -71,17 +80,10 @@ const getChatMessages = asyncHandler(async (req, res) => {
   const otherUser = await User.findByPk(userId);
   
   if (currentUser && otherUser && currentUser.readStatusEnabled && otherUser.readStatusEnabled) {
-    const unreadMessages = await Message.findAll({
-      where: {
-        senderId: userId,
-        receiverId: currentUserId,
-        isRead: true, // now marked read above; create receipts only once
-      }
-    });
-
-    for (const message of unreadMessages) {
+    const io = req.app.get('io');
+    for (const message of toMarkRead) {
       // Create read record (idempotent)
-      await MessageRead.findOrCreate({
+      const [readRecord] = await MessageRead.findOrCreate({
         where: { messageId: message.id, userId: currentUserId },
         defaults: { 
           messageId: message.id, 
@@ -89,17 +91,36 @@ const getChatMessages = asyncHandler(async (req, res) => {
           readAt: new Date() 
         }
       });
-      
+
       // Update message delivery status to 'read' for UX if you track it
       if (message.status !== 'read') {
         await message.update({ status: 'read' });
       }
+
+      // Emit real-time read receipt to the sender
+      if (io) {
+        const userPayload = { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar };
+        io.to(`user_${message.senderId}`).emit('message_read', {
+          messageId: message.id,
+          userId: currentUserId,
+          readAt: readRecord.readAt,
+          user: userPayload,
+        });
+      }
     }
   }
 
+  // Normalize API response so the client sees these messages as read immediately
+  const normalized = filtered.map((m) => {
+    if (m.senderId === Number(userId) && m.receiverId === currentUserId) {
+      return { ...m, isRead: true };
+    }
+    return m;
+  });
+
   res.json({
     success: true,
-    data: filtered.reverse(), // Reverse to show oldest first
+    data: normalized.reverse(), // Reverse to show oldest first
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -284,11 +305,21 @@ const getChatList = asyncHandler(async (req, res) => {
   });
 });
 
-// Mark messages as read (always persist read state; read receipts handled elsewhere)
+// Mark messages as read (persist read state and emit receipts for those newly marked)
 const markMessagesAsRead = asyncHandler(async (req, res) => {
   const { senderId } = req.params;
   const receiverId = req.user.id;
 
+  // Capture which messages are currently unread to emit receipts just for these
+  const toMarkRead = await Message.findAll({
+    where: {
+      senderId,
+      receiverId,
+      isRead: false,
+    }
+  });
+
+  // Persist read state (backend source of truth)
   await Message.update(
     { isRead: true },
     {
@@ -299,6 +330,42 @@ const markMessagesAsRead = asyncHandler(async (req, res) => {
       }
     }
   );
+
+  // Emit read receipts only if BOTH users enabled read status
+  if (toMarkRead.length > 0) {
+    const currentUser = await User.findByPk(receiverId);
+    const otherUser = await User.findByPk(senderId);
+    if (currentUser && otherUser && currentUser.readStatusEnabled && otherUser.readStatusEnabled) {
+      const io = req.app.get('io');
+      for (const m of toMarkRead) {
+        // Create MessageRead idempotently
+        const [readRecord] = await MessageRead.findOrCreate({
+          where: { messageId: m.id, userId: receiverId },
+          defaults: {
+            messageId: m.id,
+            userId: receiverId,
+            readAt: new Date()
+          }
+        });
+
+        // Update per-message status
+        if (m.status !== 'read') {
+          await m.update({ status: 'read' });
+        }
+
+        // Notify sender immediately with avatar info
+        if (io) {
+          const userPayload = { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar };
+          io.to(`user_${senderId}`).emit('message_read', {
+            messageId: m.id,
+            userId: receiverId,
+            readAt: readRecord.readAt,
+            user: userPayload,
+          });
+        }
+      }
+    }
+  }
 
   res.json({
     success: true,

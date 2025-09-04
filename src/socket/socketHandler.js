@@ -161,10 +161,60 @@ const handleConnection = async (socket) => {
   });
 
   // Handle chat events
-  socket.on('join_chat', (data) => {
+  socket.on('join_chat', async (data) => {
     const { receiverId } = data;
     const chatRoom = `chat_${Math.min(userId, receiverId)}_${Math.max(userId, receiverId)}`;
     socket.join(chatRoom);
+
+    // When opening a chat, immediately mark partner->me messages as read and emit receipts
+    try {
+      if (!receiverId) return;
+      // Find unread messages sent by the chat partner to current user
+      const toMarkRead = await Message.findAll({
+        where: {
+          senderId: receiverId,
+          receiverId: userId,
+          isRead: false,
+        }
+      });
+
+      if (toMarkRead && toMarkRead.length > 0) {
+        // Persist read state (backend source of truth)
+        await Message.update(
+          { isRead: true },
+          { where: { senderId: receiverId, receiverId: userId, isRead: false } }
+        );
+
+        // Only emit read receipts if BOTH users enabled it
+        const me = await User.findByPk(userId);
+        const other = await User.findByPk(receiverId);
+        if (me && other && me.readStatusEnabled && other.readStatusEnabled) {
+          for (const m of toMarkRead) {
+            // Create read record idempotently
+            const [rec] = await MessageRead.findOrCreate({
+              where: { messageId: m.id, userId },
+              defaults: { messageId: m.id, userId, readAt: new Date() }
+            });
+
+            // Update message status to 'read'
+            if (m.status !== 'read') {
+              await m.update({ status: 'read' });
+            }
+
+            // Notify the sender with avatar info
+            const userPayload = { id: me.id, name: me.name, avatar: me.avatar };
+            global.io && global.io.to(`user_${receiverId}`).emit('message_read', {
+              messageId: m.id,
+              userId,
+              readAt: rec.readAt,
+              user: userPayload,
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error handling join_chat read sync:', e);
+    }
   });
 
   socket.on('leave_chat', (data) => {
