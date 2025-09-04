@@ -143,6 +143,25 @@ class ModelManager {
       type: DataTypes.STRING,
       allowNull: true,
     });
+
+    // Reminder fields
+    await this.ensureColumnExists('Notes', 'reminderAt', {
+      type: DataTypes.DATE,
+      allowNull: true,
+    });
+
+    await this.ensureColumnExists('Notes', 'reminderSent', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
+
+    // Persistent acknowledgement state for reminders
+    await this.ensureColumnExists('Notes', 'reminderAcknowledged', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
   }
 
   async updateUsersTable() {

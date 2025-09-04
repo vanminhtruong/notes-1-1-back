@@ -13,6 +13,10 @@ const validateCreateNote = (req, res, next) => {
     priority: Joi.string().valid('low', 'medium', 'high').optional().default('medium').messages({
       'any.only': 'Mức độ ưu tiên phải là low, medium hoặc high',
     }),
+    reminderAt: Joi.alternatives().try(
+      Joi.date().iso(),
+      Joi.string().isoDate()
+    ).allow(null).optional(),
   });
 
   const { error } = schema.validate(req.body);
@@ -38,6 +42,10 @@ const validateUpdateNote = (req, res, next) => {
       'any.only': 'Mức độ ưu tiên phải là low, medium hoặc high',
     }),
     isArchived: Joi.boolean().optional(),
+    reminderAt: Joi.alternatives().try(
+      Joi.date().iso(),
+      Joi.string().isoDate()
+    ).allow(null).optional(),
   });
 
   const { error } = schema.validate(req.body);

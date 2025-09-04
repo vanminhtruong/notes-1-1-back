@@ -12,6 +12,7 @@ router.get('/', notesController.getNotes);
 router.get('/stats', notesController.getNoteStats);
 router.get('/:id', notesController.getNoteById);
 router.put('/:id', validateUpdateNote, notesController.updateNote);
+router.patch('/:id/ack-reminder', notesController.acknowledgeReminder);
 router.patch('/:id/archive', notesController.archiveNote);
 router.delete('/:id', notesController.deleteNote);
 

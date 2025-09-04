@@ -4,7 +4,7 @@ const { emitToUser } = require('../socket/socketHandler');
 
 const createNote = async (req, res) => {
   try {
-    const { title, content, imageUrl, category, priority } = req.body;
+    const { title, content, imageUrl, category, priority, reminderAt } = req.body;
     const userId = req.user.id;
 
     const note = await Note.create({
@@ -13,6 +13,8 @@ const createNote = async (req, res) => {
       imageUrl: imageUrl || null,
       category,
       priority,
+      reminderAt: reminderAt ? new Date(reminderAt) : null,
+      reminderSent: false,
       userId,
     });
 
@@ -31,6 +33,28 @@ const createNote = async (req, res) => {
       message: 'Tạo ghi chú thành công',
       note: noteWithUser,
     });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Acknowledge reminder: persist that user has clicked the bell
+const acknowledgeReminder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const note = await Note.findOne({ where: { id, userId } });
+    if (!note) {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
+
+    await note.update({ reminderAcknowledged: true, reminderSent: true });
+
+    // Optionally emit event so other clients update UI
+    emitToUser(userId, 'note_acknowledged', { id: note.id });
+
+    res.json({ message: 'Đã xác nhận nhắc nhở', note });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -125,7 +149,7 @@ const getNoteById = async (req, res) => {
 const updateNote = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, imageUrl, category, priority, isArchived } = req.body;
+    const { title, content, imageUrl, category, priority, isArchived, reminderAt } = req.body;
     const userId = req.user.id;
 
     const note = await Note.findOne({ where: { id, userId } });
@@ -134,6 +158,18 @@ const updateNote = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
     }
 
+    // Determine if reminderAt changed; normalize to Date or null
+    let nextReminderAt = (reminderAt === undefined)
+      ? note.reminderAt
+      : (reminderAt ? new Date(reminderAt) : null);
+    const reminderChanged = reminderAt !== undefined && (
+      // one is null and the other not
+      (nextReminderAt === null && note.reminderAt !== null) ||
+      (nextReminderAt !== null && note.reminderAt === null) ||
+      // both not null but timestamp differs
+      (nextReminderAt !== null && note.reminderAt !== null && nextReminderAt.getTime() !== new Date(note.reminderAt).getTime())
+    );
+
     await note.update({
       title: title !== undefined ? title : note.title,
       content: content !== undefined ? content : note.content,
@@ -141,6 +177,11 @@ const updateNote = async (req, res) => {
       category: category !== undefined ? category : note.category,
       priority: priority !== undefined ? priority : note.priority,
       isArchived: isArchived !== undefined ? isArchived : note.isArchived,
+      reminderAt: nextReminderAt,
+      // Reset reminderSent if reminderAt changed; otherwise keep as is
+      reminderSent: reminderChanged ? false : note.reminderSent,
+      // If rescheduled, user hasn't acknowledged the new schedule yet
+      reminderAcknowledged: reminderChanged ? false : note.reminderAcknowledged,
     });
 
     const updatedNote = await Note.findByPk(note.id, {
@@ -263,4 +304,5 @@ module.exports = {
   deleteNote,
   archiveNote,
   getNoteStats,
+  acknowledgeReminder,
 };
