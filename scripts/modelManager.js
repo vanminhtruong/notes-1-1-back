@@ -134,6 +134,12 @@ class ModelManager {
       allowNull: false,
       defaultValue: false,
     });
+
+    await this.ensureColumnExists('GroupMessages', 'isRead', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
   }
 
   async updateNotesTable() {

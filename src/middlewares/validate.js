@@ -1,47 +1,53 @@
 const Joi = require('joi');
 
+// This middleware now supports validating multiple parts of the request
+// simultaneously (e.g. { params, body, query }). It will validate each
+// provided part independently and write the sanitized values back onto req.
 module.exports = (schema) => (req, res, next) => {
-  let validationSchema;
-  let dataToValidate;
+  const details = [];
 
-  // Check if schema has nested structure (body, params, query)
-  if (schema.body) {
-    validationSchema = schema.body;
-    dataToValidate = req.body;
-  } else if (schema.params) {
-    validationSchema = schema.params;
-    dataToValidate = req.params;
-  } else if (schema.query) {
-    validationSchema = schema.query;
-    dataToValidate = req.query;
-  } else {
-    // Schema is a direct Joi schema
-    validationSchema = schema;
-    dataToValidate = req.body;
-  }
-
-  const { error, value } = validationSchema.validate(dataToValidate, {
-    abortEarly: false,
-    allowUnknown: false,
-    stripUnknown: true,
-  });
-
-  if (error) {
-    return res.status(400).json({
-      message: 'Validation error',
-      details: error.details.map((d) => d.message),
+  const validatePart = (partName, value, joiSchema) => {
+    const { error, value: validated } = joiSchema.validate(value, {
+      abortEarly: false,
+      allowUnknown: false,
+      stripUnknown: true,
+      convert: true,
     });
+    if (error) {
+      details.push(
+        ...error.details.map((d) => `${partName}: ${d.message}`)
+      );
+      return null;
+    }
+    return validated;
+  };
+
+  // If schema is a raw Joi schema, treat it as body-only for backward compat
+  if (!schema.body && !schema.params && !schema.query) {
+    const validated = validatePart('body', req.body, schema);
+    if (details.length) {
+      return res.status(400).json({ message: 'Validation error', details });
+    }
+    req.body = validated;
+    return next();
   }
 
-  // Update the appropriate request property with validated data
+  // Validate present parts
+  if (schema.params) {
+    const validated = validatePart('params', req.params, schema.params);
+    if (validated) req.params = validated;
+  }
+  if (schema.query) {
+    const validated = validatePart('query', req.query, schema.query);
+    if (validated) req.query = validated;
+  }
   if (schema.body) {
-    req.body = value;
-  } else if (schema.params) {
-    req.params = value;
-  } else if (schema.query) {
-    req.query = value;
-  } else {
-    req.body = value;
+    const validated = validatePart('body', req.body, schema.body);
+    if (validated) req.body = validated;
+  }
+
+  if (details.length) {
+    return res.status(400).json({ message: 'Validation error', details });
   }
 
   return next();

@@ -3,7 +3,13 @@ const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 
 const getGroupMemberIds = async (groupId) => {
-  const members = await GroupMember.findAll({ where: { groupId }, attributes: ['userId'] });
+  console.log(`[getGroupMemberIds] Querying for groupId: ${groupId} (type: ${typeof groupId})`);
+  const members = await GroupMember.findAll({ 
+    where: { groupId: Number(groupId) }, 
+    attributes: ['id', 'userId', 'groupId', 'role'] 
+  });
+  console.log(`[getGroupMemberIds] Found members:`, members.map(m => ({ id: m.id, userId: m.userId, groupId: m.groupId, role: m.role })));
+  console.log(`[getGroupMemberIds] Returning userIds:`, members.map(m => m.userId));
   return members.map(m => m.userId);
 };
 
@@ -91,6 +97,7 @@ const getGroupMessages = asyncHandler(async (req, res) => {
       { 
         model: GroupMessageRead, 
         as: 'GroupMessageReads',
+        required: false, // Left join to include messages without reads
         include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }]
       }
     ],
@@ -103,6 +110,67 @@ const getGroupMessages = asyncHandler(async (req, res) => {
     .map(m => m.toJSON())
     .filter(m => !(Array.isArray(m.deletedForUserIds) && m.deletedForUserIds.includes(userId)))
     .reverse();
+
+  // Mark messages as read (always set isRead=true regardless of read status preferences)
+  const toMarkRead = filtered.filter(m => m.senderId !== userId && !m.isRead);
+  
+  if (toMarkRead.length > 0) {
+    // Always mark messages as read for unread count purposes
+    for (const message of toMarkRead) {
+      // Set isRead flag
+      await GroupMessage.update(
+        { isRead: true },
+        { where: { id: message.id } }
+      );
+      
+      // Only create read receipts if BOTH users have read status enabled
+      const currentUser = await User.findByPk(userId);
+      const senderUser = await User.findByPk(message.senderId);
+      
+      if (currentUser && senderUser && currentUser.readStatusEnabled && senderUser.readStatusEnabled) {
+        // Create GroupMessageRead record for read receipts with retry
+        let readRecord;
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            [readRecord] = await GroupMessageRead.findOrCreate({
+              where: { messageId: message.id, userId },
+              defaults: { messageId: message.id, userId, readAt: new Date() }
+            });
+            break; // Success, exit retry loop
+          } catch (error) {
+            retries--;
+            if (error.name === 'SequelizeTimeoutError' && error.original?.code === 'SQLITE_BUSY' && retries > 0) {
+              console.log(`Database busy in getGroupMessages, retrying... (${3 - retries}/3)`);
+              await new Promise(resolve => setTimeout(resolve, 100 * (3 - retries)));
+            } else {
+              console.error('Error creating GroupMessageRead in getGroupMessages:', error);
+              break;
+            }
+          }
+        }
+
+        // Notify sender and other group members about read receipt via socket
+        const io = req.app.get('io');
+        if (io) {
+          const members = await getGroupMemberIds(groupId);
+          const userInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+          
+          for (const memberId of members) {
+            if (memberId !== userId) {
+              io.to(`user_${memberId}`).emit('group_message_read', {
+                messageId: message.id,
+                groupId: Number(groupId),
+                userId,
+                readAt: readRecord.readAt,
+                user: userInfo
+              });
+            }
+          }
+        }
+      }
+    }
+  }
 
   res.json({ success: true, data: filtered, pagination: { page: parseInt(page), limit: parseInt(limit), hasMore: filtered.length === parseInt(limit) } });
 });
@@ -166,8 +234,22 @@ const sendGroupMessage = asyncHandler(async (req, res) => {
 
 const inviteMembers = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { memberIds = [] } = req.body;
+  // Sanitize and normalize memberIds to integers
+  const memberIds = Array.isArray(req.body?.memberIds) ? req.body.memberIds : [];
+  const normalizedIds = Array.from(new Set(
+    memberIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  ));
   const userId = req.user.id;
+  
+  console.log(`[InviteMembers] Starting invite process:`, { groupId, userId, normalizedIds });
+
+  // Ensure group exists
+  const group = await Group.findByPk(groupId);
+  if (!group) {
+    return res.status(404).json({ success: false, message: 'Group not found' });
+  }
 
   const gm = await GroupMember.findOne({ where: { groupId, userId } });
   if (!gm || gm.role !== 'owner') {
@@ -175,13 +257,24 @@ const inviteMembers = asyncHandler(async (req, res) => {
   }
 
   const currentIds = await getGroupMemberIds(groupId);
-  const uniqueTargets = Array.from(new Set(memberIds.filter(id => id && id !== userId && !currentIds.includes(id))));
+  console.log(`[InviteMembers] Current group members:`, currentIds);
+  const uniqueTargets = normalizedIds.filter((id) => id && id !== userId && !currentIds.includes(id));
+  console.log(`[InviteMembers] Unique targets after filtering:`, uniqueTargets);
 
   const added = [];
   const pending = [];
   const pendingInvites = [];
 
   for (const uid of uniqueTargets) {
+    console.log(`[InviteMembers] Processing user ${uid}`);
+    // Skip if somehow already a member (double-check to avoid race)
+    const exists = await GroupMember.findOne({ where: { groupId: Number(groupId), userId: Number(uid) } });
+    console.log(`[InviteMembers] Double-check membership for user ${uid}:`, exists ? 'EXISTS' : 'NOT_EXISTS');
+    if (exists) {
+      console.log(`[InviteMembers] User ${uid} already exists in group, skipping`);
+      continue;
+    }
+
     // Check friendship accepted between inviter (owner) and invitee
     const friendship = await Friendship.findOne({
       where: {
@@ -193,36 +286,75 @@ const inviteMembers = asyncHandler(async (req, res) => {
       },
     });
 
+    console.log(`[InviteMembers] User ${uid} - friendship check:`, friendship ? 'FRIENDS' : 'NOT_FRIENDS');
+
     if (friendship) {
-      await GroupMember.create({ groupId, userId: uid, role: 'member' });
-      added.push(uid);
-      continue;
+      // Already friends - add directly to group, no invite needed
+      try {
+        console.log(`[InviteMembers] Attempting GroupMember.create with:`, { groupId: Number(groupId), userId: Number(uid), role: 'member' });
+        await GroupMember.create({ groupId: Number(groupId), userId: Number(uid), role: 'member' });
+        // Clean up any pending invite for this user in this group if exists
+        await GroupInvite.destroy({ where: { groupId, inviteeId: uid, status: 'pending' } });
+        added.push(uid);
+        console.log(`[InviteMembers] User ${uid} added directly to group (friends)`);
+        continue;
+      } catch (err) {
+        // Gracefully handle unique or race conditions
+        console.log(`[InviteMembers] Error adding friend ${uid} to group:`, {
+          name: err.name,
+          message: err.message,
+          errors: err.errors?.map(e => ({ field: e.path, message: e.message, type: e.type })),
+          sql: err.sql
+        });
+        if (err && (err.name === 'SequelizeUniqueConstraintError' || err.name === 'SequelizeForeignKeyConstraintError' || err.name === 'SequelizeValidationError')) {
+          // Clean up pending invite if any
+          await GroupInvite.destroy({ where: { groupId, inviteeId: uid, status: 'pending' } });
+          continue;
+        }
+        continue;
+      }
     }
 
-    // Create or update pending invite
+    // Not friends - create or update pending invite
+    console.log(`[InviteMembers] User ${uid} not friends, creating invite`);
     let invite = await GroupInvite.findOne({ where: { groupId, inviteeId: uid } });
     
-    if (!invite) {
-      // Create new invite
-      invite = await GroupInvite.create({ 
-        groupId, 
-        inviteeId: uid, 
-        inviterId: userId, 
-        status: 'pending' 
-      });
-    } else if (invite.status !== 'pending') {
-      // Reset existing invite to pending if it was declined/accepted before
-      invite.status = 'pending';
-      invite.inviterId = userId; // Update inviter in case different
-      await invite.save();
+    try {
+      if (!invite) {
+        // Create new invite
+        invite = await GroupInvite.create({ 
+          groupId, 
+          inviteeId: uid, 
+          inviterId: userId, 
+          status: 'pending' 
+        });
+        console.log(`[InviteMembers] Created new invite for user ${uid}`);
+      } else if (invite.status !== 'pending') {
+        // Reset existing invite to pending if it was declined/accepted before
+        invite.status = 'pending';
+        invite.inviterId = userId; // Update inviter in case different
+        await invite.save();
+        console.log(`[InviteMembers] Reset existing invite for user ${uid}`);
+      } else {
+        console.log(`[InviteMembers] Using existing pending invite for user ${uid}`);
+      }
+    } catch (err) {
+      // Skip invalid user IDs or constraint issues without failing the whole request
+      console.log(`[InviteMembers] Error creating invite for user ${uid}:`, err.name);
+      if (err && (err.name === 'SequelizeUniqueConstraintError' || err.name === 'SequelizeForeignKeyConstraintError' || err.name === 'SequelizeValidationError')) {
+        continue;
+      }
+      continue;
     }
     
     // Always add to pending list if status is now pending
-    if (invite.status === 'pending') {
+    if (invite && invite.status === 'pending') {
       pending.push(uid);
       pendingInvites.push({ inviteId: invite.id, inviteeId: uid });
     }
   }
+
+  console.log(`[InviteMembers] Final results:`, { added, pending, pendingInvites });
 
   const io = req.app.get('io');
   if (io) {
@@ -258,7 +390,7 @@ const removeMembers = asyncHandler(async (req, res) => {
   if (!owner || owner.role !== 'owner') {
     return res.status(403).json({ success: false, message: 'Only group owner can remove members' });
   }
-
+ 
   const currentIds = await getGroupMemberIds(groupId);
   const toRemove = Array.from(new Set(memberIds.filter(id => id && currentIds.includes(id) && id !== userId)));
 
@@ -422,6 +554,101 @@ const updateGroup = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
+const markGroupMessagesRead = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const userId = req.user.id;
+
+  // Verify user is group member
+  const membership = await GroupMember.findOne({ where: { groupId, userId } });
+  if (!membership) {
+    return res.status(403).json({ success: false, message: 'Not a group member' });
+  }
+
+  // Get all unread messages in this group (sent by others)
+  const unreadMessages = await GroupMessage.findAll({
+    where: { 
+      groupId,
+      senderId: { [Op.ne]: userId },
+      isRead: false
+    }
+  });
+
+  const toMarkRead = [];
+  const readReceiptsToCreate = [];
+
+  for (const message of unreadMessages) {
+    // Always mark as read for unread count purposes
+    await GroupMessage.update(
+      { isRead: true },
+      { where: { id: message.id } }
+    );
+    toMarkRead.push(message);
+
+    // Only create read receipts if BOTH users have read status enabled
+    const currentUser = await User.findByPk(userId);
+    const senderUser = await User.findByPk(message.senderId);
+    
+    if (currentUser && senderUser && currentUser.readStatusEnabled && senderUser.readStatusEnabled) {
+      // Create GroupMessageRead record for read receipts with retry for database lock
+      let readRecord;
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          [readRecord] = await GroupMessageRead.findOrCreate({
+            where: { messageId: message.id, userId },
+            defaults: { messageId: message.id, userId, readAt: new Date() }
+          });
+          break; // Success, exit retry loop
+        } catch (error) {
+          retries--;
+          if (error.name === 'SequelizeTimeoutError' && error.original?.code === 'SQLITE_BUSY' && retries > 0) {
+            console.log(`Database busy in markGroupMessagesRead, retrying... (${3 - retries}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 100 * (3 - retries))); // Exponential backoff
+          } else {
+            console.error('Error creating GroupMessageRead:', error);
+            break; // Exit on non-retryable error
+          }
+        }
+      }
+      if (readRecord) {
+        readReceiptsToCreate.push({ message, readRecord });
+      }
+    }
+  }
+
+  // Send read receipts via socket
+  if (readReceiptsToCreate.length > 0) {
+    const io = req.app.get('io');
+    if (io) {
+      const members = await getGroupMemberIds(groupId);
+      const userInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+      
+      for (const { message, readRecord } of readReceiptsToCreate) {
+        for (const memberId of members) {
+          if (memberId !== userId) {
+            io.to(`user_${memberId}`).emit('group_message_read', {
+              messageId: message.id,
+              groupId: Number(groupId),
+              userId,
+              readAt: readRecord.readAt,
+              user: userInfo
+            });
+          }
+        }
+      }
+    }
+  }
+
+  res.json({ 
+    success: true, 
+    data: { 
+      groupId: Number(groupId), 
+      markedCount: toMarkRead.length,
+      readReceiptsCount: readReceiptsToCreate.length
+    } 
+  });
+});
+
 module.exports = {
   createGroup,
   listMyGroups,
@@ -435,4 +662,5 @@ module.exports = {
   acceptGroupInvite,
   declineGroupInvite,
   listMyInvites,
+  markGroupMessagesRead,
 };

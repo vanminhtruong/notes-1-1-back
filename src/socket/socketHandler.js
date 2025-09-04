@@ -354,7 +354,7 @@ const handleConnection = async (socket) => {
       const { messageId, groupId } = data;
       
       // Check if BOTH current user and message sender have read status enabled
-      const message = await Message.findByPk(messageId);
+      const message = await GroupMessage.findByPk(messageId);
       if (!message) return;
       
       const currentUser = await User.findByPk(userId);
@@ -370,15 +370,30 @@ const handleConnection = async (socket) => {
       });
       if (!membership) return;
 
-      // Record read receipt
-      const [readRecord, created] = await GroupMessageRead.findOrCreate({
-        where: { messageId, userId },
-        defaults: { 
-          messageId, 
-          userId, 
-          readAt: new Date() 
+      // Record read receipt with retry for database lock
+      let readRecord, created;
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          [readRecord, created] = await GroupMessageRead.findOrCreate({
+            where: { messageId, userId },
+            defaults: { 
+              messageId, 
+              userId, 
+              readAt: new Date() 
+            }
+          });
+          break; // Success, exit retry loop
+        } catch (error) {
+          retries--;
+          if (error.name === 'SequelizeTimeoutError' && error.original?.code === 'SQLITE_BUSY' && retries > 0) {
+            console.log(`Database busy, retrying... (${3 - retries}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 100 * (3 - retries))); // Exponential backoff
+          } else {
+            throw error; // Re-throw if not a retry-able error or out of retries
+          }
         }
-      });
+      }
 
       if (created || readRecord) {
         // Update message status

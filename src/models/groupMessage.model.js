@@ -38,6 +38,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('sent', 'delivered', 'read'),
       defaultValue: 'sent'
     },
+    isRead: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     // Optional deletion flags similar to 1:1 messages
     isDeletedForAll: {
       type: DataTypes.BOOLEAN,

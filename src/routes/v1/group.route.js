@@ -14,6 +14,7 @@ const {
   acceptGroupInvite,
   declineGroupInvite,
   listMyInvites,
+  markGroupMessagesRead,
 } = require('../../controllers/group.controller');
 const {
   createGroupSchema,
@@ -36,6 +37,7 @@ router.post('/', validate(createGroupSchema), createGroup);
 
 router.get('/:groupId/messages', validate(getGroupMessagesSchema), getGroupMessages);
 router.post('/:groupId/message', validate(sendGroupMessageSchema), sendGroupMessage);
+router.put('/:groupId/read', validate(groupIdParamSchema), markGroupMessagesRead);
 
 router.post('/:groupId/invite', validate(inviteMembersSchema), inviteMembers);
 router.post('/:groupId/remove', validate(removeMembersSchema), removeMembers);
