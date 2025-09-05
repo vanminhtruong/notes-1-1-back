@@ -2,6 +2,7 @@ const { User, Friendship } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op, fn, col, where } = require('sequelize');
 const { isUserOnline } = require('../socket/socketHandler');
+const { isBlockedBetween, getBlockedUserIdSetFor } = require('../utils/block');
 
 // Get all users (for searching)
 const getAllUsers = asyncHandler(async (req, res) => {
@@ -54,7 +55,14 @@ const sendFriendRequest = asyncHandler(async (req, res) => {
       message: 'User not found'
     });
   }
-
+  // Prevent sending request if either user has blocked the other
+  if (await isBlockedBetween(requesterId, userId)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Cannot send friend request due to block'
+    });
+  }
+  
   // Check if friendship already exists
   const existingFriendship = await Friendship.findOne({
     where: {
@@ -133,9 +141,13 @@ const getFriendRequests = asyncHandler(async (req, res) => {
     order: [['createdAt', 'DESC']]
   });
 
+  // Filter out requests from users blocked-with current user
+  const blockedSet = await getBlockedUserIdSetFor(userId);
+  const filtered = friendRequests.filter(fr => !blockedSet.has(fr.requesterId));
+
   res.json({
     success: true,
-    data: friendRequests
+    data: filtered
   });
 });
 
@@ -154,9 +166,13 @@ const getSentRequests = asyncHandler(async (req, res) => {
     order: [['createdAt', 'DESC']]
   });
 
+  // Filter out requests sent to users blocked-with current user
+  const blockedSet = await getBlockedUserIdSetFor(userId);
+  const filtered = sentRequests.filter(fr => !blockedSet.has(fr.addresseeId));
+
   res.json({
     success: true,
-    data: sentRequests
+    data: filtered
   });
 });
 
@@ -180,6 +196,13 @@ const acceptFriendRequest = asyncHandler(async (req, res) => {
     return res.status(404).json({
       success: false,
       message: 'Friend request not found'
+    });
+  }
+  // Disallow accepting if there's a block between users
+  if (await isBlockedBetween(userId, friendship.requesterId)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Cannot accept friend request due to block'
     });
   }
 
@@ -270,8 +293,15 @@ const getFriends = asyncHandler(async (req, res) => {
     ]
   });
 
+  // Filter out blocked users
+  const blockedSet = await getBlockedUserIdSetFor(userId);
+  const visibleFriendships = friendships.filter(friendship => {
+    const friendId = friendship.requesterId === userId ? friendship.addresseeId : friendship.requesterId;
+    return !blockedSet.has(friendId);
+  });
+
   // Extract friend user data
-  const friends = friendships.map(friendship => {
+  const friends = visibleFriendships.map(friendship => {
     const friend = friendship.requesterId === userId 
       ? friendship.addressee 
       : friendship.requester;

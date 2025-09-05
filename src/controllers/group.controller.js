@@ -1,6 +1,7 @@
 const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
+const { isBlockedBetween, getBlockedUserIdSetFor } = require('../utils/block');
 
 const getGroupMemberIds = async (groupId) => {
   console.log(`[getGroupMemberIds] Querying for groupId: ${groupId} (type: ${typeof groupId})`);
@@ -264,9 +265,16 @@ const inviteMembers = asyncHandler(async (req, res) => {
   const added = [];
   const pending = [];
   const pendingInvites = [];
+  const blocked = [];
 
   for (const uid of uniqueTargets) {
     console.log(`[InviteMembers] Processing user ${uid}`);
+    // Skip if blocked between inviter and invitee
+    if (await isBlockedBetween(userId, uid)) {
+      console.log(`[InviteMembers] Skipping user ${uid} due to block`);
+      blocked.push(uid);
+      continue;
+    }
     // Skip if somehow already a member (double-check to avoid race)
     const exists = await GroupMember.findOne({ where: { groupId: Number(groupId), userId: Number(uid) } });
     console.log(`[InviteMembers] Double-check membership for user ${uid}:`, exists ? 'EXISTS' : 'NOT_EXISTS');
@@ -378,7 +386,7 @@ const inviteMembers = asyncHandler(async (req, res) => {
     }
   }
 
-  res.json({ success: true, data: { groupId: Number(groupId), added, pending, pendingInvites } });
+  res.json({ success: true, data: { groupId: Number(groupId), added, pending, pendingInvites, blocked } });
 });
 
 const removeMembers = asyncHandler(async (req, res) => {
@@ -471,7 +479,10 @@ const listMyInvites = asyncHandler(async (req, res) => {
     ],
     order: [['createdAt', 'DESC']],
   });
-  res.json({ success: true, data: invites });
+  // Filter out invites where inviter is blocked-with current user
+  const blockedSet = await getBlockedUserIdSetFor(userId);
+  const filtered = invites.filter(inv => inv.inviter && !blockedSet.has(inv.inviter.id));
+  res.json({ success: true, data: filtered });
 });
 
 // Accept a pending group invite
@@ -483,6 +494,11 @@ const acceptGroupInvite = asyncHandler(async (req, res) => {
   const invite = await GroupInvite.findOne({ where: { id: inviteId, groupId, inviteeId: userId, status: 'pending' } });
   if (!invite) {
     return res.status(404).json({ success: false, message: 'Invite not found or already processed' });
+  }
+
+  // Prevent accepting invite if blocked between inviter and invitee
+  if (await isBlockedBetween(userId, invite.inviterId)) {
+    return res.status(403).json({ success: false, message: 'Cannot accept group invite due to block' });
   }
 
   // Add member if not already a member
