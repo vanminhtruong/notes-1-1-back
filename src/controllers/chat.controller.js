@@ -1,4 +1,4 @@
-const { User, Message, Friendship, MessageRead, ChatPreference } = require('../models');
+const { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { isUserOnline } = require('../socket/socketHandler');
@@ -147,6 +147,22 @@ const sendMessage = asyncHandler(async (req, res) => {
     return res.status(404).json({
       success: false,
       message: 'Receiver not found'
+    });
+  }
+
+  // Enforce blocking: if either user has blocked the other, disallow sending
+  const blocked = await BlockedUser.findOne({
+    where: {
+      [Op.or]: [
+        { userId: senderId, blockedUserId: receiverId },
+        { userId: receiverId, blockedUserId: senderId },
+      ],
+    },
+  });
+  if (blocked) {
+    return res.status(403).json({
+      success: false,
+      message: 'Messaging is blocked between you and this user',
     });
   }
 

@@ -13,6 +13,7 @@ const defineGroupInvite = require('./groupInvite.model');
 const defineMessageRead = require('./messageRead.model');
 const defineGroupMessageRead = require('./groupMessageRead.model');
 const defineChatPreference = require('./chatPreference.model');
+const defineBlockedUser = require('./blockedUser.model');
 
 const Sample = defineSample(sequelize, DataTypes);
 const User = defineUser(sequelize, DataTypes);
@@ -27,6 +28,7 @@ const GroupInvite = defineGroupInvite(sequelize, DataTypes);
 const MessageRead = defineMessageRead(sequelize, DataTypes);
 const GroupMessageRead = defineGroupMessageRead(sequelize, DataTypes);
 const ChatPreference = defineChatPreference(sequelize, DataTypes);
+const BlockedUser = defineBlockedUser(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
@@ -78,6 +80,12 @@ User.hasMany(GroupMessageRead, { foreignKey: 'userId', as: 'groupMessageReads' }
 ChatPreference.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 ChatPreference.belongsTo(User, { foreignKey: 'otherUserId', as: 'otherUser' });
 
+// BlockedUser associations (1-1 blocking)
+BlockedUser.belongsTo(User, { foreignKey: 'userId', as: 'blocker' });
+BlockedUser.belongsTo(User, { foreignKey: 'blockedUserId', as: 'blocked' });
+User.hasMany(BlockedUser, { foreignKey: 'userId', as: 'blocks' });
+User.hasMany(BlockedUser, { foreignKey: 'blockedUserId', as: 'blockedBy' });
+
 // GroupInvite associations
 GroupInvite.belongsTo(Group, { foreignKey: 'groupId', as: 'group' });
 GroupInvite.belongsTo(User, { foreignKey: 'inviterId', as: 'inviter' });
@@ -101,4 +109,6 @@ module.exports = {
   MessageRead,
   GroupMessageRead,
   ChatPreference,
+  BlockedUser,
 };
+

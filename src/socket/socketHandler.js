@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User, Friendship, GroupMember, MessageRead, GroupMessageRead, Message, GroupMessage } = require('../models');
+const { User, Friendship, GroupMember, MessageRead, GroupMessageRead, Message, GroupMessage, BlockedUser } = require('../models');
 
 const connectedUsers = new Map(); // Store connected users
 
@@ -189,26 +189,37 @@ const handleConnection = async (socket) => {
         const me = await User.findByPk(userId);
         const other = await User.findByPk(receiverId);
         if (me && other && me.readStatusEnabled && other.readStatusEnabled) {
-          for (const m of toMarkRead) {
-            // Create read record idempotently
-            const [rec] = await MessageRead.findOrCreate({
-              where: { messageId: m.id, userId },
-              defaults: { messageId: m.id, userId, readAt: new Date() }
-            });
+          // Suppress read receipt emissions if either party has blocked the other
+          const blocked = await BlockedUser.findOne({
+            where: {
+              [require('sequelize').Op.or]: [
+                { userId: userId, blockedUserId: receiverId },
+                { userId: receiverId, blockedUserId: userId },
+              ],
+            },
+          });
+          if (!blocked) {
+            for (const m of toMarkRead) {
+              // Create read record idempotently
+              const [rec] = await MessageRead.findOrCreate({
+                where: { messageId: m.id, userId },
+                defaults: { messageId: m.id, userId, readAt: new Date() }
+              });
 
-            // Update message status to 'read'
-            if (m.status !== 'read') {
-              await m.update({ status: 'read' });
+              // Update message status to 'read'
+              if (m.status !== 'read') {
+                await m.update({ status: 'read' });
+              }
+
+              // Notify the sender with avatar info
+              const userPayload = { id: me.id, name: me.name, avatar: me.avatar };
+              global.io && global.io.to(`user_${receiverId}`).emit('message_read', {
+                messageId: m.id,
+                userId,
+                readAt: rec.readAt,
+                user: userPayload,
+              });
             }
-
-            // Notify the sender with avatar info
-            const userPayload = { id: me.id, name: me.name, avatar: me.avatar };
-            global.io && global.io.to(`user_${receiverId}`).emit('message_read', {
-              messageId: m.id,
-              userId,
-              readAt: rec.readAt,
-              user: userPayload,
-            });
           }
         }
       }
@@ -223,32 +234,78 @@ const handleConnection = async (socket) => {
     socket.leave(chatRoom);
   });
 
-  socket.on('message_sent', (data) => {
-    const { receiverId, message } = data;
-    // Emit to receiver's personal room
-    socket.to(`user_${receiverId}`).emit('new_message', {
-      ...message,
-      senderId: userId,
-      senderName: socket.user.name
-    });
+  socket.on('message_sent', async (data) => {
+    try {
+      const { receiverId, message } = data || {};
+      if (!receiverId) return;
+      // Block guard: if either user has blocked the other, do not forward
+      const blocked = await BlockedUser.findOne({
+        where: {
+          [require('sequelize').Op.or]: [
+            { userId: userId, blockedUserId: receiverId },
+            { userId: receiverId, blockedUserId: userId },
+          ],
+        },
+      });
+      if (blocked) {
+        socket.emit('message_blocked', { receiverId });
+        return;
+      }
+      // Emit to receiver's personal room
+      socket.to(`user_${receiverId}`).emit('new_message', {
+        ...message,
+        senderId: userId,
+        senderName: socket.user.name
+      });
+    } catch (e) {
+      console.error('Error handling message_sent with block guard:', e);
+    }
   });
 
-  socket.on('typing_start', (data) => {
-    const { receiverId } = data;
-    socket.to(`user_${receiverId}`).emit('user_typing', {
-      userId: userId,
-      userName: socket.user.name,
-      isTyping: true
-    });
+  socket.on('typing_start', async (data) => {
+    try {
+      const { receiverId } = data || {};
+      if (!receiverId) return;
+      const blocked = await BlockedUser.findOne({
+        where: {
+          [require('sequelize').Op.or]: [
+            { userId: userId, blockedUserId: receiverId },
+            { userId: receiverId, blockedUserId: userId },
+          ],
+        },
+      });
+      if (blocked) return;
+      socket.to(`user_${receiverId}`).emit('user_typing', {
+        userId: userId,
+        userName: socket.user.name,
+        isTyping: true
+      });
+    } catch (e) {
+      console.error('Error handling typing_start with block guard:', e);
+    }
   });
 
-  socket.on('typing_stop', (data) => {
-    const { receiverId } = data;
-    socket.to(`user_${receiverId}`).emit('user_typing', {
-      userId: userId,
-      userName: socket.user.name,
-      isTyping: false
-    });
+  socket.on('typing_stop', async (data) => {
+    try {
+      const { receiverId } = data || {};
+      if (!receiverId) return;
+      const blocked = await BlockedUser.findOne({
+        where: {
+          [require('sequelize').Op.or]: [
+            { userId: userId, blockedUserId: receiverId },
+            { userId: receiverId, blockedUserId: userId },
+          ],
+        },
+      });
+      if (blocked) return;
+      socket.to(`user_${receiverId}`).emit('user_typing', {
+        userId: userId,
+        userName: socket.user.name,
+        isTyping: false
+      });
+    } catch (e) {
+      console.error('Error handling typing_stop with block guard:', e);
+    }
   });
 
   // Group typing indicator: broadcast to all group members except the sender
@@ -334,6 +391,17 @@ const handleConnection = async (socket) => {
         const user = await User.findByPk(userId, {
           attributes: ['id', 'name', 'avatar']
         });
+
+        // Before notifying sender, suppress if a block exists between users
+        const blocked = await BlockedUser.findOne({
+          where: {
+            [require('sequelize').Op.or]: [
+              { userId: userId, blockedUserId: message.senderId },
+              { userId: message.senderId, blockedUserId: userId },
+            ],
+          },
+        });
+        if (blocked) return;
 
         // Notify sender about read receipt
         socket.to(`user_${message.senderId}`).emit('message_read', {
