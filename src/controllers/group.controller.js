@@ -737,6 +737,12 @@ const recallGroupMessages = asyncHandler(async (req, res) => {
         await m.save();
       }
     }
+    // Remove current user's pins for these group messages to prevent stale pinned entries in UI
+    try {
+      await PinnedMessage.destroy({ where: { userId, groupMessageId: { [Op.in]: messageIds } } });
+    } catch (e) {
+      console.log('Failed to cleanup user pins on recallGroupMessages(self):', e?.name || e);
+    }
   } else {
     await GroupMessage.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds }, groupId } });
     // Remove pins associated with these group messages
@@ -744,7 +750,7 @@ const recallGroupMessages = asyncHandler(async (req, res) => {
   }
 
   // Emit socket update
-  const io = req.app.get('io');
+  const io = req.app.get('io') || global.io;
   if (io) {
     const payload = { groupId: Number(groupId), scope, messageIds };
     if (scope === 'self') {

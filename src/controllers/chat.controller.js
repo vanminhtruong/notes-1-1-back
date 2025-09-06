@@ -472,8 +472,19 @@ const deleteAllMessages = asyncHandler(async (req, res) => {
     }
   }
 
+  // Also remove any pins for these messages for the current user (so pinned banner won't persist)
+  try {
+    const messageIds = messages.map(m => m.id);
+    if (messageIds.length > 0) {
+      await PinnedMessage.destroy({ where: { userId: currentUserId, messageId: { [Op.in]: messageIds } } });
+    }
+  } catch (e) {
+    // Non-fatal cleanup; log and continue
+    console.log('Failed to cleanup user pins on deleteAllMessages:', e?.name || e);
+  }
+
   // Only emit socket event to current user (delete for me only)
-  const io = req.app.get('io');
+  const io = req.app.get('io') || global.io;
   if (io) {
     const payload = { 
       deletedWith: userId,
@@ -563,6 +574,12 @@ module.exports = {
           await m.save();
         }
       }
+      // Remove current user's pins for these messages to avoid stale pinned entries
+      try {
+        await PinnedMessage.destroy({ where: { userId, messageId: { [Op.in]: messageIds } } });
+      } catch (e) {
+        console.log('Failed to cleanup user pins on recallMessages(self):', e?.name || e);
+      }
     } else {
       await Message.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds } } });
       // Remove any pins associated with these messages
@@ -570,7 +587,7 @@ module.exports = {
     }
 
     // Prepare socket emission
-    const io = req.app.get('io');
+    const io = req.app.get('io') || global.io;
     if (io) {
       const participants = new Set();
       for (const m of msgs) {
