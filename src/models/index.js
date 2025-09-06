@@ -14,6 +14,8 @@ const defineMessageRead = require('./messageRead.model');
 const defineGroupMessageRead = require('./groupMessageRead.model');
 const defineChatPreference = require('./chatPreference.model');
 const defineBlockedUser = require('./blockedUser.model');
+const definePinnedChat = require('./pinnedChat.model');
+const definePinnedMessage = require('./pinnedMessage.model');
 
 const Sample = defineSample(sequelize, DataTypes);
 const User = defineUser(sequelize, DataTypes);
@@ -29,6 +31,8 @@ const MessageRead = defineMessageRead(sequelize, DataTypes);
 const GroupMessageRead = defineGroupMessageRead(sequelize, DataTypes);
 const ChatPreference = defineChatPreference(sequelize, DataTypes);
 const BlockedUser = defineBlockedUser(sequelize, DataTypes);
+const PinnedChat = definePinnedChat(sequelize, DataTypes);
+const PinnedMessage = definePinnedMessage(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
@@ -94,6 +98,18 @@ Group.hasMany(GroupInvite, { foreignKey: 'groupId', as: 'invites' });
 User.hasMany(GroupInvite, { foreignKey: 'inviterId', as: 'sentGroupInvites' });
 User.hasMany(GroupInvite, { foreignKey: 'inviteeId', as: 'receivedGroupInvites' });
 
+// PinnedChat associations
+PinnedChat.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+PinnedChat.belongsTo(User, { foreignKey: 'pinnedUserId', as: 'pinnedUser' });
+PinnedChat.belongsTo(Group, { foreignKey: 'pinnedGroupId', as: 'pinnedGroup' });
+User.hasMany(PinnedChat, { foreignKey: 'userId', as: 'pinnedChats' });
+
+// PinnedMessage associations
+PinnedMessage.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+PinnedMessage.belongsTo(Message, { foreignKey: 'messageId', as: 'message' });
+PinnedMessage.belongsTo(GroupMessage, { foreignKey: 'groupMessageId', as: 'groupMessage' });
+User.hasMany(PinnedMessage, { foreignKey: 'userId', as: 'pinnedMessages' });
+
 module.exports = {
   sequelize,
   Sample,
@@ -110,5 +126,7 @@ module.exports = {
   GroupMessageRead,
   ChatPreference,
   BlockedUser,
+  PinnedChat,
+  PinnedMessage,
 };
 

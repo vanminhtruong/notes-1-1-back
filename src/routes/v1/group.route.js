@@ -7,6 +7,7 @@ const {
   getGroupMessages,
   sendGroupMessage,
   recallGroupMessages,
+  editGroupMessage,
   inviteMembers,
   removeMembers,
   leaveGroup,
@@ -16,6 +17,10 @@ const {
   declineGroupInvite,
   listMyInvites,
   markGroupMessagesRead,
+  togglePinGroup,
+  getGroupPinStatus,
+  togglePinGroupMessage,
+  listGroupPinnedMessages,
 } = require('../../controllers/group.controller');
 const {
   createGroupSchema,
@@ -25,8 +30,10 @@ const {
   getGroupMessagesSchema,
   sendGroupMessageSchema,
   recallGroupMessagesSchema,
+  editGroupMessageSchema,
   updateGroupSchema,
   inviteActionSchema,
+  togglePinGroupMessageSchema,
 } = require('../../validators/group.validator');
 
 const router = express.Router();
@@ -39,6 +46,7 @@ router.post('/', validate(createGroupSchema), createGroup);
 
 router.get('/:groupId/messages', validate(getGroupMessagesSchema), getGroupMessages);
 router.post('/:groupId/message', validate(sendGroupMessageSchema), sendGroupMessage);
+router.put('/:groupId/message/:messageId', validate(editGroupMessageSchema), editGroupMessage);
 router.put('/:groupId/read', validate(groupIdParamSchema), markGroupMessagesRead);
 router.post('/:groupId/message/recall', validate(recallGroupMessagesSchema), recallGroupMessages);
 
@@ -55,5 +63,13 @@ router.patch('/:groupId', validate(updateGroupSchema), updateGroup);
 
 // Delete group (owner only)
 router.delete('/:groupId', validate(groupIdParamSchema), deleteGroup);
+
+// Pin/Unpin group
+router.put('/:groupId/pin', validate(groupIdParamSchema), togglePinGroup);
+router.get('/:groupId/pin', validate(groupIdParamSchema), getGroupPinStatus);
+
+// Pin/Unpin a specific group message and list pinned messages
+router.put('/:groupId/message/:messageId/pin', validate(togglePinGroupMessageSchema), togglePinGroupMessage);
+router.get('/:groupId/pins', validate(groupIdParamSchema), listGroupPinnedMessages);
 
 module.exports = router;

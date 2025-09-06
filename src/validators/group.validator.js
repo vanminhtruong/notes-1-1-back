@@ -63,6 +63,26 @@ const recallGroupMessagesSchema = {
   })
 };
 
+const editGroupMessageSchema = {
+  params: Joi.object({
+    groupId: Joi.number().integer().positive().required(),
+    messageId: Joi.number().integer().positive().required(),
+  }),
+  body: Joi.object({
+    content: Joi.string().min(1).max(2000).required(),
+  })
+};
+
+const togglePinGroupMessageSchema = {
+  params: Joi.object({
+    groupId: Joi.number().integer().positive().required(),
+    messageId: Joi.number().integer().positive().required(),
+  }),
+  body: Joi.object({
+    pinned: Joi.boolean().required(),
+  })
+};
+
 const inviteActionSchema = {
   params: Joi.object({
     groupId: Joi.number().integer().positive().required(),
@@ -91,4 +111,6 @@ module.exports = {
   updateGroupSchema,
   inviteActionSchema,
   recallGroupMessagesSchema,
+  editGroupMessageSchema,
+  togglePinGroupMessageSchema,
 };

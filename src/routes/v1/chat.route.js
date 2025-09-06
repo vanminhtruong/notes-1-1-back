@@ -9,6 +9,10 @@ const {
   deleteAllMessages,
   getChatBackground,
   setChatBackground,
+  togglePinChat,
+  getPinStatus,
+  togglePinMessage,
+  listPinnedMessages,
 } = require('../../controllers/chat.controller');
 const authenticate = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
@@ -16,7 +20,8 @@ const {
   sendMessageSchema,
   getChatMessagesSchema,
   markAsReadSchema,
-  recallMessagesSchema
+  recallMessagesSchema,
+  editMessageSchema
 } = require('../../validators/chat.validator');
 
 const router = express.Router();
@@ -39,6 +44,9 @@ router.post('/message', validate(sendMessageSchema), sendMessage);
 // Recall messages (self or all)
 router.post('/message/recall', validate(recallMessagesSchema), recallMessages);
 
+// Edit a message
+router.put('/message/:messageId', validate(editMessageSchema), require('../../controllers/chat.controller').editMessage);
+
 // Mark messages as read
 router.put('/:senderId/read', validate(markAsReadSchema), markMessagesAsRead);
 
@@ -48,5 +56,13 @@ router.delete('/:userId/messages', deleteAllMessages);
 // Per-chat background (1-1 only)
 router.get('/:userId/background', getChatBackground);
 router.put('/:userId/background', setChatBackground);
+
+// Pin/Unpin chat
+router.put('/:userId/pin', togglePinChat);
+router.get('/:userId/pin', getPinStatus);
+
+// Pin/Unpin a specific message (1-1) and list pinned messages for a chat
+router.put('/message/:messageId/pin', togglePinMessage);
+router.get('/:userId/pins', listPinnedMessages);
 
 module.exports = router;

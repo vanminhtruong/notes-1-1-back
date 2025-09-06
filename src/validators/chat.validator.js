@@ -31,9 +31,19 @@ const recallMessagesSchema = {
   })
 };
 
+const editMessageSchema = {
+  params: Joi.object({
+    messageId: Joi.number().integer().positive().required(),
+  }),
+  body: Joi.object({
+    content: Joi.string().min(1).max(1000).required(),
+  })
+};
+
 module.exports = {
   sendMessageSchema,
   getChatMessagesSchema,
   markAsReadSchema,
-  recallMessagesSchema
+  recallMessagesSchema,
+  editMessageSchema
 };

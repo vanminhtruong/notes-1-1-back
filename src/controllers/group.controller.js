@@ -1,4 +1,4 @@
-const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead } = require('../models');
+const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { isBlockedBetween, getBlockedUserIdSetFor } = require('../utils/block');
@@ -43,11 +43,38 @@ const listMyGroups = asyncHandler(async (req, res) => {
   const groupIds = memberships.map(m => m.groupId);
   const groups = await Group.findAll({ where: { id: { [Op.in]: groupIds } }, order: [['updatedAt', 'DESC']] });
 
+  // Get pinned groups for current user
+  const pinnedGroups = await PinnedChat.findAll({
+    where: { userId, pinnedGroupId: { [Op.not]: null } }
+  });
+  const pinnedGroupIds = new Set(pinnedGroups.map(p => p.pinnedGroupId));
+
   const data = [];
   for (const g of groups) {
     const memberIds = await getGroupMemberIds(g.id);
-    data.push({ id: g.id, name: g.name, ownerId: g.ownerId, avatar: g.avatar, background: g.background, members: memberIds });
+    data.push({ 
+      id: g.id, 
+      name: g.name, 
+      ownerId: g.ownerId, 
+      avatar: g.avatar, 
+      background: g.background, 
+      members: memberIds,
+      isPinned: pinnedGroupIds.has(g.id)
+    });
   }
+
+  // Sort by pin status first, then by updatedAt
+  data.sort((a, b) => {
+    // Pinned groups always come first
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    
+    // Within same pin status, sort by updatedAt (most recent first)
+    const aGroup = groups.find(g => g.id === a.id);
+    const bGroup = groups.find(g => g.id === b.id);
+    return new Date(bGroup.updatedAt) - new Date(aGroup.updatedAt);
+  });
+
   res.json({ success: true, data });
 });
 
@@ -712,6 +739,8 @@ const recallGroupMessages = asyncHandler(async (req, res) => {
     }
   } else {
     await GroupMessage.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds }, groupId } });
+    // Remove pins associated with these group messages
+    await PinnedMessage.destroy({ where: { groupMessageId: { [Op.in]: messageIds } } });
   }
 
   // Emit socket update
@@ -733,12 +762,109 @@ const recallGroupMessages = asyncHandler(async (req, res) => {
   return res.json({ success: true, data: { groupId: Number(groupId), scope, messageIds } });
 });
 
+// Edit a single group message (only sender, only text messages)
+const editGroupMessage = asyncHandler(async (req, res) => {
+  const { groupId, messageId } = req.params;
+  const userId = req.user.id;
+  const { content } = req.body || {};
+
+  // Ensure user is a member
+  const membership = await GroupMember.findOne({ where: { groupId, userId } });
+  if (!membership) {
+    return res.status(403).json({ success: false, message: 'Not a group member' });
+  }
+
+  const msg = await GroupMessage.findOne({ where: { id: messageId, groupId } });
+  if (!msg) {
+    return res.status(404).json({ success: false, message: 'Message not found' });
+  }
+  if (msg.senderId !== userId) {
+    return res.status(403).json({ success: false, message: 'You can only edit your own messages' });
+  }
+  if (msg.messageType !== 'text') {
+    return res.status(400).json({ success: false, message: 'Only text messages can be edited' });
+  }
+
+  await msg.update({ content });
+
+  const io = req.app.get('io');
+  const payload = { id: msg.id, groupId: Number(groupId), content: msg.content, updatedAt: msg.updatedAt };
+  if (io) {
+    const members = await getGroupMemberIds(groupId);
+    for (const uid of members) {
+      io.to(`user_${uid}`).emit('group_message_edited', payload);
+    }
+  }
+
+  return res.json({ success: true, data: payload });
+});
+
+// Pin/Unpin a group
+const togglePinGroup = asyncHandler(async (req, res) => {
+  const currentUserId = req.user.id;
+  const { groupId } = req.params;
+  const { pinned } = req.body;
+
+  // Ensure user is a member of the group
+  const membership = await GroupMember.findOne({
+    where: { groupId, userId: currentUserId }
+  });
+
+  if (!membership) {
+    return res.status(403).json({
+      success: false,
+      message: 'You can only pin groups you are a member of'
+    });
+  }
+
+  if (pinned) {
+    // Pin the group
+    const [pinnedGroup, created] = await PinnedChat.findOrCreate({
+      where: { userId: currentUserId, pinnedGroupId: groupId },
+      defaults: { userId: currentUserId, pinnedGroupId: groupId }
+    });
+    
+    return res.json({
+      success: true,
+      message: created ? 'Group pinned' : 'Group already pinned',
+      data: { pinned: true }
+    });
+  } else {
+    // Unpin the group
+    const deleted = await PinnedChat.destroy({
+      where: { userId: currentUserId, pinnedGroupId: groupId }
+    });
+    
+    return res.json({
+      success: true,
+      message: deleted > 0 ? 'Group unpinned' : 'Group was not pinned',
+      data: { pinned: false }
+    });
+  }
+});
+
+// Get pin status for a group
+const getGroupPinStatus = asyncHandler(async (req, res) => {
+  const currentUserId = req.user.id;
+  const { groupId } = req.params;
+
+  const pinnedGroup = await PinnedChat.findOne({
+    where: { userId: currentUserId, pinnedGroupId: groupId }
+  });
+
+  return res.json({
+    success: true,
+    data: { pinned: !!pinnedGroup }
+  });
+});
+
 module.exports = {
   createGroup,
   listMyGroups,
   getGroupMessages,
   sendGroupMessage,
   recallGroupMessages,
+  editGroupMessage,
   inviteMembers,
   removeMembers,
   leaveGroup,
@@ -748,4 +874,80 @@ module.exports = {
   declineGroupInvite,
   listMyInvites,
   markGroupMessagesRead,
+  togglePinGroup,
+  getGroupPinStatus,
+  // Pin/Unpin a specific group message (per-user)
+  togglePinGroupMessage: asyncHandler(async (req, res) => {
+    const currentUserId = req.user.id;
+    const { groupId, messageId } = req.params;
+    const { pinned } = req.body;
+
+    // Verify membership
+    const membership = await GroupMember.findOne({ where: { groupId, userId: currentUserId } });
+    if (!membership) return res.status(403).json({ success: false, message: 'Not a group member' });
+
+    const msg = await GroupMessage.findOne({ where: { id: messageId, groupId } });
+    if (!msg) return res.status(404).json({ success: false, message: 'Message not found' });
+
+    if (pinned) {
+      // Create a record for current user; shared semantics derived from any record existence
+      await PinnedMessage.findOrCreate({
+        where: { userId: currentUserId, groupMessageId: messageId },
+        defaults: { userId: currentUserId, groupMessageId: messageId },
+      });
+    } else {
+      // Unpin globally for the group message
+      await PinnedMessage.destroy({ where: { groupMessageId: messageId } });
+    }
+
+    // Realtime notify all group members
+    try {
+      const members = await GroupMember.findAll({ where: { groupId } });
+      const payload = { messageId: Number(messageId), groupId: Number(groupId), pinned: !!pinned };
+      for (const m of members) {
+        global.io && global.io.to(`user_${m.userId}`).emit('group_message_pinned', payload);
+      }
+    } catch (e) {
+      // ignore socket errors
+    }
+
+    return res.json({ success: true, data: { pinned: !!pinned } });
+  }),
+  // List pinned messages in a group (current user scope)
+  listGroupPinnedMessages: asyncHandler(async (req, res) => {
+    const currentUserId = req.user.id;
+    const { groupId } = req.params;
+
+    // Verify membership
+    const membership = await GroupMember.findOne({ where: { groupId, userId: currentUserId } });
+    if (!membership) return res.status(403).json({ success: false, message: 'Not a group member' });
+
+    const msgs = await GroupMessage.findAll({
+      where: { groupId },
+      attributes: ['id', 'groupId', 'senderId', 'content', 'messageType', 'createdAt'],
+      order: [['createdAt', 'ASC']],
+    });
+    const idSet = new Set(msgs.map(m => m.id));
+    // Shared pins: return distinct groupMessageIds regardless of who pinned
+    const pins = await PinnedMessage.findAll({ where: { groupMessageId: { [Op.in]: Array.from(idSet) } }, order: [['pinnedAt', 'DESC']] });
+    const map = new Map(msgs.map(m => [m.id, m]));
+    const seen = new Set();
+    const data = [];
+    for (const p of pins) {
+      if (seen.has(p.groupMessageId)) continue;
+      seen.add(p.groupMessageId);
+      const m = map.get(p.groupMessageId);
+      if (!m) continue;
+      const deletedFor = Array.isArray(m.get('deletedForUserIds')) ? m.get('deletedForUserIds') : [];
+      const isHiddenForMe = deletedFor.includes(currentUserId);
+      if (m.isDeletedForAll || isHiddenForMe) {
+        if (m.isDeletedForAll) {
+          await PinnedMessage.destroy({ where: { groupMessageId: p.groupMessageId } });
+        }
+        continue;
+      }
+      data.push({ id: p.groupMessageId, content: m.content, messageType: m.messageType, createdAt: m.createdAt });
+    }
+    return res.json({ success: true, data });
+  }),
 };

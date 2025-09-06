@@ -1,4 +1,4 @@
-const { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser } = require('../models');
+const { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser, PinnedChat, PinnedMessage } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { isUserOnline } = require('../socket/socketHandler');
@@ -314,8 +314,23 @@ const getChatList = asyncHandler(async (req, res) => {
     });
   }
 
-  // Sort by last message timestamp
+  // Get pinned chats for current user
+  const pinnedChats = await PinnedChat.findAll({
+    where: { userId, pinnedUserId: { [Op.not]: null } }
+  });
+  const pinnedUserIds = new Set(pinnedChats.map(p => p.pinnedUserId));
+
+  // Add isPinned flag and sort by pin status, then by last message timestamp
+  chatList.forEach(chat => {
+    chat.isPinned = pinnedUserIds.has(chat.friend.id);
+  });
+
   chatList.sort((a, b) => {
+    // Pinned chats always come first
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    
+    // Within same pin status, sort by last message timestamp
     const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt) : new Date(0);
     const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt) : new Date(0);
     return bTime - aTime;
@@ -485,6 +500,33 @@ module.exports = {
   markMessagesAsRead,
   getUnreadCount,
   deleteAllMessages,
+  editMessage: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { messageId } = req.params;
+    const { content } = req.body || {};
+
+    const msg = await Message.findByPk(messageId);
+    if (!msg) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+    if (msg.senderId !== userId) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own messages' });
+    }
+    if (msg.messageType !== 'text') {
+      return res.status(400).json({ success: false, message: 'Only text messages can be edited' });
+    }
+
+    await msg.update({ content });
+
+    const io = req.app.get('io');
+    const payload = { id: msg.id, content: msg.content, updatedAt: msg.updatedAt };
+    if (io) {
+      io.to(`user_${msg.senderId}`).emit('message_edited', payload);
+      io.to(`user_${msg.receiverId}`).emit('message_edited', payload);
+    }
+
+    return res.json({ success: true, data: payload });
+  }),
   // Added below
   recallMessages: asyncHandler(async (req, res) => {
     const userId = req.user.id;
@@ -523,6 +565,8 @@ module.exports = {
       }
     } else {
       await Message.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds } } });
+      // Remove any pins associated with these messages
+      await PinnedMessage.destroy({ where: { messageId: { [Op.in]: messageIds } } });
     }
 
     // Prepare socket emission
@@ -600,5 +644,164 @@ module.exports = {
       await pref.update({ backgroundUrl: backgroundUrl || null });
     }
     return res.json({ success: true, data: { backgroundUrl: pref.backgroundUrl || null } });
-  })
+  }),
+  // Pin/Unpin a chat
+  togglePinChat: asyncHandler(async (req, res) => {
+    const currentUserId = req.user.id;
+    const { userId } = req.params;
+    const { pinned } = req.body;
+
+    // Ensure they are friends
+    const friendship = await Friendship.findOne({
+      where: {
+        [Op.or]: [
+          { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
+          { requesterId: userId, addresseeId: currentUserId, status: 'accepted' }
+        ]
+      }
+    });
+
+    if (!friendship) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only pin chats with friends'
+      });
+    }
+
+    if (pinned) {
+      // Pin the chat
+      const [pinnedChat, created] = await PinnedChat.findOrCreate({
+        where: { userId: currentUserId, pinnedUserId: userId },
+        defaults: { userId: currentUserId, pinnedUserId: userId }
+      });
+      
+      return res.json({
+        success: true,
+        message: created ? 'Chat pinned' : 'Chat already pinned',
+        data: { pinned: true }
+      });
+    } else {
+      // Unpin the chat
+      const deleted = await PinnedChat.destroy({
+        where: { userId: currentUserId, pinnedUserId: userId }
+      });
+      
+      return res.json({
+        success: true,
+        message: deleted > 0 ? 'Chat unpinned' : 'Chat was not pinned',
+        data: { pinned: false }
+      });
+    }
+  }),
+  // Get pin status for a chat
+  getPinStatus: asyncHandler(async (req, res) => {
+  const currentUserId = req.user.id;
+  const { userId } = req.params;
+
+  const pinnedChat = await PinnedChat.findOne({
+    where: { userId: currentUserId, pinnedUserId: userId }
+  });
+
+  return res.json({
+    success: true,
+    data: { pinned: !!pinnedChat }
+  });
+}),
+// Pin/Unpin a specific message in 1-1 chat (per-user)
+togglePinMessage: asyncHandler(async (req, res) => {
+  const currentUserId = req.user.id;
+  const { messageId } = req.params;
+  const { pinned } = req.body;
+
+  const msg = await Message.findByPk(messageId);
+  if (!msg) return res.status(404).json({ success: false, message: 'Message not found' });
+
+  // Ensure the current user is participant of this message
+  if (msg.senderId !== currentUserId && msg.receiverId !== currentUserId) {
+    return res.status(403).json({ success: false, message: 'Not allowed' });
+  }
+
+  if (pinned) {
+    // Create a record for current user if not exists (shared semantics derive from existence of any record)
+    await PinnedMessage.findOrCreate({
+      where: { userId: currentUserId, messageId },
+      defaults: { userId: currentUserId, messageId },
+    });
+  } else {
+    // Unpin globally for this conversation by removing all records of this message
+    await PinnedMessage.destroy({ where: { messageId } });
+  }
+
+  // Notify both participants in real-time
+  try {
+    const a = msg.senderId;
+    const b = msg.receiverId;
+    const payload = { messageId: msg.id, participants: [a, b], pinned: !!pinned };
+    global.io && global.io.to(`user_${a}`).emit('message_pinned', payload);
+    global.io && global.io.to(`user_${b}`).emit('message_pinned', payload);
+  } catch (e) {
+    // ignore socket errors
+  }
+
+  return res.json({ success: true, data: { pinned: !!pinned } });
+}),
+// List pinned messages for a 1-1 chat with specific user (current user scope)
+listPinnedMessages: asyncHandler(async (req, res) => {
+  const currentUserId = req.user.id;
+  const { userId } = req.params;
+
+  // Ensure they are friends
+  const friendship = await Friendship.findOne({
+    where: {
+      [Op.or]: [
+        { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
+        { requesterId: userId, addresseeId: currentUserId, status: 'accepted' },
+      ],
+    },
+  });
+  if (!friendship) return res.status(403).json({ success: false, message: 'You can only view pinned with friends' });
+
+  // messages between two users
+  const msgs = await Message.findAll({
+    where: {
+      [Op.or]: [
+        { senderId: currentUserId, receiverId: userId },
+        { senderId: userId, receiverId: currentUserId },
+      ],
+    },
+    attributes: ['id', 'content', 'messageType', 'createdAt', 'senderId', 'receiverId'],
+    order: [['createdAt', 'ASC']],
+  });
+  const msgIdSet = new Set(msgs.map((m) => m.id));
+  // Shared pins: return distinct messageIds regardless of who pinned
+  const pinned = await PinnedMessage.findAll({ where: { messageId: { [Op.in]: Array.from(msgIdSet) } }, order: [['pinnedAt', 'DESC']] });
+  const pinnedMap = new Map(msgs.map((m) => [m.id, m]));
+  const seen = new Set();
+  const data = [];
+  for (const p of pinned) {
+    if (seen.has(p.messageId)) continue;
+    seen.add(p.messageId);
+    const m = pinnedMap.get(p.messageId);
+    if (!m) continue;
+    // Exclude recalled or hidden-for-current-user messages
+    const deletedFor = Array.isArray(m.get('deletedForUserIds')) ? m.get('deletedForUserIds') : [];
+    const isHiddenForMe = deletedFor.includes(currentUserId);
+    const otherId = m.senderId === currentUserId ? m.receiverId : m.senderId;
+    const isHiddenForOther = deletedFor.includes(otherId);
+    if (m.isDeletedForAll || isHiddenForMe) {
+      // If recalled for all remove; if hidden for me, just skip in my view
+      if (m.isDeletedForAll) {
+        await PinnedMessage.destroy({ where: { messageId: p.messageId } });
+      }
+      continue;
+    }
+    // If both sides hid it (delete-for-self for both), clean up pins
+    if (isHiddenForOther) {
+      await PinnedMessage.destroy({ where: { messageId: p.messageId } });
+      continue;
+    }
+    data.push({ id: p.messageId, content: m.content, messageType: m.messageType, createdAt: m.createdAt });
+  }
+  return res.json({ success: true, data });
+}),
 };
