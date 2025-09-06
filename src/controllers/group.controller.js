@@ -211,13 +211,16 @@ const sendGroupMessage = asyncHandler(async (req, res) => {
     let hasOnlineMembers = false;
     
     for (const uid of members) {
-      if (uid === senderId) continue; // exclude sender from notification
-      io.to(`user_${uid}`).emit('group_message', payload);
-      
-      if (isUserOnline(uid)) {
-        hasOnlineMembers = true;
+      if (uid !== senderId) {
+        io.to(`user_${uid}`).emit('group_message', payload);
+        if (isUserOnline(uid)) {
+          hasOnlineMembers = true;
+        }
       }
     }
+
+    // Also emit to sender to ensure real-time append on their client
+    io.to(`user_${senderId}`).emit('group_message', payload);
     
     // Update message status to delivered if any member is online
     if (hasOnlineMembers) {
@@ -665,11 +668,77 @@ const markGroupMessagesRead = asyncHandler(async (req, res) => {
   });
 });
 
+// Extracted recall to a named function (avoid inline function in module.exports)
+const recallGroupMessages = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const userId = req.user.id;
+  const { messageIds, scope } = req.body;
+
+  // Validate membership
+  const membership = await GroupMember.findOne({ where: { groupId, userId } });
+  if (!membership) {
+    return res.status(403).json({ success: false, message: 'Not a group member' });
+  }
+
+  if (!Array.isArray(messageIds) || messageIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'messageIds is required' });
+  }
+  if (!['self', 'all'].includes(scope)) {
+    return res.status(400).json({ success: false, message: 'Invalid scope' });
+  }
+
+  // Load messages ensure they belong to this group
+  const msgs = await GroupMessage.findAll({ where: { id: { [Op.in]: messageIds }, groupId } });
+  if (msgs.length !== messageIds.length) {
+    return res.status(404).json({ success: false, message: 'Some messages not found' });
+  }
+
+  // For 'all', only the sender can recall their own messages
+  if (scope === 'all') {
+    const notOwned = msgs.find(m => m.senderId !== userId);
+    if (notOwned) {
+      return res.status(403).json({ success: false, message: 'Only the sender can recall for everyone' });
+    }
+  }
+
+  if (scope === 'self') {
+    for (const m of msgs) {
+      const list = m.get('deletedForUserIds') || [];
+      if (!list.includes(userId)) {
+        list.push(userId);
+        m.set('deletedForUserIds', list);
+        await m.save();
+      }
+    }
+  } else {
+    await GroupMessage.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds }, groupId } });
+  }
+
+  // Emit socket update
+  const io = req.app.get('io');
+  if (io) {
+    const payload = { groupId: Number(groupId), scope, messageIds };
+    if (scope === 'self') {
+      // Only notify the recalling user (delete for me)
+      io.to(`user_${userId}`).emit('group_messages_recalled', payload);
+    } else {
+      // Notify all members for recall for everyone
+      const members = await GroupMember.findAll({ where: { groupId }, attributes: ['userId'] });
+      for (const m of members) {
+        io.to(`user_${m.userId}`).emit('group_messages_recalled', payload);
+      }
+    }
+  }
+
+  return res.json({ success: true, data: { groupId: Number(groupId), scope, messageIds } });
+});
+
 module.exports = {
   createGroup,
   listMyGroups,
   getGroupMessages,
   sendGroupMessage,
+  recallGroupMessages,
   inviteMembers,
   removeMembers,
   leaveGroup,

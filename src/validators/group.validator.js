@@ -53,6 +53,16 @@ const sendGroupMessageSchema = {
   })
 };
 
+const recallGroupMessagesSchema = {
+  params: Joi.object({
+    groupId: Joi.number().integer().positive().required(),
+  }),
+  body: Joi.object({
+    messageIds: Joi.array().items(Joi.number().integer().positive()).min(1).required(),
+    scope: Joi.string().valid('self', 'all').required()
+  })
+};
+
 const inviteActionSchema = {
   params: Joi.object({
     groupId: Joi.number().integer().positive().required(),
@@ -80,4 +90,5 @@ module.exports = {
   sendGroupMessageSchema,
   updateGroupSchema,
   inviteActionSchema,
+  recallGroupMessagesSchema,
 };

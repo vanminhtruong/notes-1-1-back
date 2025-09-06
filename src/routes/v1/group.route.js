@@ -6,6 +6,7 @@ const {
   listMyGroups,
   getGroupMessages,
   sendGroupMessage,
+  recallGroupMessages,
   inviteMembers,
   removeMembers,
   leaveGroup,
@@ -23,6 +24,7 @@ const {
   groupIdParamSchema,
   getGroupMessagesSchema,
   sendGroupMessageSchema,
+  recallGroupMessagesSchema,
   updateGroupSchema,
   inviteActionSchema,
 } = require('../../validators/group.validator');
@@ -38,6 +40,7 @@ router.post('/', validate(createGroupSchema), createGroup);
 router.get('/:groupId/messages', validate(getGroupMessagesSchema), getGroupMessages);
 router.post('/:groupId/message', validate(sendGroupMessageSchema), sendGroupMessage);
 router.put('/:groupId/read', validate(groupIdParamSchema), markGroupMessagesRead);
+router.post('/:groupId/message/recall', validate(recallGroupMessagesSchema), recallGroupMessages);
 
 router.post('/:groupId/invite', validate(inviteMembersSchema), inviteMembers);
 router.post('/:groupId/remove', validate(removeMembersSchema), removeMembers);

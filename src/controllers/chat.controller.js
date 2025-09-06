@@ -226,8 +226,14 @@ const sendMessage = asyncHandler(async (req, res) => {
       ...messageData,
       status: deliveryStatus
     });
-    
-    // Send to sender with correct status
+
+    // Also send to sender as a new message to append in real-time
+    io.to(`user_${senderId}`).emit('new_message', {
+      ...messageData,
+      status: deliveryStatus
+    });
+
+    // Send to sender status update (kept for compatibility with existing UI)
     io.to(`user_${senderId}`).emit('message_sent', {
       ...messageData,
       status: deliveryStatus
