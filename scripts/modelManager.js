@@ -32,6 +32,10 @@ class ModelManager {
           type: DataTypes.TEXT,
           allowNull: true,
         },
+        nickname: {
+          type: DataTypes.STRING(60),
+          allowNull: true,
+        },
         createdAt: {
           type: DataTypes.DATE,
           allowNull: false,
@@ -455,6 +459,11 @@ class ModelManager {
       await this.updateNotesTable();
       await this.createReadTables();
       await this.createChatPreferenceTable();
+      // Ensure new columns on existing installations
+      await this.ensureColumnExists('ChatPreferences', 'nickname', {
+        type: DataTypes.STRING(60),
+        allowNull: true,
+      });
       await this.fixFriendshipIndexes();
 
       console.log('✅ All model migrations completed successfully!');

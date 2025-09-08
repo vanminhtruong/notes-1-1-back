@@ -69,6 +69,16 @@ const editMessageSchema = {
   })
 };
 
+// Set per-chat nickname (alias) for the other user
+const setChatNicknameSchema = {
+  params: Joi.object({
+    userId: Joi.number().integer().positive().required(),
+  }),
+  body: Joi.object({
+    nickname: Joi.string().allow('', null).max(60).optional(),
+  })
+};
+
 module.exports = {
   sendMessageSchema,
   getChatMessagesSchema,
@@ -77,5 +87,6 @@ module.exports = {
   reactMessageSchema,
   unreactMessageSchema,
   recallMessagesSchema,
-  editMessageSchema
+  editMessageSchema,
+  setChatNicknameSchema
 };

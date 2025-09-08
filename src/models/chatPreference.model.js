@@ -27,6 +27,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    nickname: {
+      type: DataTypes.STRING(60),
+      allowNull: true,
+    },
   }, {
     indexes: [
       {

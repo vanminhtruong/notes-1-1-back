@@ -14,6 +14,79 @@ const getGroupMemberIds = async (groupId) => {
   return members.map(m => m.userId);
 };
 
+// List all groups a specific user has joined
+const listUserGroups = asyncHandler(async (req, res) => {
+  const currentUserId = req.user.id;
+  const { userId } = req.params;
+  const uid = Number(userId);
+
+  // Collect group IDs where target user is a member
+  const memberships = await GroupMember.findAll({ where: { userId: uid }, attributes: ['groupId'] });
+  const groupIds = memberships.map(m => m.groupId);
+  if (groupIds.length === 0) return res.json({ success: true, data: [] });
+
+  const groups = await Group.findAll({ where: { id: { [Op.in]: groupIds } }, order: [['updatedAt', 'DESC']] });
+
+  // Determine pinned groups for current user (for consistent shape)
+  const pinnedGroups = await PinnedChat.findAll({ where: { userId: currentUserId, pinnedGroupId: { [Op.not]: null } } });
+  const pinnedGroupIds = new Set(pinnedGroups.map(p => p.pinnedGroupId));
+
+  const data = [];
+  for (const g of groups) {
+    const memberIds = await getGroupMemberIds(g.id);
+    data.push({ id: g.id, name: g.name, ownerId: g.ownerId, avatar: g.avatar, background: g.background, members: memberIds, isPinned: pinnedGroupIds.has(g.id) });
+  }
+
+  // Sort pinned first, then updatedAt
+  data.sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    const aGroup = groups.find(gr => gr.id === a.id);
+    const bGroup = groups.find(gr => gr.id === b.id);
+    return new Date(bGroup.updatedAt) - new Date(aGroup.updatedAt);
+  });
+
+  res.json({ success: true, data });
+});
+
+// List common groups between current user and target user
+const listCommonGroups = asyncHandler(async (req, res) => {
+  const currentUserId = req.user.id;
+  const { userId } = req.params;
+  const uid = Number(userId);
+
+  // Get memberships for both users
+  const [mine, theirs] = await Promise.all([
+    GroupMember.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] }),
+    GroupMember.findAll({ where: { userId: uid }, attributes: ['groupId'] }),
+  ]);
+  const mySet = new Set(mine.map(m => m.groupId));
+  const commonIds = Array.from(new Set(theirs.map(t => t.groupId))).filter(id => mySet.has(id));
+  if (commonIds.length === 0) return res.json({ success: true, data: [] });
+
+  const groups = await Group.findAll({ where: { id: { [Op.in]: commonIds } }, order: [['updatedAt', 'DESC']] });
+
+  // Pinned status for current user
+  const pinnedGroups = await PinnedChat.findAll({ where: { userId: currentUserId, pinnedGroupId: { [Op.not]: null } } });
+  const pinnedGroupIds = new Set(pinnedGroups.map(p => p.pinnedGroupId));
+
+  const data = [];
+  for (const g of groups) {
+    const memberIds = await getGroupMemberIds(g.id);
+    data.push({ id: g.id, name: g.name, ownerId: g.ownerId, avatar: g.avatar, background: g.background, members: memberIds, isPinned: pinnedGroupIds.has(g.id) });
+  }
+
+  data.sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    const aGroup = groups.find(gr => gr.id === a.id);
+    const bGroup = groups.find(gr => gr.id === b.id);
+    return new Date(bGroup.updatedAt) - new Date(aGroup.updatedAt);
+  });
+
+  res.json({ success: true, data });
+});
+
 const createGroup = asyncHandler(async (req, res) => {
   const { name, memberIds = [], avatar, background } = req.body;
   const ownerId = req.user.id;
@@ -979,6 +1052,8 @@ const getGroupPinStatus = asyncHandler(async (req, res) => {
 module.exports = {
   createGroup,
   listMyGroups,
+  listUserGroups,
+  listCommonGroups,
   getGroupMessages,
   searchGroupMessages,
   sendGroupMessage,
@@ -997,6 +1072,35 @@ module.exports = {
   markGroupMessagesRead,
   togglePinGroup,
   getGroupPinStatus,
+  // List members with basic user info and role
+  listGroupMembers: asyncHandler(async (req, res) => {
+    const { groupId } = req.params;
+    const userId = req.user.id;
+
+    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    if (!membership) {
+      return res.status(403).json({ success: false, message: 'Not a group member' });
+    }
+
+    const rows = await GroupMember.findAll({
+      where: { groupId },
+      attributes: ['userId', 'role'],
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar', 'email', 'phone', 'birthDate', 'gender'] }]
+    });
+
+    const data = rows.map(r => ({
+      id: r.user?.id || r.userId,
+      name: r.user?.name || `User ${r.userId}`,
+      avatar: r.user?.avatar || null,
+      email: r.user?.email || null,
+      phone: r.user?.phone || null,
+      birthDate: r.user?.birthDate || null,
+      gender: r.user?.gender || 'unspecified',
+      role: r.role,
+    }));
+
+    return res.json({ success: true, data });
+  }),
   // Pin/Unpin a specific group message (per-user)
   togglePinGroupMessage: asyncHandler(async (req, res) => {
     const currentUserId = req.user.id;

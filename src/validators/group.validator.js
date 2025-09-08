@@ -33,6 +33,13 @@ const groupIdParamSchema = {
   }),
 };
 
+// userId param validator (for listing user's groups and common groups)
+const userIdParamSchema = {
+  params: Joi.object({
+    userId: Joi.number().integer().positive().required(),
+  }),
+};
+
 const getGroupMessagesSchema = {
   params: Joi.object({
     groupId: Joi.number().integer().positive().required(),
@@ -132,11 +139,18 @@ const updateGroupSchema = {
   }).min(1)
 };
 
+const listGroupMembersSchema = {
+  params: Joi.object({
+    groupId: Joi.number().integer().positive().required(),
+  })
+};
+
 module.exports = {
   createGroupSchema,
   inviteMembersSchema,
   removeMembersSchema,
   groupIdParamSchema,
+  userIdParamSchema,
   getGroupMessagesSchema,
   searchGroupMessagesSchema,
   sendGroupMessageSchema,
@@ -147,4 +161,5 @@ module.exports = {
   togglePinGroupMessageSchema,
   reactGroupMessageSchema,
   unreactGroupMessageSchema,
+  listGroupMembersSchema,
 };

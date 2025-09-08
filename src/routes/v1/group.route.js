@@ -4,6 +4,8 @@ const validate = require('../../middlewares/validate');
 const {
   createGroup,
   listMyGroups,
+  listUserGroups,
+  listCommonGroups,
   getGroupMessages,
   searchGroupMessages,
   sendGroupMessage,
@@ -22,12 +24,14 @@ const {
   getGroupPinStatus,
   togglePinGroupMessage,
   listGroupPinnedMessages,
+  listGroupMembers,
 } = require('../../controllers/group.controller');
 const {
   createGroupSchema,
   inviteMembersSchema,
   removeMembersSchema,
   groupIdParamSchema,
+  userIdParamSchema,
   getGroupMessagesSchema,
   searchGroupMessagesSchema,
   sendGroupMessageSchema,
@@ -38,6 +42,7 @@ const {
   togglePinGroupMessageSchema,
   reactGroupMessageSchema,
   unreactGroupMessageSchema,
+  listGroupMembersSchema,
 } = require('../../validators/group.validator');
 
 const router = express.Router();
@@ -45,6 +50,8 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/', listMyGroups);
+router.get('/user/:userId', validate(userIdParamSchema), listUserGroups);
+router.get('/common/:userId', validate(userIdParamSchema), listCommonGroups);
 router.get('/invites', listMyInvites);
 router.post('/', validate(createGroupSchema), createGroup);
 
@@ -79,5 +86,8 @@ router.get('/:groupId/pin', validate(groupIdParamSchema), getGroupPinStatus);
 // Pin/Unpin a specific group message and list pinned messages
 router.put('/:groupId/message/:messageId/pin', validate(togglePinGroupMessageSchema), togglePinGroupMessage);
 router.get('/:groupId/pins', validate(groupIdParamSchema), listGroupPinnedMessages);
+
+// List group members
+router.get('/:groupId/members', validate(listGroupMembersSchema), listGroupMembers);
 
 module.exports = router;

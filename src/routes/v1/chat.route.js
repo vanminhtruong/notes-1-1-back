@@ -17,6 +17,8 @@ const {
   editMessage,
   reactMessage,
   unreactMessage,
+  getChatNickname,
+  setChatNickname,
 } = require('../../controllers/chat.controller');
 const authenticate = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
@@ -30,6 +32,7 @@ const {
   recallMessagesSchema,
   editMessageSchema
 } = require('../../validators/chat.validator');
+const { setChatNicknameSchema } = require('../../validators/chat.validator');
 
 const router = express.Router();
 
@@ -72,6 +75,10 @@ router.delete('/:userId/messages', deleteAllMessages);
 // Per-chat background (1-1 only)
 router.get('/:userId/background', getChatBackground);
 router.put('/:userId/background', setChatBackground);
+
+// Per-chat nickname (alias) (1-1 only)
+router.get('/:userId/nickname', getChatNickname);
+router.put('/:userId/nickname', validate(setChatNicknameSchema), setChatNickname);
 
 // Pin/Unpin chat
 router.put('/:userId/pin', togglePinChat);

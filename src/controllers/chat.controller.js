@@ -1,4 +1,4 @@
-const { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser, PinnedChat, PinnedMessage, MessageReaction } = require('../models');
+const { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser, PinnedChat, PinnedMessage, MessageReaction, GroupMember } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { isUserOnline } = require('../socket/socketHandler');
@@ -296,7 +296,9 @@ const getChatList = asyncHandler(async (req, res) => {
       },
       order: [['createdAt', 'DESC']],
       include: [
-        { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }
+        { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
+        // Include reactions so client can show heart indicator in chat list
+        { model: MessageReaction, as: 'Reactions', attributes: ['userId', 'type', 'count'] },
       ]
     });
 
@@ -309,6 +311,15 @@ const getChatList = asyncHandler(async (req, res) => {
       }
     });
 
+    // Fetch current user's nickname (alias) for this friend, if any
+    let nickname = null;
+    try {
+      const pref = await ChatPreference.findOne({ where: { userId, otherUserId: friend.id } });
+      nickname = pref?.nickname || null;
+    } catch (e) {
+      // ignore preference errors; nickname stays null
+    }
+
     chatList.push({
       friend: {
         ...friend.toJSON(),
@@ -316,7 +327,8 @@ const getChatList = asyncHandler(async (req, res) => {
       },
       lastMessage: lastMessage || null,
       unreadCount,
-      friendshipId: friendship.id
+      friendshipId: friendship.id,
+      nickname
     });
   }
 
@@ -555,6 +567,73 @@ module.exports = {
       .filter(m => !(Array.isArray(m.deletedForUserIds) && m.deletedForUserIds.includes(currentUserId)));
 
     return res.json({ success: true, data: filtered });
+  }),
+  // Get per-chat nickname (alias) that current user set for other user
+  getChatNickname: asyncHandler(async (req, res) => {
+    const currentUserId = req.user.id;
+    const { userId } = req.params;
+
+    // Ensure they are friends or share a group
+    const friendship = await Friendship.findOne({
+      where: {
+        [Op.or]: [
+          { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
+          { requesterId: userId, addresseeId: currentUserId, status: 'accepted' }
+        ]
+      }
+    });
+    let shareGroup = false;
+    if (!friendship) {
+      const myGroups = await GroupMember.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] });
+      const otherGroups = await GroupMember.findAll({ where: { userId }, attributes: ['groupId'] });
+      const mySet = new Set(myGroups.map((g) => g.groupId));
+      shareGroup = otherGroups.some((g) => mySet.has(g.groupId));
+      if (!shareGroup) return res.status(403).json({ success: false, message: 'You can only view preferences with friends or group members' });
+    }
+
+    const pref = await ChatPreference.findOne({ where: { userId: currentUserId, otherUserId: userId } });
+    return res.json({ success: true, data: { nickname: pref?.nickname || null } });
+  }),
+  // Set per-chat nickname (alias) for other user; pass empty to clear
+  setChatNickname: asyncHandler(async (req, res) => {
+    const currentUserId = req.user.id;
+    const { userId } = req.params;
+    let { nickname } = req.body || {};
+    if (nickname !== null && nickname !== undefined) nickname = String(nickname).trim();
+
+    // Ensure they are friends or share a group
+    const friendship = await Friendship.findOne({
+      where: {
+        [Op.or]: [
+          { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
+          { requesterId: userId, addresseeId: currentUserId, status: 'accepted' }
+        ]
+      }
+    });
+    if (!friendship) {
+      const myGroups = await GroupMember.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] });
+      const otherGroups = await GroupMember.findAll({ where: { userId }, attributes: ['groupId'] });
+      const mySet = new Set(myGroups.map((g) => g.groupId));
+      const shareGroup = otherGroups.some((g) => mySet.has(g.groupId));
+      if (!shareGroup) return res.status(403).json({ success: false, message: 'You can only set preferences with friends or group members' });
+    }
+
+    const [pref] = await ChatPreference.findOrCreate({
+      where: { userId: currentUserId, otherUserId: userId },
+      defaults: { userId: currentUserId, otherUserId: userId, nickname: nickname || null }
+    });
+    if (pref.nickname !== (nickname || null)) await pref.update({ nickname: nickname || null });
+    // Emit only to current user's sockets to update all their tabs/devices
+    try {
+      const io = req.app.get('io') || global.io;
+      if (io) {
+        io.to(`user_${currentUserId}`).emit('nickname_updated', {
+          otherUserId: Number(userId),
+          nickname: pref.nickname || null,
+        });
+      }
+    } catch {}
+    return res.json({ success: true, data: { nickname: pref.nickname || null } });
   }),
   sendMessage,
   getChatList,
