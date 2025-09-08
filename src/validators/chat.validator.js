@@ -18,10 +18,39 @@ const getChatMessagesSchema = {
   })
 };
 
+// Search messages in a 1-1 chat
+const searchChatMessagesSchema = {
+  params: Joi.object({
+    userId: Joi.number().integer().positive().required()
+  }),
+  query: Joi.object({
+    q: Joi.string().min(1).max(200).required(),
+    limit: Joi.number().integer().min(1).max(100).optional().default(20)
+  })
+};
+
 const markAsReadSchema = {
   params: Joi.object({
     senderId: Joi.number().integer().positive().required()
   })
+};
+
+const reactMessageSchema = {
+  params: Joi.object({
+    messageId: Joi.number().integer().positive().required(),
+  }),
+  body: Joi.object({
+    type: Joi.string().valid('like','love','haha','wow','sad','angry').required(),
+  })
+};
+
+const unreactMessageSchema = {
+  params: Joi.object({
+    messageId: Joi.number().integer().positive().required(),
+  }),
+  query: Joi.object({
+    type: Joi.string().valid('like','love','haha','wow','sad','angry').optional(),
+  }).optional()
 };
 
 const recallMessagesSchema = {
@@ -43,7 +72,10 @@ const editMessageSchema = {
 module.exports = {
   sendMessageSchema,
   getChatMessagesSchema,
+  searchChatMessagesSchema,
   markAsReadSchema,
+  reactMessageSchema,
+  unreactMessageSchema,
   recallMessagesSchema,
   editMessageSchema
 };

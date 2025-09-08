@@ -1,4 +1,4 @@
-const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage } = require('../models');
+const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { isBlockedBetween, getBlockedUserIdSetFor } = require('../utils/block');
@@ -127,6 +127,12 @@ const getGroupMessages = asyncHandler(async (req, res) => {
         as: 'GroupMessageReads',
         required: false, // Left join to include messages without reads
         include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }]
+      },
+      { 
+        model: MessageReaction, 
+        as: 'Reactions', 
+        attributes: ['userId', 'type', 'count'],
+        include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }]
       }
     ],
     order: [['createdAt', 'DESC']],
@@ -201,6 +207,112 @@ const getGroupMessages = asyncHandler(async (req, res) => {
   }
 
   res.json({ success: true, data: filtered, pagination: { page: parseInt(page), limit: parseInt(limit), hasMore: filtered.length === parseInt(limit) } });
+});
+
+// React to a group message (allow multiple reactions per user per message)
+const reactGroupMessage = asyncHandler(async (req, res) => {
+  const { groupId, messageId } = req.params;
+  const userId = req.user.id;
+  const { type } = req.body || {};
+
+  const membership = await GroupMember.findOne({ where: { groupId, userId } });
+  if (!membership) return res.status(403).json({ success: false, message: 'Not a group member' });
+
+  const msg = await GroupMessage.findOne({ where: { id: messageId, groupId } });
+  if (!msg) return res.status(404).json({ success: false, message: 'Message not found' });
+
+  // If same type already exists, increment count
+  const existingSame = await MessageReaction.findOne({ where: { userId, groupMessageId: messageId, type } });
+  if (existingSame) {
+    await existingSame.increment('count', { by: 1 });
+    await existingSame.update({ reactedAt: new Date() });
+  } else {
+    // If already 3, delete the current 3rd slot (keep first two)
+    let removedType = null;
+    const list = await MessageReaction.findAll({ where: { userId, groupMessageId: messageId }, order: [['reactedAt', 'ASC']] });
+    if (list.length >= 3) {
+      try { removedType = list[2].type; await list[2].destroy(); } catch {}
+    }
+    await MessageReaction.findOrCreate({
+      where: { userId, groupMessageId: messageId, type },
+      defaults: { userId, groupMessageId: messageId, type, count: 1 }
+    });
+    // Emit unreact for removedType if any
+    try {
+      if (removedType) {
+        const io = req.app.get('io') || global.io;
+        if (io) {
+          const members = await getGroupMemberIds(groupId);
+          const payloadUn = { groupId: Number(groupId), messageId: Number(messageId), userId, type: removedType };
+          for (const uid of members) io.to(`user_${uid}`).emit('group_message_unreacted', payloadUn);
+        }
+      }
+    } catch {}
+  }
+
+  const io = req.app.get('io') || global.io;
+  if (io) {
+    const members = await getGroupMemberIds(groupId);
+    const current = await MessageReaction.findOne({ where: { userId, groupMessageId: messageId, type } });
+    const userInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+    const payload = { groupId: Number(groupId), messageId: Number(messageId), userId, type, count: current?.count ?? 1, user: userInfo };
+    for (const uid of members) io.to(`user_${uid}`).emit('group_message_reacted', payload);
+  }
+
+  return res.json({ success: true, data: { groupId: Number(groupId), messageId: Number(messageId), type } });
+});
+
+// Remove reaction from a group message. If ?type is provided, remove only that type; otherwise remove all of current user's reactions.
+const unreactGroupMessage = asyncHandler(async (req, res) => {
+  const { groupId, messageId } = req.params;
+  const userId = req.user.id;
+  const { type } = req.query || {};
+  const membership = await GroupMember.findOne({ where: { groupId, userId } });
+  if (!membership) return res.status(403).json({ success: false, message: 'Not a group member' });
+
+  const where = { userId, groupMessageId: messageId };
+  if (type) where.type = type;
+  await MessageReaction.destroy({ where });
+
+  const io = req.app.get('io') || global.io;
+  if (io) {
+    const members = await getGroupMemberIds(groupId);
+    const payload = { groupId: Number(groupId), messageId: Number(messageId), userId, ...(type ? { type } : {}) };
+    for (const uid of members) io.to(`user_${uid}`).emit('group_message_unreacted', payload);
+  }
+
+  return res.json({ success: true, data: { groupId: Number(groupId), messageId: Number(messageId), ...(type ? { type } : {}) } });
+});
+
+// Search messages in a group by content
+const searchGroupMessages = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const userId = req.user.id;
+  const { q, limit = 20 } = req.query || {};
+
+  if (!q || String(q).trim().length === 0) {
+    return res.json({ success: true, data: [] });
+  }
+
+  // Verify membership
+  const membership = await GroupMember.findOne({ where: { groupId, userId } });
+  if (!membership) {
+    return res.status(403).json({ success: false, message: 'Not a group member' });
+  }
+
+  const like = { [Op.like]: `%${q}%` };
+  const rows = await GroupMessage.findAll({
+    where: { groupId, content: like, isDeletedForAll: { [Op.not]: true } },
+    attributes: ['id', 'groupId', 'senderId', 'content', 'messageType', 'createdAt'],
+    order: [['createdAt', 'DESC']],
+    limit: parseInt(limit),
+  });
+
+  const filtered = rows
+    .map(r => r.toJSON())
+    .filter(m => !(Array.isArray(m.deletedForUserIds) && m.deletedForUserIds.includes(userId)));
+
+  return res.json({ success: true, data: filtered });
 });
 
 const sendGroupMessage = asyncHandler(async (req, res) => {
@@ -868,7 +980,10 @@ module.exports = {
   createGroup,
   listMyGroups,
   getGroupMessages,
+  searchGroupMessages,
   sendGroupMessage,
+  reactGroupMessage,
+  unreactGroupMessage,
   recallGroupMessages,
   editGroupMessage,
   inviteMembers,

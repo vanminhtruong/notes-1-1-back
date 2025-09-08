@@ -1,6 +1,7 @@
 const express = require('express');
 const { 
   getChatMessages,
+  searchChatMessages,
   sendMessage,
   getChatList,
   markMessagesAsRead,
@@ -13,12 +14,18 @@ const {
   getPinStatus,
   togglePinMessage,
   listPinnedMessages,
+  editMessage,
+  reactMessage,
+  unreactMessage,
 } = require('../../controllers/chat.controller');
 const authenticate = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const { 
   sendMessageSchema,
   getChatMessagesSchema,
+  searchChatMessagesSchema,
+  reactMessageSchema,
+  unreactMessageSchema,
   markAsReadSchema,
   recallMessagesSchema,
   editMessageSchema
@@ -38,6 +45,9 @@ router.get('/unread-count', getUnreadCount);
 // Get chat messages with a specific user
 router.get('/:userId', validate(getChatMessagesSchema), getChatMessages);
 
+// Search chat messages with a specific user
+router.get('/:userId/search', validate(searchChatMessagesSchema), searchChatMessages);
+
 // Send a message
 router.post('/message', validate(sendMessageSchema), sendMessage);
 
@@ -45,7 +55,13 @@ router.post('/message', validate(sendMessageSchema), sendMessage);
 router.post('/message/recall', validate(recallMessagesSchema), recallMessages);
 
 // Edit a message
-router.put('/message/:messageId', validate(editMessageSchema), require('../../controllers/chat.controller').editMessage);
+router.put('/message/:messageId', validate(editMessageSchema), editMessage);
+
+// React to a message
+router.post('/message/:messageId/react', validate(reactMessageSchema), reactMessage);
+
+// Unreact to a message
+router.delete('/message/:messageId/react', validate(unreactMessageSchema), unreactMessage);
 
 // Mark messages as read
 router.put('/:senderId/read', validate(markAsReadSchema), markMessagesAsRead);

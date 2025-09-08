@@ -43,6 +43,17 @@ const getGroupMessagesSchema = {
   })
 };
 
+// Search messages in a group by content
+const searchGroupMessagesSchema = {
+  params: Joi.object({
+    groupId: Joi.number().integer().positive().required(),
+  }),
+  query: Joi.object({
+    q: Joi.string().min(1).max(200).required(),
+    limit: Joi.number().integer().min(1).max(100).optional().default(20),
+  })
+};
+
 const sendGroupMessageSchema = {
   params: Joi.object({
     groupId: Joi.number().integer().positive().required(),
@@ -83,6 +94,26 @@ const togglePinGroupMessageSchema = {
   })
 };
 
+const reactGroupMessageSchema = {
+  params: Joi.object({
+    groupId: Joi.number().integer().positive().required(),
+    messageId: Joi.number().integer().positive().required(),
+  }),
+  body: Joi.object({
+    type: Joi.string().valid('like','love','haha','wow','sad','angry').required(),
+  })
+};
+
+const unreactGroupMessageSchema = {
+  params: Joi.object({
+    groupId: Joi.number().integer().positive().required(),
+    messageId: Joi.number().integer().positive().required(),
+  }),
+  query: Joi.object({
+    type: Joi.string().valid('like','love','haha','wow','sad','angry').optional(),
+  }).optional()
+};
+
 const inviteActionSchema = {
   params: Joi.object({
     groupId: Joi.number().integer().positive().required(),
@@ -107,10 +138,13 @@ module.exports = {
   removeMembersSchema,
   groupIdParamSchema,
   getGroupMessagesSchema,
+  searchGroupMessagesSchema,
   sendGroupMessageSchema,
   updateGroupSchema,
   inviteActionSchema,
   recallGroupMessagesSchema,
   editGroupMessageSchema,
   togglePinGroupMessageSchema,
+  reactGroupMessageSchema,
+  unreactGroupMessageSchema,
 };
