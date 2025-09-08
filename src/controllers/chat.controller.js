@@ -652,6 +652,22 @@ module.exports = {
       return res.status(403).json({ success: false, message: 'Not allowed' });
     }
 
+    // Blocked check: disallow reacting if either side has blocked the other
+    try {
+      const otherUserId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId;
+      const blocked = await BlockedUser.findOne({
+        where: {
+          [Op.or]: [
+            { userId: currentUserId, blockedUserId: otherUserId },
+            { userId: otherUserId, blockedUserId: currentUserId },
+          ],
+        },
+      });
+      if (blocked) {
+        return res.status(403).json({ success: false, message: 'Messaging is blocked between you and this user' });
+      }
+    } catch {}
+
     // If same type already exists, increment count
     const existingSame = await MessageReaction.findOne({ where: { userId: currentUserId, messageId, type } });
     if (existingSame) {
@@ -710,6 +726,22 @@ module.exports = {
     if (msg.senderId !== currentUserId && msg.receiverId !== currentUserId) {
       return res.status(403).json({ success: false, message: 'Not allowed' });
     }
+
+    // Blocked check: disallow reaction updates if either side has blocked the other
+    try {
+      const otherUserId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId;
+      const blocked = await BlockedUser.findOne({
+        where: {
+          [Op.or]: [
+            { userId: currentUserId, blockedUserId: otherUserId },
+            { userId: otherUserId, blockedUserId: currentUserId },
+          ],
+        },
+      });
+      if (blocked) {
+        return res.status(403).json({ success: false, message: 'Messaging is blocked between you and this user' });
+      }
+    } catch {}
 
     const where = { userId: currentUserId, messageId };
     if (type) where.type = type;
