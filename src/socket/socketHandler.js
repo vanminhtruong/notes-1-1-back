@@ -354,6 +354,130 @@ const handleConnection = async (socket) => {
     }
   });
 
+  // 1-1 Voice call signaling (audio only for now)
+  // Events: call_request -> call_incoming, call_accept -> call_accepted,
+  // call_reject -> call_rejected, call_signal <-> call_signal, call_end -> call_ended, call_cancel -> call_cancelled
+  socket.on('call_request', async (payload) => {
+    try {
+      const to = payload && Number(payload.to);
+      const callId = payload && String(payload.callId || '');
+      if (!to || !callId) return;
+      // Block guard
+      const blocked = await BlockedUser.findOne({
+        where: {
+          [require('sequelize').Op.or]: [
+            { userId: userId, blockedUserId: to },
+            { userId: to, blockedUserId: userId },
+          ],
+        },
+      });
+      if (blocked) {
+        socket.emit('call_rejected', { callId, by: { id: to }, reason: 'blocked' });
+        return;
+      }
+      // If callee not online, immediately notify caller
+      if (!connectedUsers.has(to)) {
+        socket.emit('call_rejected', { callId, by: { id: to }, reason: 'offline' });
+        return;
+      }
+      // Forward incoming call to callee's personal room
+      global.io && global.io.to(`user_${to}`).emit('call_incoming', {
+        callId,
+        from: { id: userId, name: socket.user.name, avatar: socket.user.avatar || null },
+      });
+    } catch (e) {
+      console.error('Error handling call_request:', e);
+    }
+  });
+
+  socket.on('call_accept', async (payload) => {
+    try {
+      const to = payload && Number(payload.to);
+      const callId = payload && String(payload.callId || '');
+      if (!to || !callId) return;
+      // Block guard (redundant but consistent)
+      const blocked = await BlockedUser.findOne({
+        where: {
+          [require('sequelize').Op.or]: [
+            { userId: userId, blockedUserId: to },
+            { userId: to, blockedUserId: userId },
+          ],
+        },
+      });
+      if (blocked) {
+        socket.emit('call_rejected', { callId, by: { id: to }, reason: 'blocked' });
+        return;
+      }
+      global.io && global.io.to(`user_${to}`).emit('call_accepted', {
+        callId,
+        by: { id: userId, name: socket.user.name, avatar: socket.user.avatar || null },
+      });
+    } catch (e) {
+      console.error('Error handling call_accept:', e);
+    }
+  });
+
+  socket.on('call_reject', (payload) => {
+    try {
+      const to = payload && Number(payload.to);
+      const callId = payload && String(payload.callId || '');
+      const reason = payload && String(payload.reason || 'rejected');
+      if (!to || !callId) return;
+      global.io && global.io.to(`user_${to}`).emit('call_rejected', {
+        callId,
+        by: { id: userId, name: socket.user.name, avatar: socket.user.avatar || null },
+        reason,
+      });
+    } catch (e) {
+      console.error('Error handling call_reject:', e);
+    }
+  });
+
+  socket.on('call_signal', (payload) => {
+    try {
+      const to = payload && Number(payload.to);
+      const callId = payload && String(payload.callId || '');
+      const data = payload && payload.data;
+      if (!to || !callId || !data) return;
+      // Forward WebRTC signaling data
+      global.io && global.io.to(`user_${to}`).emit('call_signal', {
+        callId,
+        from: { id: userId, name: socket.user.name, avatar: socket.user.avatar || null },
+        data,
+      });
+    } catch (e) {
+      console.error('Error handling call_signal:', e);
+    }
+  });
+
+  socket.on('call_end', (payload) => {
+    try {
+      const to = payload && Number(payload.to);
+      const callId = payload && String(payload.callId || '');
+      if (!to || !callId) return;
+      global.io && global.io.to(`user_${to}`).emit('call_ended', {
+        callId,
+        by: { id: userId, name: socket.user.name, avatar: socket.user.avatar || null },
+      });
+    } catch (e) {
+      console.error('Error handling call_end:', e);
+    }
+  });
+
+  socket.on('call_cancel', (payload) => {
+    try {
+      const to = payload && Number(payload.to);
+      const callId = payload && String(payload.callId || '');
+      if (!to || !callId) return;
+      global.io && global.io.to(`user_${to}`).emit('call_cancelled', {
+        callId,
+        by: { id: userId, name: socket.user.name, avatar: socket.user.avatar || null },
+      });
+    } catch (e) {
+      console.error('Error handling call_cancel:', e);
+    }
+  });
+
   // Handle message read receipts for 1:1 chats
   socket.on('message_read', async (data) => {
     try {
