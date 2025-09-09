@@ -380,10 +380,11 @@ const handleConnection = async (socket) => {
         socket.emit('call_rejected', { callId, by: { id: to }, reason: 'offline' });
         return;
       }
-      // Forward incoming call to callee's personal room
+      // Forward incoming call to callee's personal room (include media type if provided)
       global.io && global.io.to(`user_${to}`).emit('call_incoming', {
         callId,
         from: { id: userId, name: socket.user.name, avatar: socket.user.avatar || null },
+        media: payload && (payload.media === 'video' ? 'video' : 'audio'),
       });
     } catch (e) {
       console.error('Error handling call_request:', e);
