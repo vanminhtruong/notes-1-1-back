@@ -86,7 +86,7 @@ module.exports = (sequelize, DataTypes) => {
     language: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'vi',
+      defaultValue: 'en',
     },
     // Persisted preference: remember-me on login
     rememberLogin: {
