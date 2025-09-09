@@ -99,9 +99,9 @@ const startReminderScheduler = () => {
     const modelManager = new ModelManager();
     await modelManager.runMigrations();
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       // eslint-disable-next-line no-console
-      console.log(`Server running at http://localhost:${PORT}`);
+      console.log(`Server running on 0.0.0.0:${PORT} (try http://localhost:${PORT} or http://<LAN-IP>:${PORT})`);
       // eslint-disable-next-line no-console
       console.log(`WebSocket server ready for connections`);
       // Start reminder scheduler after server is up
