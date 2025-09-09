@@ -1085,19 +1085,27 @@ module.exports = {
     const rows = await GroupMember.findAll({
       where: { groupId },
       attributes: ['userId', 'role'],
-      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar', 'email', 'phone', 'birthDate', 'gender'] }]
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar', 'email', 'phone', 'birthDate', 'gender', 'hidePhone', 'hideBirthDate'] }]
     });
 
-    const data = rows.map(r => ({
-      id: r.user?.id || r.userId,
-      name: r.user?.name || `User ${r.userId}`,
-      avatar: r.user?.avatar || null,
-      email: r.user?.email || null,
-      phone: r.user?.phone || null,
-      birthDate: r.user?.birthDate || null,
-      gender: r.user?.gender || 'unspecified',
-      role: r.role,
-    }));
+    const data = rows.map(r => {
+      const isSelf = r.user?.id === userId;
+      const hidePhone = !!r.user?.hidePhone;
+      const hideBirthDate = !!r.user?.hideBirthDate;
+      return {
+        id: r.user?.id || r.userId,
+        name: r.user?.name || `User ${r.userId}`,
+        avatar: r.user?.avatar || null,
+        email: r.user?.email || null,
+        // Do not leak hidden fields to others; allow self to see own
+        phone: hidePhone && !isSelf ? null : (r.user?.phone || null),
+        birthDate: hideBirthDate && !isSelf ? null : (r.user?.birthDate || null),
+        gender: r.user?.gender || 'unspecified',
+        role: r.role,
+        hidePhone,
+        hideBirthDate,
+      };
+    });
 
     return res.json({ success: true, data });
   }),
