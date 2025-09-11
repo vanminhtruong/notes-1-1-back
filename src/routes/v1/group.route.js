@@ -25,6 +25,7 @@ const {
   togglePinGroupMessage,
   listGroupPinnedMessages,
   listGroupMembers,
+  updateMemberRole,
 } = require('../../controllers/group.controller');
 const {
   createGroupSchema,
@@ -43,6 +44,7 @@ const {
   reactGroupMessageSchema,
   unreactGroupMessageSchema,
   listGroupMembersSchema,
+  updateMemberRoleSchema,
 } = require('../../validators/group.validator');
 
 const router = express.Router();
@@ -89,5 +91,8 @@ router.get('/:groupId/pins', validate(groupIdParamSchema), listGroupPinnedMessag
 
 // List group members
 router.get('/:groupId/members', validate(listGroupMembersSchema), listGroupMembers);
+
+// Update member role (owner only)
+router.put('/:groupId/members/:memberId/role', validate(updateMemberRoleSchema), updateMemberRole);
 
 module.exports = router;

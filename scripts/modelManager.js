@@ -266,6 +266,13 @@ class ModelManager {
       type: DataTypes.STRING,
       allowNull: true,
     });
+
+    // New: admins-only messaging switch
+    await this.ensureColumnExists('Groups', 'adminsOnly', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
   }
 
   async createReadTables() {

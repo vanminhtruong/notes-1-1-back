@@ -6,6 +6,7 @@ const createGroupSchema = {
     memberIds: Joi.array().items(Joi.number().integer().positive()).optional().default([]),
     avatar: Joi.string().max(500).optional(),
     background: Joi.string().max(500).optional(),
+    adminsOnly: Joi.boolean().optional(),
   })
 };
 
@@ -136,12 +137,23 @@ const updateGroupSchema = {
     name: Joi.string().min(1).max(100).optional(),
     avatar: Joi.string().max(500).optional(),
     background: Joi.string().max(500).optional(),
+    adminsOnly: Joi.boolean().optional(),
   }).min(1)
 };
 
 const listGroupMembersSchema = {
   params: Joi.object({
     groupId: Joi.number().integer().positive().required(),
+  })
+};
+
+const updateMemberRoleSchema = {
+  params: Joi.object({
+    groupId: Joi.number().integer().positive().required(),
+    memberId: Joi.number().integer().positive().required(),
+  }),
+  body: Joi.object({
+    role: Joi.string().valid('admin','member').required(),
   })
 };
 
@@ -162,4 +174,5 @@ module.exports = {
   reactGroupMessageSchema,
   unreactGroupMessageSchema,
   listGroupMembersSchema,
+  updateMemberRoleSchema,
 };
