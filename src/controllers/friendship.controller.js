@@ -268,7 +268,27 @@ const rejectFriendRequest = asyncHandler(async (req, res) => {
     });
   }
 
+  // Capture requesterId before destroy
+  const requesterId = friendship.requesterId;
   await friendship.destroy();
+
+  // Emit WebSocket event để thông báo cho người gửi (requester)
+  try {
+    const io = req.app.get('io');
+    if (io && requesterId) {
+      io.to(`user_${requesterId}`).emit('friend_request_rejected', {
+        rejectedBy: {
+          id: req.user.id,
+          name: req.user.name,
+          email: req.user.email,
+          avatar: req.user.avatar,
+        },
+        rejectedAt: new Date(),
+      });
+    }
+  } catch (e) {
+    // non-blocking
+  }
 
   res.json({
     success: true,

@@ -105,6 +105,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false,
     },
+    // Cho phép nhận tin nhắn từ người lạ (không phải bạn bè)
+    allowMessagesFromNonFriends: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   }, {
     hooks: {
       beforeCreate: async (user) => {

@@ -116,6 +116,16 @@ class ModelManager {
       allowNull: false,
       defaultValue: 'sent',
     });
+
+    await this.ensureColumnExists('Messages', 'replyToMessageId', {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Messages',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+    });
   }
 
   async updateGroupMessageTable() {
@@ -143,6 +153,16 @@ class ModelManager {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    });
+
+    await this.ensureColumnExists('GroupMessages', 'replyToMessageId', {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'GroupMessages',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
     });
   }
 
@@ -248,6 +268,12 @@ class ModelManager {
     });
 
     await this.ensureColumnExists('Users', 'hideBirthDate', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
+
+    await this.ensureColumnExists('Users', 'allowMessagesFromNonFriends', {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,

@@ -68,7 +68,8 @@ const sendGroupMessageSchema = {
   }),
   body: Joi.object({
     content: Joi.string().min(1).max(2000).required(),
-    messageType: Joi.string().valid('text', 'image', 'file').optional().default('text')
+    messageType: Joi.string().valid('text', 'image', 'file').optional().default('text'),
+    replyToMessageId: Joi.number().integer().positive().optional()
   })
 };
 

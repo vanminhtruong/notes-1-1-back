@@ -210,13 +210,13 @@ const updateLanguage = async (req, res) => {
 // GET /api/v1/settings/privacy
 const getPrivacy = async (req, res) => {
   const user = req.user;
-  return res.json({ hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate });
+  return res.json({ hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate, allowMessagesFromNonFriends: !!user.allowMessagesFromNonFriends });
 };
 
 // PUT /api/v1/settings/privacy { hidePhone?: boolean, hideBirthDate?: boolean }
 const updatePrivacy = async (req, res) => {
   const user = req.user;
-  const { hidePhone, hideBirthDate } = req.body || {};
+  const { hidePhone, hideBirthDate, allowMessagesFromNonFriends } = req.body || {};
 
   if (hidePhone != null && typeof hidePhone !== 'boolean') {
     return res.status(400).json({ message: 'Invalid payload: hidePhone must be boolean if provided' });
@@ -224,20 +224,24 @@ const updatePrivacy = async (req, res) => {
   if (hideBirthDate != null && typeof hideBirthDate !== 'boolean') {
     return res.status(400).json({ message: 'Invalid payload: hideBirthDate must be boolean if provided' });
   }
+  if (allowMessagesFromNonFriends != null && typeof allowMessagesFromNonFriends !== 'boolean') {
+    return res.status(400).json({ message: 'Invalid payload: allowMessagesFromNonFriends must be boolean if provided' });
+  }
 
   if (typeof hidePhone === 'boolean') user.hidePhone = hidePhone;
   if (typeof hideBirthDate === 'boolean') user.hideBirthDate = hideBirthDate;
+  if (typeof allowMessagesFromNonFriends === 'boolean') user.allowMessagesFromNonFriends = allowMessagesFromNonFriends;
   await user.save();
 
   // Broadcast to user's other sessions
   try {
     const io = req.app.get('io');
     if (io) {
-      io.to(`user_${user.id}`).emit('privacy_updated', { hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate });
+      io.to(`user_${user.id}`).emit('privacy_updated', { hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate, allowMessagesFromNonFriends: !!user.allowMessagesFromNonFriends });
     }
   } catch (e) {}
 
-  return res.json({ message: 'Updated', hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate });
+  return res.json({ message: 'Updated', hidePhone: !!user.hidePhone, hideBirthDate: !!user.hideBirthDate, allowMessagesFromNonFriends: !!user.allowMessagesFromNonFriends });
 };
 
 module.exports = { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage, getPrivacy, updatePrivacy };

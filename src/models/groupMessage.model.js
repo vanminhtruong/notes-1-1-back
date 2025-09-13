@@ -63,6 +63,16 @@ module.exports = (sequelize, DataTypes) => {
           this.setDataValue('deletedForUserIds', '[]');
         }
       }
+    },
+    // Reply functionality
+    replyToMessageId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'GroupMessages',
+        key: 'id'
+      },
+      onDelete: 'SET NULL'
     }
   }, {
     indexes: [

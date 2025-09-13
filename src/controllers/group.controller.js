@@ -127,6 +127,47 @@ class GroupController {
       const memberIds = await this.getGroupMemberIds(g.id);
       // Determine my role in this group for convenience on the client
       const myMembership = await GroupMember.findOne({ where: { groupId: g.id, userId }, attributes: ['role'] });
+      // Compute unread count per user using GroupMessageRead (per-user tracking)
+      let unreadCount = 0;
+      try {
+        const rows = await GroupMessage.findAll({
+          where: {
+            groupId: g.id,
+            senderId: { [Op.ne]: userId },
+            messageType: { [Op.ne]: 'system' },
+            [Op.or]: [
+              { isDeletedForAll: { [Op.not]: true } },
+              { isDeletedForAll: null },
+            ],
+          },
+          attributes: ['id', 'deletedForUserIds'],
+          include: [
+            {
+              model: GroupMessageRead,
+              as: 'GroupMessageReads',
+              attributes: ['userId'],
+              required: false,
+              where: { userId }
+            }
+          ]
+        });
+        const filtered = rows
+          .map(r => (typeof r.toJSON === 'function' ? r.toJSON() : r))
+          .filter(m => {
+            // Exclude messages I've deleted for me
+            let del = m.deletedForUserIds;
+            if (typeof del === 'string') {
+              try { del = JSON.parse(del); } catch { del = null; }
+            }
+            if (Array.isArray(del) && del.includes(userId)) return false;
+            // Count as unread if there is NO read record by me
+            const hasMyRead = Array.isArray(m.GroupMessageReads) && m.GroupMessageReads.some((gr) => Number(gr.userId) === Number(userId));
+            return !hasMyRead;
+          });
+        unreadCount = filtered.length;
+      } catch (e) {
+        unreadCount = 0;
+      }
       data.push({ 
         id: g.id, 
         name: g.name, 
@@ -136,7 +177,8 @@ class GroupController {
         adminsOnly: !!g.adminsOnly,
         members: memberIds,
         isPinned: pinnedGroupIds.has(g.id),
-        myRole: myMembership?.role || (g.ownerId === userId ? 'owner' : 'member')
+        myRole: myMembership?.role || (g.ownerId === userId ? 'owner' : 'member'),
+        unreadCount
       });
     }
 
@@ -209,6 +251,12 @@ class GroupController {
           as: 'Reactions', 
           attributes: ['userId', 'type', 'count'],
           include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }]
+        },
+        {
+          model: GroupMessage,
+          as: 'replyToMessage',
+          attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'],
+          include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }]
         }
       ],
       order: [['createdAt', 'DESC']],
@@ -317,7 +365,7 @@ class GroupController {
   sendGroupMessage = asyncHandler(async (req, res) => {
     const { groupId } = req.params;
     const senderId = req.user.id;
-    const { content, messageType = 'text' } = req.body;
+    const { content, messageType = 'text', replyToMessageId } = req.body;
 
     const membership = await GroupMember.findOne({ where: { groupId, userId: senderId } });
     if (!membership) {
@@ -333,14 +381,63 @@ class GroupController {
       }
     }
 
-    const msg = await GroupMessage.create({ groupId, senderId, content, messageType, status: 'sent' });
+    // Validate replyToMessageId if provided
+    let replyToMessage = null;
+    if (replyToMessageId) {
+      replyToMessage = await GroupMessage.findOne({
+        where: {
+          id: replyToMessageId,
+          groupId: groupId
+        }
+      });
+      
+      if (!replyToMessage) {
+        return res.status(404).json({
+          success: false,
+          message: 'Reply target message not found'
+        });
+      }
+    }
+
+    const msg = await GroupMessage.create({ 
+      groupId, 
+      senderId, 
+      content, 
+      messageType, 
+      status: 'sent',
+      replyToMessageId: replyToMessageId || null 
+    });
     const messageWithData = await GroupMessage.findByPk(msg.id, {
-      include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }]
+      include: [
+        { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
+        {
+          model: GroupMessage,
+          as: 'replyToMessage',
+          attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'],
+          include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }]
+        }
+      ]
     });
 
     const io = req.app.get('io');
     if (io) {
       const members = await this.getGroupMemberIds(groupId);
+      const replyPayload = messageWithData.replyToMessage
+        ? {
+            id: messageWithData.replyToMessage.id,
+            content: messageWithData.replyToMessage.content,
+            messageType: messageWithData.replyToMessage.messageType,
+            senderId: messageWithData.replyToMessage.senderId,
+            createdAt: messageWithData.replyToMessage.createdAt,
+            sender: messageWithData.replyToMessage.sender
+              ? {
+                  id: messageWithData.replyToMessage.sender.id,
+                  name: messageWithData.replyToMessage.sender.name,
+                  avatar: messageWithData.replyToMessage.sender.avatar,
+                }
+              : undefined,
+          }
+        : null;
       const payload = {
         id: messageWithData.id,
         groupId: Number(groupId),
@@ -350,7 +447,10 @@ class GroupController {
         createdAt: messageWithData.createdAt,
         senderName: messageWithData.sender.name,
         senderAvatar: messageWithData.sender.avatar,
-        status: 'delivered'
+        status: 'delivered',
+        // Reply fields for real-time rendering
+        replyToMessageId: messageWithData.replyToMessageId || null,
+        replyToMessage: replyPayload,
       };
       
       // Check which members are online to update status
@@ -887,55 +987,64 @@ class GroupController {
       return res.status(403).json({ success: false, message: 'Not a group member' });
     }
 
-    // Get all unread messages in this group (sent by others)
-    const unreadMessages = await GroupMessage.findAll({
+    // Get candidate messages in this group (sent by others), excluding system and globally-deleted
+    // We will ensure GroupMessageRead exists per message for current user (if missing)
+    const candidates = await GroupMessage.findAll({
       where: { 
         groupId,
         senderId: { [Op.ne]: userId },
-        isRead: false
-      }
+        messageType: { [Op.ne]: 'system' },
+        [Op.or]: [
+          { isDeletedForAll: { [Op.not]: true } },
+          { isDeletedForAll: null },
+        ],
+      },
+      attributes: ['id','senderId']
     });
 
     const toMarkRead = [];
     const readReceiptsToCreate = [];
 
-    for (const message of unreadMessages) {
-      // Always mark as read for unread count purposes
+    for (const message of candidates) {
+      // Skip if read record already exists for this user
+      const alreadyRead = await GroupMessageRead.findOne({ where: { messageId: message.id, userId } });
+      if (alreadyRead) {
+        continue;
+      }
+      // Always mark as read for unread tracking purposes (legacy flag)
       await GroupMessage.update(
         { isRead: true },
         { where: { id: message.id } }
       );
       toMarkRead.push(message);
 
-      // Only create read receipts if BOTH users have read status enabled
-      const currentUser = await User.findByPk(userId);
-      const senderUser = await User.findByPk(message.senderId);
-      
-      if (currentUser && senderUser && currentUser.readStatusEnabled && senderUser.readStatusEnabled) {
-        // Create GroupMessageRead record for read receipts with retry for database lock
-        let readRecord;
-        let retries = 3;
-        while (retries > 0) {
-          try {
-            [readRecord] = await GroupMessageRead.findOrCreate({
-              where: { messageId: message.id, userId },
-              defaults: { messageId: message.id, userId, readAt: new Date() }
-            });
-            break; // Success, exit retry loop
-          } catch (error) {
-            retries--;
-            if (error.name === 'SequelizeTimeoutError' && error.original?.code === 'SQLITE_BUSY' && retries > 0) {
-              console.log(`Database busy in markGroupMessagesRead, retrying... (${3 - retries}/3)`);
-              await new Promise(resolve => setTimeout(resolve, 100 * (3 - retries))); // Exponential backoff
-            } else {
-              console.error('Error creating GroupMessageRead:', error);
-              break; // Exit on non-retryable error
-            }
+      // Always create GroupMessageRead for current user (per-user unread tracking),
+      // but only EMIT read receipts if both parties have readStatusEnabled
+      let readRecord;
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          [readRecord] = await GroupMessageRead.findOrCreate({
+            where: { messageId: message.id, userId },
+            defaults: { messageId: message.id, userId, readAt: new Date() }
+          });
+          break;
+        } catch (error) {
+          retries--;
+          if (error.name === 'SequelizeTimeoutError' && error.original?.code === 'SQLITE_BUSY' && retries > 0) {
+            console.log(`Database busy in markGroupMessagesRead, retrying... (${3 - retries}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 100 * (3 - retries)));
+          } else {
+            console.error('Error creating GroupMessageRead:', error);
+            break;
           }
         }
-        if (readRecord) {
-          readReceiptsToCreate.push({ message, readRecord });
-        }
+      }
+      // Queue for socket emit if receipts enabled
+      const currentUser = await User.findByPk(userId);
+      const senderUser = await User.findByPk(message.senderId);
+      if (readRecord && currentUser && senderUser && currentUser.readStatusEnabled && senderUser.readStatusEnabled) {
+        readReceiptsToCreate.push({ message, readRecord });
       }
     }
 

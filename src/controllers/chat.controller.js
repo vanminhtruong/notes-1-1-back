@@ -9,7 +9,8 @@ const getChatMessages = asyncHandler(async (req, res) => {
   const currentUserId = req.user.id;
   const { page = 1, limit = 50 } = req.query;
 
-  // Check if users are friends
+  // Check if users are friends (kept for behavior elsewhere). For viewing messages,
+  // we allow if not friends as well so users can open a chat window and see any existing conversation.
   const friendship = await Friendship.findOne({
     where: {
       [Op.or]: [
@@ -18,13 +19,6 @@ const getChatMessages = asyncHandler(async (req, res) => {
       ]
     }
   });
-
-  if (!friendship) {
-    return res.status(403).json({
-      success: false,
-      message: 'You can only chat with friends'
-    });
-  }
 
   const offset = (page - 1) * limit;
 
@@ -48,6 +42,12 @@ const getChatMessages = asyncHandler(async (req, res) => {
         as: 'Reactions', 
         attributes: ['userId', 'type', 'count'],
         include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }]
+      },
+      {
+        model: Message,
+        as: 'replyToMessage',
+        attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'],
+        include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }]
       }
     ],
     order: [['createdAt', 'DESC']],
@@ -137,7 +137,7 @@ const getChatMessages = asyncHandler(async (req, res) => {
 
 // Send a message
 const sendMessage = asyncHandler(async (req, res) => {
-  const { receiverId, content, messageType = 'text' } = req.body;
+  const { receiverId, content, messageType = 'text', replyToMessageId } = req.body;
   const senderId = req.user.id;
 
   if (receiverId === senderId) {
@@ -172,7 +172,7 @@ const sendMessage = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if users are friends
+  // Check if users are friends. If not friends, only allow sending if the receiver permits messages from non-friends.
   const friendship = await Friendship.findOne({
     where: {
       [Op.or]: [
@@ -183,10 +183,34 @@ const sendMessage = asyncHandler(async (req, res) => {
   });
 
   if (!friendship) {
-    return res.status(403).json({
-      success: false,
-      message: 'You can only send messages to friends'
+    // Enforce receiver's preference for messages from strangers
+    if (!receiver.allowMessagesFromNonFriends) {
+      return res.status(403).json({
+        success: false,
+        message: 'Recipient does not allow messages from non-friends'
+      });
+    }
+  }
+
+  // Validate replyToMessageId if provided
+  let replyToMessage = null;
+  if (replyToMessageId) {
+    replyToMessage = await Message.findOne({
+      where: {
+        id: replyToMessageId,
+        [Op.or]: [
+          { senderId: senderId, receiverId: receiverId },
+          { senderId: receiverId, receiverId: senderId }
+        ]
+      }
     });
+    
+    if (!replyToMessage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reply target message not found'
+      });
+    }
   }
 
   const message = await Message.create({
@@ -194,20 +218,44 @@ const sendMessage = asyncHandler(async (req, res) => {
     receiverId,
     content,
     messageType,
-    status: 'sent'
+    status: 'sent',
+    replyToMessageId: replyToMessageId || null
   });
 
   // Get message with user data
   const messageWithData = await Message.findByPk(message.id, {
     include: [
       { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
-      { model: User, as: 'receiver', attributes: ['id', 'name', 'avatar'] }
+      { model: User, as: 'receiver', attributes: ['id', 'name', 'avatar'] },
+      {
+        model: Message,
+        as: 'replyToMessage',
+        attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'],
+        include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }]
+      }
     ]
   });
 
   // Emit socket event for real-time delivery
   const io = req.app.get('io');
   if (io) {
+    const replyPayload = messageWithData.replyToMessage
+      ? {
+          id: messageWithData.replyToMessage.id,
+          content: messageWithData.replyToMessage.content,
+          messageType: messageWithData.replyToMessage.messageType,
+          senderId: messageWithData.replyToMessage.senderId,
+          createdAt: messageWithData.replyToMessage.createdAt,
+          sender: messageWithData.replyToMessage.sender
+            ? {
+                id: messageWithData.replyToMessage.sender.id,
+                name: messageWithData.replyToMessage.sender.name,
+                avatar: messageWithData.replyToMessage.sender.avatar,
+              }
+            : undefined,
+        }
+      : null;
+
     const messageData = {
       id: messageWithData.id,
       senderId: senderId,
@@ -215,7 +263,10 @@ const sendMessage = asyncHandler(async (req, res) => {
       content: messageWithData.content,
       messageType: messageWithData.messageType,
       createdAt: messageWithData.createdAt,
-      senderName: messageWithData.sender.name
+      senderName: messageWithData.sender.name,
+      // Reply fields for real-time rendering on client
+      replyToMessageId: messageWithData.replyToMessageId || null,
+      replyToMessage: replyPayload,
     };
     
     // Check if receiver is online to determine status

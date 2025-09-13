@@ -4,7 +4,8 @@ const sendMessageSchema = {
   body: Joi.object({
     receiverId: Joi.number().integer().positive().required(),
     content: Joi.string().min(1).max(1000).required(),
-    messageType: Joi.string().valid('text', 'image', 'file').optional().default('text')
+    messageType: Joi.string().valid('text', 'image', 'file').optional().default('text'),
+    replyToMessageId: Joi.number().integer().positive().optional()
   })
 };
 

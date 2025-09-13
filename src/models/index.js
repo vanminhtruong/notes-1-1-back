@@ -52,6 +52,10 @@ Message.belongsTo(User, { foreignKey: 'receiverId', as: 'receiver' });
 User.hasMany(Message, { foreignKey: 'senderId', as: 'sentMessages' });
 User.hasMany(Message, { foreignKey: 'receiverId', as: 'receivedMessages' });
 
+// Message reply associations
+Message.belongsTo(Message, { foreignKey: 'replyToMessageId', as: 'replyToMessage' });
+Message.hasMany(Message, { foreignKey: 'replyToMessageId', as: 'replies' });
+
 // MessageRead associations
 Message.hasMany(MessageRead, { foreignKey: 'messageId', as: 'MessageReads' });
 MessageRead.belongsTo(Message, { foreignKey: 'messageId', as: 'message' });
@@ -75,6 +79,10 @@ GroupMessage.belongsTo(Group, { foreignKey: 'groupId', as: 'group' });
 GroupMessage.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
 Group.hasMany(GroupMessage, { foreignKey: 'groupId', as: 'messages' });
 User.hasMany(GroupMessage, { foreignKey: 'senderId', as: 'groupMessages' });
+
+// GroupMessage reply associations
+GroupMessage.belongsTo(GroupMessage, { foreignKey: 'replyToMessageId', as: 'replyToMessage' });
+GroupMessage.hasMany(GroupMessage, { foreignKey: 'replyToMessageId', as: 'replies' });
 
 // GroupMessageRead associations
 GroupMessage.hasMany(GroupMessageRead, { foreignKey: 'messageId', as: 'GroupMessageReads' });
