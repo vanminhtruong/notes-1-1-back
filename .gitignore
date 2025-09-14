@@ -9,3 +9,7 @@ yarn-error.log*
 .DS_Store
 data/
 *.sqlite
+
+# Uploaded assets (runtime files) — do not track in Git
+public/uploads/
+public/uploads/**
