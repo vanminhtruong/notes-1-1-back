@@ -1,4 +1,4 @@
-const { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser, PinnedChat, PinnedMessage, MessageReaction, GroupMember } = require('../models');
+const { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser, PinnedChat, PinnedMessage, MessageReaction, GroupMember, Notification } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { isUserOnline } = require('../socket/socketHandler');
@@ -222,6 +222,23 @@ class ChatController {
       ]
     });
 
+    // Persist a notification ONLY for the receiver so bell feed shows incoming messages for them
+    try {
+      await Notification.create({
+        userId: receiverId,
+        type: 'message',
+        fromUserId: senderId,
+        metadata: { messageId: message.id, otherUserId: senderId },
+        isRead: false,
+      });
+      // Cleanup legacy sender-side 'message' notifications created by previous versions
+      try {
+        await Notification.destroy({ where: { userId: senderId, type: 'message', fromUserId: senderId } });
+      } catch {}
+    } catch (e) {
+      // non-blocking
+    }
+
     const io = req.app.get('io');
     if (io) {
       const replyPayload = messageWithData.replyToMessage
@@ -404,6 +421,14 @@ class ChatController {
         }
       }
     );
+
+    // Also mark related message notifications as read for this pair
+    try {
+      await Notification.update(
+        { isRead: true },
+        { where: { userId: receiverId, type: 'message', fromUserId: senderId, isRead: false } }
+      );
+    } catch (e) { /* noop */ }
 
     if (toMarkRead.length > 0) {
       const currentUser = await User.findByPk(receiverId);

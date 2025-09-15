@@ -27,6 +27,8 @@ const {
   listGroupMembers,
   updateMemberRole,
 } = require('../../controllers/group.controller');
+// Moderation operations (subclassed controller)
+const { deleteAllGroupMessages } = require('../../controllers/group-child/group.moderation.controller');
 const {
   createGroupSchema,
   inviteMembersSchema,
@@ -94,5 +96,8 @@ router.get('/:groupId/members', validate(listGroupMembersSchema), listGroupMembe
 
 // Update member role (owner only)
 router.put('/:groupId/members/:memberId/role', validate(updateMemberRoleSchema), updateMemberRole);
+
+// Delete all messages in a group (owner only)
+router.delete('/:groupId/messages', validate(groupIdParamSchema), deleteAllGroupMessages);
 
 module.exports = router;

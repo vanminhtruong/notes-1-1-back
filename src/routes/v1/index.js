@@ -8,6 +8,7 @@ const uploads = require('./upload.route');
 const groups = require('./group.route');
 const settings = require('./settings.route');
 const blocks = require('./blocks.route');
+const notifications = require('./notifications.route');
 
 router.use('/sample', sample);
 router.use('/auth', auth);
@@ -18,5 +19,6 @@ router.use('/uploads', uploads);
 router.use('/groups', groups);
 router.use('/settings', settings);
 router.use('/blocks', blocks);
+router.use('/notifications', notifications);
 
 module.exports = router;

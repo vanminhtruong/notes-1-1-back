@@ -1,4 +1,4 @@
-const { User, Friendship } = require('../models');
+const { User, Friendship, Notification } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op, fn, col, where } = require('sequelize');
 const { isUserOnline } = require('../socket/socketHandler');
@@ -98,6 +98,19 @@ const sendFriendRequest = asyncHandler(async (req, res) => {
     throw err;
   }
 
+  // Persist a notification for the addressee
+  try {
+    await Notification.create({
+      userId: userId,
+      type: 'friend_request',
+      fromUserId: requesterId,
+      metadata: { friendshipId: friendship.id },
+      isRead: false,
+    });
+  } catch (e) {
+    // non-blocking
+  }
+
   // Emit WebSocket event to notify the receiver
   const io = req.app.get('io');
   if (io) {
@@ -105,7 +118,8 @@ const sendFriendRequest = asyncHandler(async (req, res) => {
       requester: {
         id: req.user.id,
         name: req.user.name,
-        email: req.user.email
+        email: req.user.email,
+        avatar: req.user.avatar
       },
       createdAt: new Date()
     });
@@ -209,6 +223,21 @@ const acceptFriendRequest = asyncHandler(async (req, res) => {
   friendship.status = 'accepted';
   await friendship.save();
 
+  // Mark persisted notification as read for the addressee (current user)
+  try {
+    await Notification.update(
+      { isRead: true },
+      {
+        where: {
+          userId: userId,
+          type: 'friend_request',
+          fromUserId: friendship.requesterId,
+          isRead: false,
+        },
+      }
+    );
+  } catch (e) {}
+
   // Emit WebSocket event to notify both requester and accepter
   const io = req.app.get('io');
   if (io) {
@@ -271,6 +300,21 @@ const rejectFriendRequest = asyncHandler(async (req, res) => {
   // Capture requesterId before destroy
   const requesterId = friendship.requesterId;
   await friendship.destroy();
+
+  // Mark persisted notification as read since it has been processed (rejected)
+  try {
+    await Notification.update(
+      { isRead: true },
+      {
+        where: {
+          userId: userId,
+          type: 'friend_request',
+          fromUserId: requesterId,
+          isRead: false,
+        },
+      }
+    );
+  } catch (e) {}
 
   // Emit WebSocket event để thông báo cho người gửi (requester)
   try {

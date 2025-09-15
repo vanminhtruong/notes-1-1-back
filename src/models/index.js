@@ -17,6 +17,7 @@ const defineBlockedUser = require('./blockedUser.model');
 const definePinnedChat = require('./pinnedChat.model');
 const definePinnedMessage = require('./pinnedMessage.model');
 const defineMessageReaction = require('./messageReaction.model');
+const defineNotification = require('./notification.model');
 
 const Sample = defineSample(sequelize, DataTypes);
 const User = defineUser(sequelize, DataTypes);
@@ -35,6 +36,7 @@ const BlockedUser = defineBlockedUser(sequelize, DataTypes);
 const PinnedChat = definePinnedChat(sequelize, DataTypes);
 const PinnedMessage = definePinnedMessage(sequelize, DataTypes);
 const MessageReaction = defineMessageReaction(sequelize, DataTypes);
+const Notification = defineNotification(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
@@ -128,6 +130,12 @@ User.hasMany(MessageReaction, { foreignKey: 'userId', as: 'messageReactions' });
 Message.hasMany(MessageReaction, { foreignKey: 'messageId', as: 'Reactions' });
 GroupMessage.hasMany(MessageReaction, { foreignKey: 'groupMessageId', as: 'Reactions' });
 
+// Notification associations
+Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' }); // recipient
+Notification.belongsTo(User, { foreignKey: 'fromUserId', as: 'fromUser' });
+Notification.belongsTo(Group, { foreignKey: 'groupId', as: 'group' });
+User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
+
 module.exports = {
   sequelize,
   Sample,
@@ -147,5 +155,6 @@ module.exports = {
   PinnedChat,
   PinnedMessage,
   MessageReaction,
+  Notification,
 };
 

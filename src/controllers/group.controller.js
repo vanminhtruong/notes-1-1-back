@@ -1,4 +1,4 @@
-const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction } = require('../models');
+const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } = require('../models');
 const asyncHandler = require('../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { isBlockedBetween, getBlockedUserIdSetFor } = require('../utils/block');
@@ -168,6 +168,30 @@ class GroupController {
       } catch (e) {
         unreadCount = 0;
       }
+      // Determine latest visible message time for current user (exclude system messages, and messages deleted-for-me)
+      let lastMessageAt = null;
+      try {
+        const recent = await GroupMessage.findAll({
+          where: { groupId: g.id, messageType: { [Op.ne]: 'system' } },
+          attributes: ['id', 'createdAt', 'deletedForUserIds'],
+          order: [['createdAt', 'DESC']],
+          limit: 20,
+        });
+        for (const m of recent) {
+          let del = m.deletedForUserIds;
+          if (typeof del === 'string') {
+            try { del = JSON.parse(del); } catch { del = null; }
+          }
+          if (Array.isArray(del) && del.includes(userId)) {
+            continue;
+          }
+          lastMessageAt = m.createdAt;
+          break;
+        }
+      } catch (e) {
+        lastMessageAt = null;
+      }
+
       data.push({ 
         id: g.id, 
         name: g.name, 
@@ -178,7 +202,8 @@ class GroupController {
         members: memberIds,
         isPinned: pinnedGroupIds.has(g.id),
         myRole: myMembership?.role || (g.ownerId === userId ? 'owner' : 'member'),
-        unreadCount
+        unreadCount,
+        lastMessageAt
       });
     }
 
@@ -690,10 +715,34 @@ class GroupController {
     const io = req.app.get('io');
     if (io) {
       if (pending.length) {
+        // Prepare inviter and group info for richer payload
+        let inviterInfo = null;
+        try { inviterInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar', 'email'] }); } catch {}
+        const groupInfo = group ? { id: group.id, name: group.name, avatar: group.avatar } : null;
         // Notify each invitee with their specific invite ID
-        for (const { inviteId, inviteeId } of pendingInvites) {
-          const payload = { groupId: Number(groupId), inviteId, inviterId: userId };
+        for (const item of pendingInvites) {
+          const { inviteId, inviteeId, createdAt } = item;
+          const payload = {
+            groupId: Number(groupId),
+            inviteId,
+            inviterId: userId,
+            inviter: inviterInfo ? { id: inviterInfo.id, name: inviterInfo.name, avatar: inviterInfo.avatar, email: inviterInfo.email } : undefined,
+            group: groupInfo || undefined,
+            createdAt: createdAt || new Date()
+          };
           io.to(`user_${inviteeId}`).emit('group_invited', payload);
+          // Persist notification for the invitee
+          try {
+            await Notification.create({
+              userId: inviteeId,
+              type: 'group_invite',
+              fromUserId: userId,
+              groupId: Number(groupId),
+              metadata: { inviteId },
+              isRead: false,
+              createdAt: payload.createdAt,
+            });
+          } catch (e) {}
         }
       }
       if (added.length) {
@@ -864,7 +913,29 @@ class GroupController {
     // Filter out invites where inviter is blocked-with current user
     const blockedSet = await getBlockedUserIdSetFor(userId);
     const filtered = invites.filter(inv => inv.inviter && !blockedSet.has(inv.inviter.id));
-    res.json({ success: true, data: filtered });
+
+    // Absolutize avatar URLs to be robust for frontend origin
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const absolutize = (obj) => {
+      if (!obj || !obj.avatar) return obj;
+      try {
+        const av = String(obj.avatar);
+        const lower = av.toLowerCase();
+        if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('data:')) return obj;
+        const needsSlash = !av.startsWith('/');
+        obj.avatar = `${baseUrl}${needsSlash ? '/' : ''}${av}`;
+      } catch {}
+      return obj;
+    };
+
+    const data = filtered.map((row) => {
+      const r = typeof row.toJSON === 'function' ? row.toJSON() : row;
+      if (r.group) r.group = absolutize(r.group);
+      if (r.inviter) r.inviter = absolutize(r.inviter);
+      return r;
+    });
+
+    res.json({ success: true, data });
   });
 
   acceptGroupInvite = asyncHandler(async (req, res) => {
@@ -891,6 +962,21 @@ class GroupController {
     // Mark invite accepted
     invite.status = 'accepted';
     await invite.save();
+
+    // Mark persisted notification as read for this invite
+    try {
+      await Notification.update(
+        { isRead: true },
+        {
+          where: {
+            userId: userId,
+            type: 'group_invite',
+            groupId: Number(groupId),
+            isRead: false,
+          }
+        }
+      );
+    } catch (e) {}
 
     const memberIds = await this.getGroupMemberIds(groupId);
     const io = req.app.get('io');
@@ -941,6 +1027,21 @@ class GroupController {
 
     invite.status = 'declined';
     await invite.save();
+
+    // Mark persisted notification as read for this invite
+    try {
+      await Notification.update(
+        { isRead: true },
+        {
+          where: {
+            userId: userId,
+            type: 'group_invite',
+            groupId: Number(groupId),
+            isRead: false,
+          }
+        }
+      );
+    } catch (e) {}
 
     res.json({ success: true, data: { groupId: Number(groupId), inviteId: Number(inviteId), status: 'declined' } });
   });
