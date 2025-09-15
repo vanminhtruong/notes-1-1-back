@@ -1309,6 +1309,19 @@ class GroupController {
       };
     });
 
+    // Sort by role priority: owner -> admin -> member; then by name (asc)
+    const rolePriority = { owner: 0, admin: 1, member: 2 };
+    data.sort((a, b) => {
+      const pa = rolePriority[a.role] ?? 99;
+      const pb = rolePriority[b.role] ?? 99;
+      if (pa !== pb) return pa - pb;
+      const na = (a.name || '').toLowerCase();
+      const nb = (b.name || '').toLowerCase();
+      if (na < nb) return -1;
+      if (na > nb) return 1;
+      return 0;
+    });
+
     return res.json({ success: true, data });
   });
 
