@@ -103,6 +103,11 @@ class NotificationController {
 
   bellFeed = asyncHandler(async (req, res) => {
     const userId = req.user.id;
+    const { page = 1, limit = 4 } = req.query;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.max(1, Math.min(50, parseInt(limit))); // Max 50 items per page
+    const offset = (pageNum - 1) * limitNum;
+    
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const absolutize = (obj) => {
       try {
@@ -231,7 +236,28 @@ class NotificationController {
     }
 
     items.sort((a, b) => new Date(String(b.time)).getTime() - new Date(String(a.time)).getTime());
-    res.json({ success: true, data: items });
+    
+    // Apply pagination
+    const totalItems = items.length;
+    const paginatedItems = items.slice(offset, offset + limitNum);
+    const totalPages = Math.ceil(totalItems / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
+    
+    res.json({ 
+      success: true, 
+      data: {
+        items: paginatedItems,
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          totalItems,
+          itemsPerPage: limitNum,
+          hasNextPage,
+          hasPrevPage
+        }
+      }
+    });
   });
 
   deleteBellItem = asyncHandler(async (req, res) => {
