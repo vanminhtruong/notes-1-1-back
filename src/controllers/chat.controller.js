@@ -10,7 +10,7 @@ class ChatController {
   getChatMessages = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const currentUserId = req.user.id;
-    const { page = 1, limit = 50 } = req.query;
+    const { page = 1, limit = 10 } = req.query;
 
     const friendship = await Friendship.findOne({
       where: {
@@ -123,7 +123,8 @@ class ChatController {
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        hasMore: filtered.length === parseInt(limit)
+        hasMore: messages.length === parseInt(limit),
+        sourceCount: messages.length
       }
     });
   });

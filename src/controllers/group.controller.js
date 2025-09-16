@@ -253,7 +253,7 @@ class GroupController {
   getGroupMessages = asyncHandler(async (req, res) => {
     const { groupId } = req.params;
     const userId = req.user.id;
-    const { page = 1, limit = 50 } = req.query;
+    const { page = 1, limit = 10 } = req.query;
 
     const membership = await GroupMember.findOne({ where: { groupId, userId } });
     if (!membership) {
@@ -354,7 +354,7 @@ class GroupController {
       }
     }
 
-    res.json({ success: true, data: filtered, pagination: { page: parseInt(page), limit: parseInt(limit), hasMore: filtered.length === parseInt(limit) } });
+    res.json({ success: true, data: filtered, pagination: { page: parseInt(page), limit: parseInt(limit), hasMore: messages.length === parseInt(limit), sourceCount: messages.length } });
   });
 
   searchGroupMessages = asyncHandler(async (req, res) => {
