@@ -100,13 +100,18 @@ const sendFriendRequest = asyncHandler(async (req, res) => {
 
   // Persist a notification for the addressee
   try {
-    await Notification.create({
+    const notif = await Notification.create({
       userId: userId,
       type: 'friend_request',
       fromUserId: requesterId,
       metadata: { friendshipId: friendship.id },
       isRead: false,
     });
+    // Emit admin realtime to refresh notification tab in admin user activity
+    try {
+      const { emitToAllAdmins } = require('../socket/socketHandler');
+      emitToAllAdmins && emitToAllAdmins('admin_notification_created', { userId, type: notif.type });
+    } catch {}
   } catch (e) {
     // non-blocking
   }

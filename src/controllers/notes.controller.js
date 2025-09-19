@@ -1,6 +1,6 @@
 const { Note, User } = require('../models');
 const { Op } = require('sequelize');
-const { emitToUser } = require('../socket/socketHandler');
+const { emitToUser, emitToAllAdmins } = require('../socket/socketHandler');
 
 const createNote = async (req, res) => {
   try {
@@ -28,6 +28,9 @@ const createNote = async (req, res) => {
 
     // Emit WebSocket event
     emitToUser(userId, 'note_created', noteWithUser);
+    
+    // Emit to all admins for real-time admin panel updates
+    emitToAllAdmins('user_note_created', noteWithUser);
 
     res.status(201).json({
       message: 'Tạo ghi chú thành công',
@@ -194,6 +197,9 @@ const updateNote = async (req, res) => {
 
     // Emit WebSocket event
     emitToUser(userId, 'note_updated', updatedNote);
+    
+    // Emit to all admins for real-time admin panel updates
+    emitToAllAdmins('user_note_updated', updatedNote);
 
     res.json({
       message: 'Cập nhật ghi chú thành công',
@@ -219,6 +225,9 @@ const deleteNote = async (req, res) => {
 
     // Emit WebSocket event
     emitToUser(userId, 'note_deleted', { id: note.id });
+    
+    // Emit to all admins for real-time admin panel updates
+    emitToAllAdmins('user_note_deleted', { id: note.id, userId });
 
     res.json({ message: 'Xóa ghi chú thành công' });
   } catch (error) {
@@ -243,6 +252,13 @@ const archiveNote = async (req, res) => {
     emitToUser(userId, 'note_archived', {
       id: note.id,
       isArchived: note.isArchived,
+    });
+    
+    // Emit to all admins for real-time admin panel updates
+    emitToAllAdmins('user_note_archived', {
+      id: note.id,
+      isArchived: note.isArchived,
+      userId
     });
 
     res.json({

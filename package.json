@@ -22,7 +22,8 @@
     "db:refresh": "npm run db:reset && npm run db:migrate",
     "db:truncate": "node src/db/truncate.js",
     "db:clear": "npm run db:truncate",
-    "db:fix-constraints": "node src/db/fixMessageReadsConstraint.js"
+    "db:fix-constraints": "node src/db/fixMessageReadsConstraint.js",
+    "create:admin": "node scripts/createAdmin.js"
   },
   "keywords": [],
   "author": "",

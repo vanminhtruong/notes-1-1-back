@@ -225,7 +225,7 @@ class ChatController {
 
     // Persist a notification ONLY for the receiver so bell feed shows incoming messages for them
     try {
-      await Notification.create({
+      const notif = await Notification.create({
         userId: receiverId,
         type: 'message',
         fromUserId: senderId,
@@ -235,6 +235,11 @@ class ChatController {
       // Cleanup legacy sender-side 'message' notifications created by previous versions
       try {
         await Notification.destroy({ where: { userId: senderId, type: 'message', fromUserId: senderId } });
+      } catch {}
+      // Emit admin realtime to refresh notification tab in admin user activity
+      try {
+        const { emitToAllAdmins } = require('../socket/socketHandler');
+        emitToAllAdmins && emitToAllAdmins('admin_notification_created', { userId: receiverId, type: notif.type });
       } catch {}
     } catch (e) {
       // non-blocking
@@ -302,6 +307,25 @@ class ChatController {
           status: 'delivered'
         });
       }
+    }
+
+    // Emit to all admins for monitoring UI
+    try {
+      const { emitToAllAdmins } = require('../socket/socketHandler');
+      const adminPayload = {
+        id: messageWithData.id,
+        senderId,
+        receiverId,
+        content: messageWithData.content,
+        messageType: messageWithData.messageType,
+        createdAt: messageWithData.createdAt,
+        senderName: messageWithData.sender?.name,
+        receiverName: messageWithData.receiver?.name,
+        replyToMessageId: messageWithData.replyToMessageId || null,
+      };
+      emitToAllAdmins && emitToAllAdmins('admin_dm_created', adminPayload);
+    } catch (e) {
+      // no-op for admin emit errors
     }
 
     res.status(201).json({

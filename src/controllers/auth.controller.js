@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { sendEmail } = require('../utils/email');
 const { sendSms } = require('../utils/sms');
+const { emitToAllAdmins } = require('../socket/socketHandler');
 
 const generateToken = (user, options = {}) => {
   const expiresIn = options.expiresIn || process.env.JWT_EXPIRES_IN || '7d';
@@ -46,6 +47,16 @@ const googleLogin = async (req, res) => {
       // Create a random password to satisfy model constraints
       const randomPassword = crypto.randomBytes(24).toString('hex');
       user = await User.create({ email, name, password: randomPassword });
+      
+      // Emit to admins about new user registration
+      emitToAllAdmins('user_registered', {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        createdAt: user.createdAt
+      });
     }
 
     // If user inactive
@@ -106,6 +117,16 @@ const facebookLogin = async (req, res) => {
         name: name || email.split('@')[0], 
         password: randomPassword 
       });
+      
+      // Emit to admins about new user registration
+      emitToAllAdmins('user_registered', {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        createdAt: user.createdAt
+      });
     }
 
     // If user inactive
@@ -160,6 +181,16 @@ const register = async (req, res) => {
       phone: typeof phone === 'string' ? (phone.trim() || null) : (phone ?? null),
       birthDate: birthDate ? birthDate : null,
       gender: gender || 'unspecified',
+    });
+    
+    // Emit to admins about new user registration
+    emitToAllAdmins('user_registered', {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt
     });
     const token = generateToken(user);
 
@@ -528,6 +559,43 @@ const logout = async (req, res) => {
   }
 };
 
+// Soft-delete (deactivate) current account and broadcast real-time logout to all sessions
+const deleteAccount = async (req, res) => {
+  try {
+    const user = req.user;
+
+    // Deactivate account (soft delete)
+    await user.update({ isActive: false });
+
+    // Emit real-time event to all of this user's sockets/tabs/devices
+    try {
+      if (global.io) {
+        global.io.to(`user_${user.id}`).emit('account_deleted', {
+          userId: user.id,
+          message: 'Tài khoản của bạn đã bị xóa. Bạn sẽ được đăng xuất.',
+        });
+        // Optionally force disconnect sockets shortly after emitting
+        try {
+          setTimeout(() => {
+            try { global.io.in(`user_${user.id}`).disconnectSockets(true); } catch {}
+          }, 100);
+        } catch {}
+      }
+    } catch (emitErr) {
+      console.error('Error emitting account_deleted:', emitErr);
+    }
+
+    // Clear server auth cookie
+    try {
+      res.clearCookie('auth_token', { httpOnly: true, sameSite: 'lax', secure: false, path: '/' });
+    } catch {}
+
+    return res.json({ message: 'Xóa tài khoản thành công' });
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -541,4 +609,5 @@ module.exports = {
   verifyOtp,
   resetPassword,
   getRememberPreference,
+  deleteAccount,
 };

@@ -1,4 +1,5 @@
 const { Notification, User, Group, GroupMember, GroupMessage } = require('../models');
+const { emitToAllAdmins } = require('../socket/socketHandler');
 const asyncHandler = require('../middlewares/asyncHandler');
 
 class NotificationController {
@@ -98,6 +99,10 @@ class NotificationController {
   markAllRead = asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const [count] = await Notification.update({ isRead: true }, { where: { userId, isRead: false } });
+    try {
+      // Thông báo cho tất cả admin để reload realtime tab Notifications của user này
+      emitToAllAdmins && emitToAllAdmins('admin_notifications_marked_all_read', { userId });
+    } catch (e) { /* noop */ }
     res.json({ success: true, data: { updated: Array.isArray(count) ? count[0] : count } });
   });
 

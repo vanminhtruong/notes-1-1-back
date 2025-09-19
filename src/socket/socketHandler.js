@@ -142,6 +142,27 @@ const handleConnection = async (socket) => {
     console.error('Error notifying friends about online status:', e);
   }
 
+  // Also notify all admins that a user is online (admin realtime dashboard)
+  try {
+    if (global.io) {
+      const payload = {
+        userId,
+        name: socket.user.name,
+        email: socket.user.email,
+        avatar: socket.user.avatar || null,
+        online: true,
+        at: new Date(),
+      };
+      const { User } = require('../models');
+      const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+      for (const admin of admins) {
+        global.io.to(`user_${admin.id}`).emit('admin_user_online', payload);
+      }
+    }
+  } catch (e) {
+    console.error('Error emitting admin_user_online:', e);
+  }
+
   // Handle note events
   socket.on('note_created', (data) => {
     // Broadcast to user's other devices/tabs
@@ -280,6 +301,29 @@ const handleConnection = async (socket) => {
         userName: socket.user.name,
         isTyping: true
       });
+
+      // Also notify admins who this user is typing with (for realtime UserActivity)
+      try {
+        const withUser = await User.findByPk(receiverId, { attributes: ['id', 'name'] });
+        const adminPayload = {
+          userId: userId,
+          userName: socket.user.name,
+          withUserId: receiverId,
+          withUserName: withUser ? withUser.name : undefined,
+          isTyping: true,
+          at: new Date(),
+        };
+        // Reuse helper to emit to all admins if available at runtime
+        if (global.io) {
+          const { User: _U } = require('../models');
+          const admins = await _U.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          for (const admin of admins) {
+            global.io.to(`user_${admin.id}`).emit('admin_user_typing', adminPayload);
+          }
+        }
+      } catch (e) {
+        console.error('Error emitting admin_user_typing (start):', e);
+      }
     } catch (e) {
       console.error('Error handling typing_start with block guard:', e);
     }
@@ -303,6 +347,28 @@ const handleConnection = async (socket) => {
         userName: socket.user.name,
         isTyping: false
       });
+
+      // Notify admins typing has stopped
+      try {
+        const withUser = await User.findByPk(receiverId, { attributes: ['id', 'name'] });
+        const adminPayload = {
+          userId: userId,
+          userName: socket.user.name,
+          withUserId: receiverId,
+          withUserName: withUser ? withUser.name : undefined,
+          isTyping: false,
+          at: new Date(),
+        };
+        if (global.io) {
+          const { User: _U } = require('../models');
+          const admins = await _U.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          for (const admin of admins) {
+            global.io.to(`user_${admin.id}`).emit('admin_user_typing', adminPayload);
+          }
+        }
+      } catch (e) {
+        console.error('Error emitting admin_user_typing (stop):', e);
+      }
     } catch (e) {
       console.error('Error handling typing_stop with block guard:', e);
     }
@@ -325,6 +391,20 @@ const handleConnection = async (socket) => {
           userId,
           isTyping: !!isTyping,
         });
+      }
+
+      // Notify admins as well for monitoring UI
+      try {
+        if (global.io) {
+          const { User: _U } = require('../models');
+          const admins = await _U.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          const payload = { groupId: Number(groupId), userId, userName: socket.user?.name, isTyping: !!isTyping, at: new Date() };
+          for (const admin of admins) {
+            global.io.to(`user_${admin.id}`).emit('admin_group_typing', payload);
+          }
+        }
+      } catch (e) {
+        console.error('Error emitting admin_group_typing:', e);
       }
     } catch (e) {
       console.error('Error handling group_typing:', e);
@@ -691,6 +771,27 @@ const handleConnection = async (socket) => {
     } catch (e) {
       console.error('Error notifying friends about offline status:', e);
     }
+
+    // Also notify all admins that a user is offline
+    try {
+      if (global.io) {
+        const payload = {
+          userId,
+          name: socket.user.name,
+          email: socket.user.email,
+          avatar: socket.user.avatar || null,
+          online: false,
+          lastSeenAt: new Date(),
+        };
+        const { User } = require('../models');
+        const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+        for (const admin of admins) {
+          global.io.to(`user_${admin.id}`).emit('admin_user_offline', payload);
+        }
+      }
+    } catch (e) {
+      console.error('Error emitting admin_user_offline:', e);
+    }
   });
 
   // Handle errors
@@ -703,6 +804,23 @@ const emitToUser = (userId, event, data) => {
   const userConnection = connectedUsers.get(userId);
   if (userConnection) {
     global.io.to(`user_${userId}`).emit(event, data);
+  }
+};
+
+const emitToAllAdmins = async (event, data) => {
+  try {
+    const adminUsers = await User.findAll({
+      where: { role: 'admin', isActive: true },
+      attributes: ['id']
+    });
+    
+    for (const admin of adminUsers) {
+      if (connectedUsers.has(admin.id)) {
+        global.io.to(`user_${admin.id}`).emit(event, data);
+      }
+    }
+  } catch (error) {
+    console.error('Error emitting to all admins:', error);
   }
 };
 
@@ -721,6 +839,7 @@ module.exports = {
   authenticateSocket,
   handleConnection,
   emitToUser,
+  emitToAllAdmins,
   getConnectedUsers,
   isUserOnline,
 };

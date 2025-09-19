@@ -278,6 +278,13 @@ class ModelManager {
       allowNull: false,
       defaultValue: false,
     });
+
+    // Role column for admin features
+    await this.ensureColumnExists('Users', 'role', {
+      type: DataTypes.ENUM('user', 'admin'),
+      allowNull: false,
+      defaultValue: 'user',
+    });
   }
 
   async updateGroupsTable() {

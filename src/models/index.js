@@ -136,6 +136,137 @@ Notification.belongsTo(User, { foreignKey: 'fromUserId', as: 'fromUser' });
 Notification.belongsTo(Group, { foreignKey: 'groupId', as: 'group' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 
+// --- Admin realtime hooks (do NOT modify other controllers) ---
+const emitToAdmins = async (event, data) => {
+  try {
+    if (!global.io) return;
+    const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+    for (const a of admins) {
+      global.io.to(`user_${a.id}`).emit(event, data);
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('emitToAdmins error:', e?.message || e);
+  }
+};
+
+const sanitizeUser = (u) => u ? ({ id: u.id, name: u.name, email: u.email, avatar: u.avatar }) : null;
+const sanitizeMessage = (m) => ({
+  id: m.id,
+  senderId: m.senderId,
+  receiverId: m.receiverId,
+  content: m.content,
+  messageType: m.messageType,
+  isDeletedForAll: !!m.isDeletedForAll,
+  createdAt: m.createdAt,
+  updatedAt: m.updatedAt,
+  sender: sanitizeUser(m.sender || null),
+  receiver: sanitizeUser(m.receiver || null),
+});
+
+// DM: after create/edit/recall
+Message.addHook('afterCreate', async (message) => {
+  try {
+    const full = await Message.findByPk(message.id, {
+      include: [
+        { model: User, as: 'sender', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'receiver', attributes: ['id', 'name', 'email', 'avatar'] },
+      ]
+    });
+    await emitToAdmins('admin_dm_created', sanitizeMessage(full));
+  } catch (e) { /* noop */ }
+});
+
+Message.addHook('afterUpdate', async (message) => {
+  try {
+    const changed = message.changed();
+    if (!changed) return;
+    if (Array.isArray(changed) && (changed.includes('content') || changed.includes('updatedAt'))) {
+      const full = await Message.findByPk(message.id, {
+        include: [
+          { model: User, as: 'sender', attributes: ['id', 'name', 'email', 'avatar'] },
+          { model: User, as: 'receiver', attributes: ['id', 'name', 'email', 'avatar'] },
+        ]
+      });
+      await emitToAdmins('admin_dm_edited', {
+        id: message.id,
+        content: full?.content,
+        updatedAt: full?.updatedAt,
+        senderId: full?.senderId,
+        receiverId: full?.receiverId,
+      });
+    }
+    if (message.changed('isDeletedForAll') && message.get('isDeletedForAll') === true) {
+      await emitToAdmins('admin_dm_recalled_all', { messageIds: [message.id], senderId: message.senderId, receiverId: message.receiverId });
+    }
+    if (Array.isArray(changed) && changed.includes('deletedForUserIds')) {
+      await emitToAdmins('admin_dm_deleted_for_user', { messageId: message.id, senderId: message.senderId, receiverId: message.receiverId });
+    }
+  } catch (e) { /* noop */ }
+});
+
+// Group message hooks (basic create + recall)
+const sanitizeGroupMessage = (gm) => ({
+  id: gm.id,
+  groupId: gm.groupId,
+  senderId: gm.senderId,
+  content: gm.content,
+  messageType: gm.messageType,
+  createdAt: gm.createdAt,
+  updatedAt: gm.updatedAt,
+});
+
+if (GroupMessage && typeof GroupMessage.addHook === 'function') {
+  GroupMessage.addHook('afterCreate', async (gm) => {
+    try {
+      await emitToAdmins('admin_group_message_created', sanitizeGroupMessage(gm));
+    } catch {}
+  });
+  GroupMessage.addHook('afterUpdate', async (gm) => {
+    try {
+      const changed = gm.changed();
+      if (Array.isArray(changed) && (changed.includes('content') || changed.includes('updatedAt'))) {
+        await emitToAdmins('admin_group_message_edited', { id: gm.id, content: gm.content, updatedAt: gm.updatedAt, senderId: gm.senderId });
+      }
+    } catch {}
+  });
+}
+
+// Group membership changes
+if (GroupMember && typeof GroupMember.addHook === 'function') {
+  GroupMember.addHook('afterCreate', async (gm) => {
+    try {
+      await emitToAdmins('admin_group_membership_changed', { userId: gm.userId, groupId: gm.groupId, action: 'joined' });
+    } catch {}
+  });
+  GroupMember.addHook('afterDestroy', async (gm) => {
+    try {
+      await emitToAdmins('admin_group_membership_changed', { userId: gm.userId, groupId: gm.groupId, action: 'left' });
+    } catch {}
+  });
+}
+
+// Friendship changes (accept/remove)
+if (Friendship && typeof Friendship.addHook === 'function') {
+  Friendship.addHook('afterUpdate', async (fr) => {
+    try {
+      if (fr.changed('status')) {
+        const payload = { requesterId: fr.requesterId, addresseeId: fr.addresseeId, status: fr.status };
+        if (fr.status === 'accepted') {
+          await emitToAdmins('admin_friendship_accepted', payload);
+        } else if (fr.status === 'rejected') {
+          await emitToAdmins('admin_friendship_rejected', payload);
+        }
+      }
+    } catch {}
+  });
+  Friendship.addHook('afterDestroy', async (fr) => {
+    try {
+      await emitToAdmins('admin_friendship_removed', { requesterId: fr.requesterId, addresseeId: fr.addresseeId });
+    } catch {}
+  });
+}
+
 module.exports = {
   sequelize,
   Sample,

@@ -505,6 +505,25 @@ class GroupController {
       }
     }
 
+    // Emit to all admins for monitoring UI
+    try {
+      const { emitToAllAdmins } = require('../socket/socketHandler');
+      const adminPayload = {
+        id: messageWithData.id,
+        groupId: Number(groupId),
+        senderId,
+        content: messageWithData.content,
+        messageType: messageWithData.messageType,
+        createdAt: messageWithData.createdAt,
+        senderName: messageWithData.sender?.name,
+        senderAvatar: messageWithData.sender?.avatar,
+        replyToMessageId: messageWithData.replyToMessageId || null,
+      };
+      emitToAllAdmins && emitToAllAdmins('admin_group_message_created', adminPayload);
+    } catch (e) {
+      // no-op for admin emit errors
+    }
+
     res.status(201).json({ success: true, data: messageWithData });
   });
 
@@ -733,7 +752,7 @@ class GroupController {
           io.to(`user_${inviteeId}`).emit('group_invited', payload);
           // Persist notification for the invitee
           try {
-            await Notification.create({
+            const notif = await Notification.create({
               userId: inviteeId,
               type: 'group_invite',
               fromUserId: userId,
@@ -742,6 +761,11 @@ class GroupController {
               isRead: false,
               createdAt: payload.createdAt,
             });
+            // Emit admin realtime to refresh notification tab in admin user activity
+            try {
+              const { emitToAllAdmins } = require('../socket/socketHandler');
+              emitToAllAdmins && emitToAllAdmins('admin_notification_created', { userId: inviteeId, type: notif.type });
+            } catch {}
           } catch (e) {}
         }
       }
