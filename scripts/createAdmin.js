@@ -16,12 +16,12 @@ function askQuestion(question) {
 
 async function createAdmin() {
   try {
-    console.log('🚀 Tạo tài khoản Admin\n');
+    console.log('🚀 Tạo tài khoản Super Admin\n');
     
     // Lấy thông tin từ người dùng
-    const email = await askQuestion('📧 Nhập email admin: ');
-    const password = await askQuestion('🔐 Nhập mật khẩu admin (tối thiểu 6 ký tự): ');
-    const name = await askQuestion('👤 Nhập tên admin: ');
+    const email = await askQuestion('📧 Nhập email super admin: ');
+    const password = await askQuestion('🔐 Nhập mật khẩu super admin (tối thiểu 6 ký tự): ');
+    const name = await askQuestion('👤 Nhập tên super admin: ');
     
     // Kiểm tra định dạng email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -60,27 +60,43 @@ async function createAdmin() {
       return;
     }
     
-    // Tạo admin user
+    // Danh sách tất cả quyền hạn có sẵn
+    const allPermissions = [
+      'manage_users',
+      'manage_notes', 
+      'manage_admins',
+      'view_analytics',
+      'manage_groups',
+      'view_messages',
+      'delete_content',
+      'system_settings'
+    ];
+
+    // Tạo super admin user
     const adminUser = await User.create({
       email,
       password,
       name,
       role: 'admin',
+      adminLevel: 'super_admin',
+      adminPermissions: allPermissions,
       isActive: true,
       theme: 'light',
       language: 'vi'
     });
     
-    console.log('\n🎉 Tạo tài khoản admin thành công!');
-    console.log('📋 Thông tin admin:');
+    console.log('\n🎉 Tạo tài khoản Super Admin thành công!');
+    console.log('📋 Thông tin Super Admin:');
     console.log(`   ID: ${adminUser.id}`);
     console.log(`   Email: ${adminUser.email}`);
     console.log(`   Tên: ${adminUser.name}`);
     console.log(`   Role: ${adminUser.role}`);
+    console.log(`   Admin Level: ${adminUser.adminLevel}`);
+    console.log(`   Quyền hạn: ${adminUser.adminPermissions.join(', ')}`);
     console.log(`   Ngày tạo: ${adminUser.createdAt}`);
     
   } catch (error) {
-    console.error('❌ Lỗi khi tạo admin:', error.message);
+    console.error('❌ Lỗi khi tạo super admin:', error.message);
   } finally {
     rl.close();
     await sequelize.close();

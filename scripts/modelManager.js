@@ -285,6 +285,18 @@ class ModelManager {
       allowNull: false,
       defaultValue: 'user',
     });
+
+    // Admin level for detailed admin permissions
+    await this.ensureColumnExists('Users', 'adminLevel', {
+      type: DataTypes.ENUM('super_admin', 'sub_admin'),
+      allowNull: true,
+    });
+
+    // Admin permissions as JSON array
+    await this.ensureColumnExists('Users', 'adminPermissions', {
+      type: DataTypes.JSON,
+      allowNull: true,
+    });
   }
 
   async updateGroupsTable() {

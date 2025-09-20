@@ -117,6 +117,17 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'user',
     },
+    // Admin level để phân quyền chi tiết (chỉ áp dụng khi role = 'admin')
+    adminLevel: {
+      type: DataTypes.ENUM('super_admin', 'sub_admin', 'dev', 'mod'),
+      allowNull: true, // null cho user thường
+    },
+    // Permissions cho admin (JSON array)
+    adminPermissions: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null,
+    },
   }, {
     hooks: {
       beforeCreate: async (user) => {

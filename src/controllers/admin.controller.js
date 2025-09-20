@@ -34,6 +34,8 @@ class AdminController {
         id: user.id,
         email: user.email,
         role: user.role,
+        adminLevel: user.adminLevel,
+        adminPermissions: user.adminPermissions || []
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -46,7 +48,9 @@ class AdminController {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        adminLevel: user.adminLevel,
+        adminPermissions: user.adminPermissions || []
       }
     });
   });
@@ -591,7 +595,26 @@ class AdminController {
       whereClause.role = role;
     }
     if (isActive !== undefined) {
-      whereClause.isActive = isActive === 'true';
+      const wantActive = isActive === 'true';
+      whereClause.isActive = wantActive;
+      // If requesting only active accounts, require specific sub-permission unless super admin
+      try {
+        const me = req.user;
+        const isSuper = me && me.adminLevel === 'super_admin';
+        const perms = Array.isArray(me?.adminPermissions) ? me.adminPermissions : [];
+        if (wantActive && !isSuper) {
+          const hasSpecific = perms.includes('manage_users.view_active_accounts');
+          const hasParent = perms.includes('manage_users');
+          // If user does not have specific sub-permission nor parent manage_users (explicit), deny
+          if (!hasSpecific && !hasParent) {
+            return res.status(403).json({
+              success: false,
+              message: 'Không có quyền xem danh sách tài khoản hoạt động',
+              requiredPermission: 'manage_users.view_active_accounts',
+            });
+          }
+        }
+      } catch {}
     }
 
     const users = await User.findAndCountAll({
@@ -696,6 +719,36 @@ class AdminController {
       deletedUser: userData
     });
   });
+
+  // API để refresh token với permissions mới (cho real-time updates)
+  refreshToken = asyncHandler(async (req, res) => {
+    const user = req.user; // Từ adminAuth middleware
+
+    const newToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        adminLevel: user.adminLevel,
+        adminPermissions: user.adminPermissions || []
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      message: 'Làm mới token thành công',
+      token: newToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        adminLevel: user.adminLevel,
+        adminPermissions: user.adminPermissions || []
+      }
+    });
+  });
 }
 
 const adminController = new AdminController();
@@ -716,4 +769,5 @@ module.exports = {
   adminGetGroupMessages: adminController.adminGetGroupMessages,
   adminGetGroupMembers: adminController.adminGetGroupMembers,
   adminGetUserNotifications: adminController.adminGetUserNotifications,
+  refreshToken: adminController.refreshToken,
 };

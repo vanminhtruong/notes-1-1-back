@@ -811,7 +811,7 @@ const emitToAllAdmins = async (event, data) => {
   try {
     const adminUsers = await User.findAll({
       where: { role: 'admin', isActive: true },
-      attributes: ['id']
+      attributes: ['id', 'adminLevel', 'adminPermissions']
     });
     
     for (const admin of adminUsers) {
@@ -821,6 +821,51 @@ const emitToAllAdmins = async (event, data) => {
     }
   } catch (error) {
     console.error('Error emitting to all admins:', error);
+  }
+};
+
+// Emit to admins với quyền cụ thể
+const emitToAdminsWithPermission = async (event, data, requiredPermission) => {
+  try {
+    const adminUsers = await User.findAll({
+      where: { role: 'admin', isActive: true },
+      attributes: ['id', 'adminLevel', 'adminPermissions']
+    });
+    
+    for (const admin of adminUsers) {
+      if (connectedUsers.has(admin.id)) {
+        // Super admin có tất cả quyền
+        if (admin.adminLevel === 'super_admin') {
+          global.io.to(`user_${admin.id}`).emit(event, data);
+        } else if (admin.adminPermissions && admin.adminPermissions.includes(requiredPermission)) {
+          global.io.to(`user_${admin.id}`).emit(event, data);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error emitting to admins with permission:', error);
+  }
+};
+
+// Emit chỉ cho super admins
+const emitToSuperAdmins = async (event, data) => {
+  try {
+    const superAdmins = await User.findAll({
+      where: { 
+        role: 'admin', 
+        isActive: true, 
+        adminLevel: 'super_admin'
+      },
+      attributes: ['id']
+    });
+    
+    for (const admin of superAdmins) {
+      if (connectedUsers.has(admin.id)) {
+        global.io.to(`user_${admin.id}`).emit(event, data);
+      }
+    }
+  } catch (error) {
+    console.error('Error emitting to super admins:', error);
   }
 };
 
@@ -840,6 +885,8 @@ module.exports = {
   handleConnection,
   emitToUser,
   emitToAllAdmins,
+  emitToAdminsWithPermission,
+  emitToSuperAdmins,
   getConnectedUsers,
   isUserOnline,
 };
