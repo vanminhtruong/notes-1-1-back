@@ -14,6 +14,10 @@ const {
   adminGetGroupMessages,
   adminGetGroupMembers,
   adminGetUserNotifications,
+  adminRecallDMMessage,
+  adminDeleteDMMessage,
+  adminRecallGroupMessage,
+  adminDeleteGroupMessage,
   refreshToken,
 } = require('../../controllers/admin.controller');
 const {
@@ -49,10 +53,17 @@ router.delete('/admins/:adminId', superAdminOnly, deleteAdmin);
 // User management (require manage_users permission)
 router.get('/users', requirePermission('manage_users'), getAllUsers);
 router.get('/users/:userId/activity', requirePermission('manage_users.view'), getUserActivity);
-router.get('/users/:userId/notifications', requirePermission('view_messages'), adminGetUserNotifications);
-router.get('/users/:userId/dm/:otherUserId/messages', requirePermission('view_messages'), adminGetDMMessages);
-router.get('/groups/:groupId/messages', requirePermission('view_messages'), adminGetGroupMessages);
-router.get('/groups/:groupId/members', requirePermission('manage_groups'), adminGetGroupMembers);
+router.get('/users/:userId/notifications', requirePermission('manage_users.activity.notifications'), adminGetUserNotifications);
+router.get('/users/:userId/dm/:otherUserId/messages', requirePermission('manage_users.activity.messages'), adminGetDMMessages);
+router.get('/groups/:groupId/messages', requirePermission('manage_users.activity.groups'), adminGetGroupMessages);
+router.get('/groups/:groupId/members', requirePermission('manage_users.activity.groups'), adminGetGroupMembers);
+
+// Message management (require message permissions)
+router.patch('/messages/:messageId/recall', requirePermission('manage_users.activity.messages.recall'), adminRecallDMMessage);
+router.delete('/messages/:messageId', requirePermission('manage_users.activity.messages.delete'), adminDeleteDMMessage);
+router.patch('/group-messages/:messageId/recall', requirePermission('manage_users.activity.groups.recall'), adminRecallGroupMessage);
+router.delete('/group-messages/:messageId', requirePermission('manage_users.activity.groups.delete'), adminDeleteGroupMessage);
+
 router.patch('/users/:id/toggle-status', requirePermission('manage_users.activate'), toggleUserStatus);
 router.delete('/users/:id/permanent', requirePermission('manage_users.delete_permanently'), deleteUserPermanently);
 

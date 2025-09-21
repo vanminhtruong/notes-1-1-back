@@ -569,6 +569,13 @@ class ChatController {
       };
       
       io.to(`user_${currentUserId}`).emit('messages_deleted', payload);
+      // Emit to admin for real-time monitoring
+      io.emit('admin_messages_deleted', {
+        ...payload,
+        senderId: currentUserId,
+        receiverId: parseInt(userId),
+        deletedCount: updatedCount
+      });
     }
 
     res.json({
@@ -872,13 +879,17 @@ class ChatController {
         participants.add(m.senderId);
         participants.add(m.receiverId);
       }
-      const payload = { scope, messageIds };
+      const payload = { scope, messageIds, userId };
       if (scope === 'self') {
         io.to(`user_${userId}`).emit('messages_recalled', payload);
+        // Emit to admin for real-time monitoring
+        io.emit('admin_messages_recalled', { ...payload, senderId: userId, receiverId: msgs[0]?.receiverId });
       } else {
         for (const pid of participants) {
           io.to(`user_${pid}`).emit('messages_recalled', payload);
         }
+        // Emit to admin for real-time monitoring
+        io.emit('admin_messages_recalled', { ...payload, senderId: userId, receiverId: msgs[0]?.receiverId });
       }
     }
 

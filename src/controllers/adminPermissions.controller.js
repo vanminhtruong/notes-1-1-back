@@ -11,13 +11,18 @@ class AdminPermissionsController {
   static AVAILABLE_PERMISSIONS = [
     'manage_users',           // Quản lý người dùng (parent)
     'manage_users.view',      // Xem thông tin người dùng
+    'manage_users.view_detail', // Xem chi tiết người dùng (modal chi tiết)
     'manage_users.activate',  // Kích hoạt/vô hiệu hóa người dùng
     'manage_users.view_active_accounts', // Xem tài khoản hoạt động
     'manage_users.delete_permanently',   // Xóa tài khoản vĩnh viễn
     // User Activity sub-permissions (consolidated - covers messages, groups, etc.)
     'manage_users.activity',             // Xem user activity (parent)
     'manage_users.activity.messages',    // Xem tab tin nhắn & quản lý tin nhắn
+    'manage_users.activity.messages.recall', // Thu hồi tin nhắn (DM)
+    'manage_users.activity.messages.delete', // Xóa tin nhắn (DM)
     'manage_users.activity.groups',      // Xem tab nhóm & quản lý nhóm
+    'manage_users.activity.groups.recall',   // Thu hồi tin nhắn nhóm
+    'manage_users.activity.groups.delete',   // Xóa tin nhắn nhóm
     'manage_users.activity.friends',     // Xem tab bạn bè
     'manage_users.activity.notifications', // Xem tab thông báo
     'manage_users.activity.monitor',     // Xem tab giám sát real-time
@@ -106,7 +111,7 @@ class AdminPermissionsController {
 
   // Tạo admin mới (chỉ super admin)
   createSubAdmin = asyncHandler(async (req, res) => {
-    const { email, password, name, permissions = [] } = req.body;
+    const { email, password, name, permissions = [], adminLevel } = req.body;
 
     // Kiểm tra email đã tồn tại
     const existingUser = await User.findOne({ where: { email } });
@@ -116,14 +121,16 @@ class AdminPermissionsController {
 
     // Validate và filter permissions
     const validPermissions = AdminPermissionsController.validateNestedPermissions(permissions);
-    const filteredPermissions = AdminPermissionsController.filterPermissionsByLevel(validPermissions, 'sub_admin');
+    const allowedLevels = ['sub_admin', 'dev', 'mod'];
+    const targetLevel = allowedLevels.includes(adminLevel) ? adminLevel : 'sub_admin';
+    const filteredPermissions = AdminPermissionsController.filterPermissionsByLevel(validPermissions, targetLevel);
 
     const newAdmin = await User.create({
       email,
       password,
       name,
       role: 'admin',
-      adminLevel: 'sub_admin',
+      adminLevel: targetLevel,
       adminPermissions: filteredPermissions,
       isActive: true
     });
@@ -176,9 +183,10 @@ class AdminPermissionsController {
       return res.status(403).json({ message: 'Không thể cập nhật quyền của Super Admin' });
     }
 
-    // Validate và filter permissions
+    // Validate và filter permissions theo level mục tiêu (nếu có thay đổi)
     const validPermissions = AdminPermissionsController.validateNestedPermissions(permissions);
-    const filteredPermissions = AdminPermissionsController.filterPermissionsByLevel(validPermissions, targetAdmin.adminLevel);
+    const nextLevel = (adminLevel && req.user.adminLevel === 'super_admin') ? adminLevel : targetAdmin.adminLevel;
+    const filteredPermissions = AdminPermissionsController.filterPermissionsByLevel(validPermissions, nextLevel);
 
     const updateData = {
       adminPermissions: filteredPermissions
@@ -186,7 +194,7 @@ class AdminPermissionsController {
 
     // Chỉ super admin mới có thể thay đổi adminLevel
     if (adminLevel && req.user.adminLevel === 'super_admin') {
-      updateData.adminLevel = adminLevel;
+      updateData.adminLevel = nextLevel;
     }
 
     await targetAdmin.update(updateData);

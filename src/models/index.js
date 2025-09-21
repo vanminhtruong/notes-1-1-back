@@ -197,7 +197,13 @@ Message.addHook('afterUpdate', async (message) => {
       });
     }
     if (message.changed('isDeletedForAll') && message.get('isDeletedForAll') === true) {
-      await emitToAdmins('admin_dm_recalled_all', { messageIds: [message.id], senderId: message.senderId, receiverId: message.receiverId });
+      // Check if this was a recall (has isRecalled flag) or delete (admin action)
+      const isRecall = message.get('isRecalled') === true;
+      if (isRecall) {
+        await emitToAdmins('admin_dm_recalled_all', { messageIds: [message.id], senderId: message.senderId, receiverId: message.receiverId });
+      } else {
+        await emitToAdmins('admin_dm_deleted_all', { messageIds: [message.id], senderId: message.senderId, receiverId: message.receiverId });
+      }
     }
     if (Array.isArray(changed) && changed.includes('deletedForUserIds')) {
       await emitToAdmins('admin_dm_deleted_for_user', { messageId: message.id, senderId: message.senderId, receiverId: message.receiverId });
