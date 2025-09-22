@@ -384,6 +384,26 @@ const updateProfile = async (req, res) => {
       console.error('Error emitting profile update:', emitError);
     }
 
+    // Also emit to all admins so Admin Users List and User Activity update in real-time
+    try {
+      await emitToAllAdmins('admin_user_updated', {
+        userId: user.id,
+        user: {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          phone: user.phone,
+          birthDate: user.birthDate,
+          gender: user.gender,
+          email: user.email,
+          isActive: user.isActive,
+        },
+        at: new Date(),
+      });
+    } catch (e) {
+      console.error('Error emitting admin_user_updated:', e);
+    }
+
     res.json({
       message: 'Cập nhật thông tin thành công',
       user,
