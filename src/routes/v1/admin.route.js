@@ -14,6 +14,7 @@ const {
   adminGetGroupMessages,
   adminGetGroupMembers,
   adminGetUserNotifications,
+  adminDeleteUserNotification,
   adminRecallDMMessage,
   adminDeleteDMMessage,
   adminRecallGroupMessage,
@@ -54,6 +55,7 @@ router.delete('/admins/:adminId', superAdminOnly, deleteAdmin);
 router.get('/users', requirePermission('manage_users'), getAllUsers);
 router.get('/users/:userId/activity', requirePermission('manage_users.view'), getUserActivity);
 router.get('/users/:userId/notifications', requirePermission('manage_users.activity.notifications'), adminGetUserNotifications);
+router.delete('/users/:userId/notifications/:notificationId', requirePermission('manage_users.activity.notifications.delete'), adminDeleteUserNotification);
 router.get('/users/:userId/dm/:otherUserId/messages', requirePermission('manage_users.activity.messages'), adminGetDMMessages);
 router.get('/groups/:groupId/messages', requirePermission('manage_users.activity.groups'), adminGetGroupMessages);
 router.get('/groups/:groupId/members', requirePermission('manage_users.activity.groups'), adminGetGroupMembers);

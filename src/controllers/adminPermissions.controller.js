@@ -25,6 +25,7 @@ class AdminPermissionsController {
     'manage_users.activity.groups.delete',   // Xóa tin nhắn nhóm
     'manage_users.activity.friends',     // Xem tab bạn bè
     'manage_users.activity.notifications', // Xem tab thông báo
+    'manage_users.activity.notifications.delete', // Xóa thông báo (real-time) trong Notifications Tab
     'manage_users.activity.monitor',     // Xem tab giám sát real-time
     'manage_notes',           // Quản lý ghi chú (parent)
     'manage_notes.create',    // Tạo ghi chú
