@@ -83,6 +83,17 @@ const handleConnection = async (socket) => {
         messageId: message.id,
         status: 'delivered'
       });
+      // Notify admins for monitoring (DM delivered)
+      try {
+        await emitToAllAdmins('admin_message_delivered', {
+          messageId: message.id,
+          senderId: message.senderId,
+          receiverId: message.receiverId,
+          status: 'delivered'
+        });
+      } catch (e) {
+        console.error('Error emitting admin_message_delivered:', e);
+      }
     }
 
     // Do the same for group messages where this user is a member
@@ -112,6 +123,17 @@ const handleConnection = async (socket) => {
           groupId: groupMessage.groupId,
           status: 'delivered'
         });
+        // Notify admins for monitoring (Group delivered)
+        try {
+          await emitToAllAdmins('admin_group_message_delivered', {
+            messageId: groupMessage.id,
+            groupId: groupMessage.groupId,
+            senderId: groupMessage.senderId,
+            status: 'delivered'
+          });
+        } catch (e) {
+          console.error('Error emitting admin_group_message_delivered:', e);
+        }
       }
     }
   } catch (error) {
@@ -615,6 +637,18 @@ const handleConnection = async (socket) => {
           readAt: readRecord.readAt,
           user
         });
+        // Notify admins for monitoring (DM read)
+        try {
+          await emitToAllAdmins('admin_message_read', {
+            messageId,
+            readerId: userId,
+            senderId: message.senderId,
+            receiverId: message.receiverId,
+            readAt: readRecord.readAt
+          });
+        } catch (e) {
+          console.error('Error emitting admin_message_read:', e);
+        }
       }
     } catch (error) {
       console.error('Error handling message_read:', error);
@@ -692,6 +726,18 @@ const handleConnection = async (socket) => {
               user
             });
           }
+        }
+        // Notify admins for monitoring (Group read)
+        try {
+          await emitToAllAdmins('admin_group_message_read', {
+            messageId,
+            groupId,
+            readerId: userId,
+            senderId: message.senderId,
+            readAt: readRecord.readAt
+          });
+        } catch (e) {
+          console.error('Error emitting admin_group_message_read:', e);
         }
       }
     } catch (error) {

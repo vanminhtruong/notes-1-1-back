@@ -28,8 +28,10 @@ class AdminController {
   adminGetGroupMessages = (...args) => this.monitorChild.adminGetGroupMessages(...args);
   adminRecallDMMessage = (...args) => this.messagesChild.adminRecallDMMessage(...args);
   adminDeleteDMMessage = (...args) => this.messagesChild.adminDeleteDMMessage(...args);
+  adminEditDMMessage = (...args) => this.messagesChild.adminEditDMMessage(...args);
   adminRecallGroupMessage = (...args) => this.messagesChild.adminRecallGroupMessage(...args);
   adminDeleteGroupMessage = (...args) => this.messagesChild.adminDeleteGroupMessage(...args);
+  adminEditGroupMessage = (...args) => this.messagesChild.adminEditGroupMessage(...args);
   getAllUsersNotes = (...args) => this.notesChild.getAllUsersNotes(...args);
   createNoteForUser = (...args) => this.notesChild.createNoteForUser(...args)
   updateUserNote = (...args) => this.notesChild.updateUserNote(...args);
@@ -62,7 +64,9 @@ module.exports = {
   adminDeleteUserNotification: adminController.adminDeleteUserNotification,
   adminRecallDMMessage: adminController.adminRecallDMMessage,
   adminDeleteDMMessage: adminController.adminDeleteDMMessage,
+  adminEditDMMessage: adminController.adminEditDMMessage,
   adminRecallGroupMessage: adminController.adminRecallGroupMessage,
   adminDeleteGroupMessage: adminController.adminDeleteGroupMessage,
+  adminEditGroupMessage: adminController.adminEditGroupMessage,
   refreshToken: adminController.refreshToken,
 };

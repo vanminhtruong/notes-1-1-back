@@ -17,8 +17,10 @@ const {
   adminDeleteUserNotification,
   adminRecallDMMessage,
   adminDeleteDMMessage,
+  adminEditDMMessage,
   adminRecallGroupMessage,
   adminDeleteGroupMessage,
+  adminEditGroupMessage,
   refreshToken,
 } = require('../../controllers/admin.controller');
 const {
@@ -63,8 +65,10 @@ router.get('/groups/:groupId/members', requirePermission('manage_users.activity.
 // Message management (require message permissions)
 router.patch('/messages/:messageId/recall', requirePermission('manage_users.activity.messages.recall'), adminRecallDMMessage);
 router.delete('/messages/:messageId', requirePermission('manage_users.activity.messages.delete'), adminDeleteDMMessage);
+router.patch('/messages/:messageId/edit', requirePermission('manage_users.activity.messages.edit'), adminEditDMMessage);
 router.patch('/group-messages/:messageId/recall', requirePermission('manage_users.activity.groups.recall'), adminRecallGroupMessage);
 router.delete('/group-messages/:messageId', requirePermission('manage_users.activity.groups.delete'), adminDeleteGroupMessage);
+router.patch('/group-messages/:messageId/edit', requirePermission('manage_users.activity.groups.edit'), adminEditGroupMessage);
 
 router.patch('/users/:id/toggle-status', requirePermission('manage_users.activate'), toggleUserStatus);
 router.delete('/users/:id/permanent', requirePermission('manage_users.delete_permanently'), deleteUserPermanently);

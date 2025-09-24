@@ -53,6 +53,20 @@ class AdminUsersChild {
       } catch {}
     }
 
+    // Exclude Super Admin accounts from user list if requester is not Super Admin
+    try {
+      const me = req.user;
+      const requesterIsSuper = me && me.adminLevel === 'super_admin';
+      if (!requesterIsSuper) {
+        const Op = require('sequelize').Op;
+        // Ensure AND conditions exist, then add an OR to keep rows where adminLevel is NULL or not 'super_admin'
+        whereClause[Op.and] = [
+          ...(whereClause[Op.and] || []),
+          { [Op.or]: [ { adminLevel: null }, { adminLevel: { [Op.ne]: 'super_admin' } } ] }
+        ];
+      }
+    } catch {}
+
     const users = await User.findAndCountAll({
       where: whereClause,
       attributes: ['id', 'name', 'email', 'role', 'isActive', 'avatar', 'lastSeenAt', 'createdAt'],

@@ -1,4 +1,4 @@
-const { User, Message, Group, GroupMember, Friendship, GroupMessage } = require('../../models');
+const { User, Message, Group, GroupMember, Friendship, GroupMessage, MessageRead, GroupMessageRead } = require('../../models');
 const asyncHandler = require('../../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 
@@ -50,14 +50,21 @@ class AdminMonitorChild {
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
         { model: User, as: 'receiver', attributes: ['id', 'name', 'avatar'] },
-        { model: Message, as: 'replyToMessage', attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'], include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }] }
+        { model: Message, as: 'replyToMessage', attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'], include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }] },
+        { model: MessageRead, as: 'MessageReads', attributes: ['userId', 'readAt'] }
       ],
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit, 10),
       offset: parseInt(offset, 10),
     });
 
-    const data = messages.map(m => m.toJSON()).reverse();
+    const data = messages.map(m => {
+      const raw = m.toJSON();
+      // Chuẩn hóa danh sách người đã đọc (DM thường là 1 người còn lại)
+      const reads = Array.isArray(raw.MessageReads) ? raw.MessageReads : [];
+      const readByUserIds = reads.map(r => r.userId);
+      return { ...raw, readByUserIds };
+    }).reverse();
     res.json({ success: true, data, pagination: { page: parseInt(page, 10), limit: parseInt(limit, 10), hasMore: messages.length === parseInt(limit, 10) } });
   });
 
@@ -72,14 +79,20 @@ class AdminMonitorChild {
       where: { groupId: gid, isDeletedForAll: { [Op.not]: true } },
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
-        { model: GroupMessage, as: 'replyToMessage', attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'], include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }] }
+        { model: GroupMessage, as: 'replyToMessage', attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'], include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }] },
+        { model: GroupMessageRead, as: 'GroupMessageReads', attributes: ['userId', 'readAt'] }
       ],
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit, 10),
       offset: parseInt(offset, 10),
     });
 
-    const data = messages.map(m => m.toJSON()).reverse();
+    const data = messages.map(m => {
+      const raw = m.toJSON();
+      const reads = Array.isArray(raw.GroupMessageReads) ? raw.GroupMessageReads : [];
+      const readByUserIds = reads.map(r => r.userId);
+      return { ...raw, readByUserIds };
+    }).reverse();
     res.json({ success: true, data, pagination: { page: parseInt(page, 10), limit: parseInt(limit, 10), hasMore: messages.length === parseInt(limit, 10) } });
   });
 

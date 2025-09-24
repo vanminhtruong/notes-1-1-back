@@ -27,6 +27,10 @@ class AdminPermissionsController {
     'manage_users.activity.notifications', // Xem tab thông báo
     'manage_users.activity.notifications.delete', // Xóa thông báo (real-time) trong Notifications Tab
     'manage_users.activity.monitor',     // Xem tab giám sát real-time
+    'manage_users.activity.monitor.message_status',        // Theo dõi trạng thái tin nhắn (parent)
+    'manage_users.activity.monitor.message_status.sent',   // Theo dõi trạng thái đã gửi
+    'manage_users.activity.monitor.message_status.delivered', // Theo dõi trạng thái đã nhận
+    'manage_users.activity.monitor.message_status.read',   // Theo dõi trạng thái đã xem
     'manage_notes',           // Quản lý ghi chú (parent)
     'manage_notes.create',    // Tạo ghi chú
     'manage_notes.edit',      // Sửa ghi chú

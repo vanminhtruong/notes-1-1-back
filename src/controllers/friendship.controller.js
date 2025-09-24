@@ -11,7 +11,8 @@ const getAllUsers = asyncHandler(async (req, res) => {
 
   const whereClause = {
     id: { [Op.ne]: currentUserId }, // Exclude current user
-    isActive: true
+    isActive: true,
+    role: { [Op.ne]: 'admin' } // Exclude admin accounts from public users search
   };
 
   if (search) {
