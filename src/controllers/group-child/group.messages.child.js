@@ -320,6 +320,11 @@ class GroupMessagesChild {
             const members = await this.parent.membersChild.getGroupMemberIds(groupId);
             const payloadUn = { groupId: Number(groupId), messageId: Number(messageId), userId, type: removedType };
             for (const uid of members) io.to(`user_${uid}`).emit('group_message_unreacted', payloadUn);
+            // Notify admins as well để Monitor cập nhật realtime
+            try {
+              const { emitToAllAdmins } = require('../../socket/socketHandler');
+              emitToAllAdmins && emitToAllAdmins('admin_group_message_unreacted', { ...payloadUn });
+            } catch (e) { /* noop */ }
           }
         }
       } catch {}
@@ -332,6 +337,11 @@ class GroupMessagesChild {
       const userInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
       const payload = { groupId: Number(groupId), messageId: Number(messageId), userId, type, count: current?.count ?? 1, user: userInfo };
       for (const uid of members) io.to(`user_${uid}`).emit('group_message_reacted', payload);
+      // Emit to admins
+      try {
+        const { emitToAllAdmins } = require('../../socket/socketHandler');
+        emitToAllAdmins && emitToAllAdmins('admin_group_message_reacted', { ...payload });
+      } catch (e) { /* noop */ }
     }
 
     return res.json({ success: true, data: { groupId: Number(groupId), messageId: Number(messageId), type } });
@@ -353,6 +363,11 @@ class GroupMessagesChild {
       const members = await this.parent.membersChild.getGroupMemberIds(groupId);
       const payload = { groupId: Number(groupId), messageId: Number(messageId), userId, ...(type ? { type } : {}) };
       for (const uid of members) io.to(`user_${uid}`).emit('group_message_unreacted', payload);
+      // Emit to admins
+      try {
+        const { emitToAllAdmins } = require('../../socket/socketHandler');
+        emitToAllAdmins && emitToAllAdmins('admin_group_message_unreacted', { ...payload });
+      } catch (e) { /* noop */ }
     }
 
     return res.json({ success: true, data: { groupId: Number(groupId), messageId: Number(messageId), ...(type ? { type } : {}) } });
