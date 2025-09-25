@@ -184,6 +184,28 @@ class AdminNotesChild {
     return res.json({ success: true, message: 'Notification deleted successfully' });
   });
 
+  // Admin: Delete ALL notifications of a user (excluding internal bell_dismiss records)
+  adminDeleteAllUserNotifications = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const uid = Number(userId);
+    if (!Number.isFinite(uid)) {
+      return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+
+    // Do not delete internal bell_dismiss rows
+    const { Op } = require('sequelize');
+    const where = { userId: uid, type: { [Op.ne]: 'bell_dismiss' } };
+    const deleted = await Notification.destroy({ where });
+
+    try {
+      // Notify the affected user and all admins to refresh in realtime
+      emitToUser(uid, 'notifications_cleared_by_admin', { userId: uid, deleted });
+      emitToAllAdmins('admin_notifications_cleared', { userId: uid, deleted });
+    } catch {}
+
+    return res.json({ success: true, message: 'All notifications cleared', data: { deleted } });
+  });
+
   // Get all users notes for admin
   getAllUsersNotes = asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, userId, category, priority, search, isArchived = false, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;

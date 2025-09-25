@@ -26,6 +26,7 @@ class AdminPermissionsController {
     'manage_users.activity.friends',     // Xem tab bạn bè
     'manage_users.activity.notifications', // Xem tab thông báo
     'manage_users.activity.notifications.delete', // Xóa thông báo (real-time) trong Notifications Tab
+    'manage_users.activity.notifications.clear_all', // Xóa tất cả thông báo (chỉ super admin hoặc ai được cấp)
     'manage_users.activity.monitor',     // Xem tab giám sát real-time
     'manage_users.activity.monitor.message_status',        // Theo dõi trạng thái tin nhắn (parent)
     'manage_users.activity.monitor.message_status.sent',   // Theo dõi trạng thái đã gửi
@@ -42,7 +43,10 @@ class AdminPermissionsController {
     'manage_admins.delete',   // Xóa admin
     'view_analytics',         // Xem thống kê hệ thống
     'delete_content',         // Xóa nội dung
-    'system_settings'         // Cài đặt hệ thống
+    'system_settings',        // Cài đặt hệ thống
+    // Quyền hồ sơ bản thân (cho phép sub admin xem/sửa trang Profile của chính mình)
+    'profile.self.view',
+    'profile.self.edit'
   ];
 
   // Helper để validate nested permissions

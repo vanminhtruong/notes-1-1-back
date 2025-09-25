@@ -1,4 +1,7 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const { adminAuth, requirePermission, superAdminOnly } = require('../../middlewares/adminAuth.middleware');
 const {
   adminLogin,
@@ -15,6 +18,7 @@ const {
   adminGetGroupMembers,
   adminGetUserNotifications,
   adminDeleteUserNotification,
+  adminDeleteAllUserNotifications,
   adminRecallDMMessage,
   adminDeleteDMMessage,
   adminEditDMMessage,
@@ -22,6 +26,11 @@ const {
   adminDeleteGroupMessage,
   adminEditGroupMessage,
   refreshToken,
+  getMyProfile,
+  updateMyProfile,
+  uploadAvatar,
+  getAdminProfile,
+  updateAdminProfile,
 } = require('../../controllers/admin.controller');
 const {
   getAllAdmins,
@@ -33,6 +42,38 @@ const {
   toggleAdminStatus,
 } = require('../../controllers/adminPermissions.controller');
 
+// Configure multer for admin uploads  
+const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `${base}-${unique}${ext}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype && file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed'));
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+
 const router = express.Router();
 
 // Admin login (no auth required)
@@ -43,6 +84,17 @@ router.use(adminAuth);
 
 // Refresh token endpoint
 router.post('/refresh-token', refreshToken);
+
+// Admin profile
+router.get('/me', getMyProfile);
+router.put('/me', updateMyProfile);
+
+// Admin file upload
+router.post('/upload/image', upload.single('file'), uploadAvatar);
+
+// Admin profile management (Super Admin only)
+router.get('/admins/:adminId/profile', superAdminOnly, getAdminProfile);
+router.put('/admins/:adminId/profile', superAdminOnly, updateAdminProfile);
 
 // Admin permissions management (Super Admin only)
 router.get('/permissions/me', getMyPermissions);
@@ -58,6 +110,7 @@ router.get('/users', requirePermission('manage_users'), getAllUsers);
 router.get('/users/:userId/activity', requirePermission('manage_users.view'), getUserActivity);
 router.get('/users/:userId/notifications', requirePermission('manage_users.activity.notifications'), adminGetUserNotifications);
 router.delete('/users/:userId/notifications/:notificationId', requirePermission('manage_users.activity.notifications.delete'), adminDeleteUserNotification);
+router.delete('/users/:userId/notifications', requirePermission('manage_users.activity.notifications.clear_all'), adminDeleteAllUserNotifications);
 router.get('/users/:userId/dm/:otherUserId/messages', requirePermission('manage_users.activity.messages'), adminGetDMMessages);
 router.get('/groups/:groupId/messages', requirePermission('manage_users.activity.groups'), adminGetGroupMessages);
 router.get('/groups/:groupId/members', requirePermission('manage_users.activity.groups'), adminGetGroupMembers);

@@ -8,6 +8,7 @@ const AdminMessagesChild = require('./group-child/admin.messages.child');
 const AdminMonitorChild = require('./group-child/admin.monitor.child');
 const AdminUsersChild = require('./group-child/admin.users.child');
 const AdminAuthChild = require('./group-child/admin.auth.child');
+const AdminProfileChild = require('./group-child/admin.profile.child');
 // class này đã quá dài hãy tạo ra class con kế thừa để xử lý
 class AdminController {
   constructor() {
@@ -17,12 +18,14 @@ class AdminController {
     this.monitorChild = new AdminMonitorChild(this);
     this.usersChild = new AdminUsersChild(this);
     this.authChild = new AdminAuthChild(this);
+    this.profileChild = new AdminProfileChild(this);
   }
 
   // Admin login (delegated)
   adminLogin = (...args) => this.authChild.adminLogin(...args);
   adminGetUserNotifications = (...args) => this.notesChild.adminGetUserNotifications(...args);
   adminDeleteUserNotification = (...args) => this.notesChild.adminDeleteUserNotification(...args);
+  adminDeleteAllUserNotifications = (...args) => this.notesChild.adminDeleteAllUserNotifications(...args);
   adminGetGroupMembers = (...args) => this.monitorChild.adminGetGroupMembers(...args);
   adminGetDMMessages = (...args) => this.monitorChild.adminGetDMMessages(...args);
   adminGetGroupMessages = (...args) => this.monitorChild.adminGetGroupMessages(...args);
@@ -41,6 +44,11 @@ class AdminController {
   toggleUserStatus = (...args) => this.usersChild.toggleUserStatus(...args);
   deleteUserPermanently = (...args) => this.usersChild.deleteUserPermanently(...args);
   refreshToken = (...args) => this.authChild.refreshToken(...args);
+  getMyProfile = (...args) => this.profileChild.getMyProfile(...args);
+  updateMyProfile = (...args) => this.profileChild.updateMyProfile(...args);
+  uploadAvatar = (...args) => this.profileChild.uploadAvatar(...args);
+  getAdminProfile = (...args) => this.profileChild.getAdminProfile(...args);
+  updateAdminProfile = (...args) => this.profileChild.updateAdminProfile(...args);
 }
 
 const adminController = new AdminController();
@@ -62,6 +70,7 @@ module.exports = {
   adminGetGroupMembers: adminController.adminGetGroupMembers,
   adminGetUserNotifications: adminController.adminGetUserNotifications,
   adminDeleteUserNotification: adminController.adminDeleteUserNotification,
+  adminDeleteAllUserNotifications: adminController.adminDeleteAllUserNotifications,
   adminRecallDMMessage: adminController.adminRecallDMMessage,
   adminDeleteDMMessage: adminController.adminDeleteDMMessage,
   adminEditDMMessage: adminController.adminEditDMMessage,
@@ -69,4 +78,9 @@ module.exports = {
   adminDeleteGroupMessage: adminController.adminDeleteGroupMessage,
   adminEditGroupMessage: adminController.adminEditGroupMessage,
   refreshToken: adminController.refreshToken,
+  getMyProfile: adminController.getMyProfile,
+  updateMyProfile: adminController.updateMyProfile,
+  uploadAvatar: adminController.uploadAvatar,
+  getAdminProfile: adminController.getAdminProfile,
+  updateAdminProfile: adminController.updateAdminProfile,
 };
