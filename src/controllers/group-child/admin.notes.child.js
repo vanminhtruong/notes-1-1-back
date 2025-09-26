@@ -208,14 +208,18 @@ class AdminNotesChild {
 
   // Get all users notes for admin
   getAllUsersNotes = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, userId, category, priority, search, isArchived = false, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+    const { page = 1, limit = 20, userId, category, priority, search, isArchived, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
 
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 20;
-    const archivedBool = typeof isArchived === 'string' ? isArchived.toLowerCase() === 'true' : !!isArchived;
     const offset = (pageNum - 1) * limitNum;
 
-    const whereClause = { isArchived: archivedBool };
+    const whereClause = {};
+    // Only apply archived filter when query param is explicitly provided
+    if (typeof isArchived !== 'undefined' && String(isArchived).trim() !== '') {
+      const archivedBool = String(isArchived).toLowerCase() === 'true';
+      whereClause.isArchived = archivedBool;
+    }
 
     if (userId !== undefined && userId !== null && String(userId).trim() !== '') {
       const uid = parseInt(String(userId), 10);
@@ -258,7 +262,7 @@ class AdminNotesChild {
     const targetUser = await User.findByPk(userId);
     if (!targetUser) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
-    }
+    } 
 
     const note = await Note.create({
       title,

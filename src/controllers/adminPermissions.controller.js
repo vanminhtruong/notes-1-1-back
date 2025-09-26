@@ -37,6 +37,8 @@ class AdminPermissionsController {
     'manage_notes.edit',      // Sửa ghi chú
     'manage_notes.delete',    // Xóa ghi chú
     'manage_notes.view',      // Xem ghi chú
+    'manage_notes.view_detail', // Xem chi tiết ghi chú (modal chi tiết)
+    'manage_notes.archive',   // Lưu trữ/bỏ lưu trữ ghi chú
     'manage_admins',          // Quản lý admin khác (chỉ super admin)
     'manage_admins.create',   // Tạo admin
     'manage_admins.edit',     // Sửa quyền admin
