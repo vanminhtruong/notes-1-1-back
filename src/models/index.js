@@ -18,6 +18,8 @@ const definePinnedChat = require('./pinnedChat.model');
 const definePinnedMessage = require('./pinnedMessage.model');
 const defineMessageReaction = require('./messageReaction.model');
 const defineNotification = require('./notification.model');
+const defineSharedNote = require('./sharedNote.model');
+const defineGroupSharedNote = require('./groupSharedNote.model');
 
 const Sample = defineSample(sequelize, DataTypes);
 const User = defineUser(sequelize, DataTypes);
@@ -37,6 +39,8 @@ const PinnedChat = definePinnedChat(sequelize, DataTypes);
 const PinnedMessage = definePinnedMessage(sequelize, DataTypes);
 const MessageReaction = defineMessageReaction(sequelize, DataTypes);
 const Notification = defineNotification(sequelize, DataTypes);
+const SharedNote = defineSharedNote(sequelize, DataTypes);
+const GroupSharedNote = defineGroupSharedNote(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
@@ -135,6 +139,22 @@ Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' }); // recipient
 Notification.belongsTo(User, { foreignKey: 'fromUserId', as: 'fromUser' });
 Notification.belongsTo(Group, { foreignKey: 'groupId', as: 'group' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
+
+// SharedNote associations
+SharedNote.belongsTo(Note, { foreignKey: 'noteId', as: 'note' });
+SharedNote.belongsTo(User, { foreignKey: 'sharedWithUserId', as: 'sharedWithUser' });
+SharedNote.belongsTo(User, { foreignKey: 'sharedByUserId', as: 'sharedByUser' });
+Note.hasMany(SharedNote, { foreignKey: 'noteId', as: 'sharedNotes' });
+User.hasMany(SharedNote, { foreignKey: 'sharedWithUserId', as: 'receivedSharedNotes' });
+User.hasMany(SharedNote, { foreignKey: 'sharedByUserId', as: 'sentSharedNotes' });
+
+// GroupSharedNote associations
+GroupSharedNote.belongsTo(Note, { foreignKey: 'noteId', as: 'note' });
+GroupSharedNote.belongsTo(Group, { foreignKey: 'groupId', as: 'group' });
+GroupSharedNote.belongsTo(User, { foreignKey: 'sharedByUserId', as: 'sharedByUser' });
+Note.hasMany(GroupSharedNote, { foreignKey: 'noteId', as: 'groupSharedNotes' });
+Group.hasMany(GroupSharedNote, { foreignKey: 'groupId', as: 'sharedNotes' });
+User.hasMany(GroupSharedNote, { foreignKey: 'sharedByUserId', as: 'sentGroupSharedNotes' });
 
 // --- Admin realtime hooks (do NOT modify other controllers) ---
 const emitToAdmins = async (event, data) => {
@@ -293,5 +313,7 @@ module.exports = {
   PinnedMessage,
   MessageReaction,
   Notification,
+  SharedNote,
+  GroupSharedNote,
 };
 

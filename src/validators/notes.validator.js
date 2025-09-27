@@ -58,7 +58,63 @@ const validateUpdateNote = (req, res, next) => {
   next();
 };
 
+const validateShareNote = (req, res, next) => {
+  const schema = Joi.object({
+    userId: Joi.number().integer().positive().required().messages({
+      'number.base': 'ID người dùng phải là số',
+      'number.positive': 'ID người dùng phải là số dương',
+      'any.required': 'ID người dùng là bắt buộc',
+    }),
+    canEdit: Joi.boolean().optional().default(false),
+    canDelete: Joi.boolean().optional().default(false),
+    message: Joi.string().max(500).allow('').optional().messages({
+      'string.max': 'Tin nhắn không được quá 500 ký tự',
+    }),
+    messageId: Joi.number().integer().positive().allow(null).optional().messages({
+      'number.base': 'Message ID phải là số',
+      'number.positive': 'Message ID phải là số dương',
+    }),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
+const validateShareNoteToGroup = (req, res, next) => {
+  const schema = Joi.object({
+    groupId: Joi.number().integer().positive().required().messages({
+      'number.base': 'ID nhóm phải là số',
+      'number.positive': 'ID nhóm phải là số dương',
+      'any.required': 'ID nhóm là bắt buộc',
+    }),
+    message: Joi.string().max(500).allow('').optional().messages({
+      'string.max': 'Tin nhắn không được quá 500 ký tự',
+    }),
+    groupMessageId: Joi.number().integer().positive().allow(null).optional().messages({
+      'number.base': 'Group Message ID phải là số',
+      'number.positive': 'Group Message ID phải là số dương',
+    }),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
 module.exports = {
   validateCreateNote,
   validateUpdateNote,
+  validateShareNote,
+  validateShareNoteToGroup,
 };

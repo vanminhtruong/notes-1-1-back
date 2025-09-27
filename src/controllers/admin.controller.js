@@ -39,6 +39,9 @@ class AdminController {
   createNoteForUser = (...args) => this.notesChild.createNoteForUser(...args)
   updateUserNote = (...args) => this.notesChild.updateUserNote(...args);
   deleteUserNote = (...args) => this.notesChild.deleteUserNote(...args);
+  getAllSharedNotes = (...args) => this.notesChild.getAllSharedNotes(...args);
+  getSharedNoteDetail = (...args) => this.notesChild.getSharedNoteDetail(...args);
+  deleteSharedNote = (...args) => this.notesChild.deleteSharedNote(...args);
   getUserActivity = (...args) => this.monitorChild.getUserActivity(...args);
   getAllUsers = (...args) => this.usersChild.getAllUsers(...args)
   toggleUserStatus = (...args) => this.usersChild.toggleUserStatus(...args);
@@ -61,6 +64,9 @@ module.exports = {
   createNoteForUser: adminController.createNoteForUser,
   updateUserNote: adminController.updateUserNote,
   deleteUserNote: adminController.deleteUserNote,
+  getAllSharedNotes: adminController.getAllSharedNotes,
+  getSharedNoteDetail: adminController.getSharedNoteDetail,
+  deleteSharedNote: adminController.deleteSharedNote,
   getUserActivity: adminController.getUserActivity,
   getAllUsers: adminController.getAllUsers,
   toggleUserStatus: adminController.toggleUserStatus,

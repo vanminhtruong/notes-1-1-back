@@ -39,6 +39,9 @@ class AdminPermissionsController {
     'manage_notes.view',      // Xem ghi chú
     'manage_notes.view_detail', // Xem chi tiết ghi chú (modal chi tiết)
     'manage_notes.archive',   // Lưu trữ/bỏ lưu trữ ghi chú
+    'manage_notes.shared',    // Quản lý ghi chú chia sẻ (parent)
+    'manage_notes.shared.view', // Xem danh sách ghi chú chia sẻ
+    'manage_notes.shared.delete', // Xóa ghi chú chia sẻ
     'manage_admins',          // Quản lý admin khác (chỉ super admin)
     'manage_admins.create',   // Tạo admin
     'manage_admins.edit',     // Sửa quyền admin

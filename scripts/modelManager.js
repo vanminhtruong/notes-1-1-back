@@ -194,6 +194,176 @@ class ModelManager {
     });
   }
 
+  async createSharedNotesTable() {
+    console.log('Creating SharedNotes table if missing...');
+    await this.ensureTableExists('SharedNotes', {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      noteId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Notes', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      sharedWithUserId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Users', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      sharedByUserId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Users', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      canEdit: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      canDelete: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      message: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      messageId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: 'Messages', key: 'id' },
+        onDelete: 'SET NULL',
+      },
+      sharedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      isActive: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    }, [
+      { fields: ['noteId'], name: 'sharednotes_noteid_idx' },
+      { fields: ['sharedWithUserId'], name: 'sharednotes_sharedwithuser_idx' },
+      { fields: ['sharedByUserId'], name: 'sharednotes_sharedbyuser_idx' },
+      { fields: ['messageId'], name: 'sharednotes_messageid_idx' },
+      { fields: ['sharedAt'], name: 'sharednotes_sharedat_idx' },
+    ]);
+  }
+
+  async updateSharedNotesTable() {
+    console.log('Updating SharedNotes table...');
+    
+    // Ensure messageId column exists (for linking to chat messages)
+    await this.ensureColumnExists('SharedNotes', 'messageId', {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Messages',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+    });
+  }
+
+  async createGroupSharedNotesTable() {
+    console.log('Creating GroupSharedNotes table if missing...');
+    await this.ensureTableExists('GroupSharedNotes', {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      noteId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Notes', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      groupId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Groups', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      sharedByUserId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Users', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      message: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      groupMessageId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: 'GroupMessages', key: 'id' },
+        onDelete: 'SET NULL',
+      },
+      sharedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      isActive: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    }, [
+      { fields: ['noteId'], name: 'groupsharednotes_noteid_idx' },
+      { fields: ['groupId'], name: 'groupsharednotes_groupid_idx' },
+      { fields: ['sharedByUserId'], name: 'groupsharednotes_sharedbyuser_idx' },
+      { fields: ['groupMessageId'], name: 'groupsharednotes_groupmessageid_idx' },
+      { fields: ['sharedAt'], name: 'groupsharednotes_sharedat_idx' },
+    ]);
+  }
+
+  async updateGroupSharedNotesTable() {
+    console.log('Updating GroupSharedNotes table...');
+    
+    // Ensure groupMessageId column exists (for linking to group chat messages)
+    await this.ensureColumnExists('GroupSharedNotes', 'groupMessageId', {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'GroupMessages',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+    });
+  }
+
   async updateUsersTable() {
     console.log('Updating Users table...');
     
@@ -511,6 +681,13 @@ class ModelManager {
       await this.updateNotesTable();
       await this.createReadTables();
       await this.createChatPreferenceTable();
+      
+      // Shared Notes migrations
+      await this.createSharedNotesTable();
+      await this.updateSharedNotesTable();
+      await this.createGroupSharedNotesTable();
+      await this.updateGroupSharedNotesTable();
+      
       // Ensure new columns on existing installations
       await this.ensureColumnExists('ChatPreferences', 'nickname', {
         type: DataTypes.STRING(60),

@@ -1,4 +1,4 @@
-const { User, Note, Message, Group, GroupMember, Notification } = require('../../models');
+const { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote } = require('../../models');
 const asyncHandler = require('../../middlewares/asyncHandler');
 const { Op } = require('sequelize');
 const { emitToAllAdmins, emitToUser } = require('../../socket/socketHandler');
@@ -354,6 +354,286 @@ class AdminNotesChild {
     emitToAllAdmins('note_deleted_by_admin', { id: note.id, userId });
 
     res.json({ message: 'Xóa ghi chú thành công' });
+  });
+
+  // Get all shared notes for admin (both individual and group shares)
+  getAllSharedNotes = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, userId, search, sharedByUserId, sortBy = 'sharedAt', sortOrder = 'DESC' } = req.query;
+
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 20;
+    const offset = (pageNum - 1) * limitNum;
+
+    // Search in note title or content
+    let noteWhere = {};
+    if (search) {
+      noteWhere = {
+        [Op.or]: [
+          { title: { [Op.like]: `%${search}%` } },
+          { content: { [Op.like]: `%${search}%` } },
+        ]
+      };
+    }
+
+    // Build where clauses for individual shares
+    const individualWhereClause = { isActive: true };
+    if (userId !== undefined && userId !== null && String(userId).trim() !== '') {
+      const uid = parseInt(String(userId), 10);
+      if (!Number.isNaN(uid)) {
+        individualWhereClause.sharedWithUserId = uid;
+      }
+    }
+    if (sharedByUserId !== undefined && sharedByUserId !== null && String(sharedByUserId).trim() !== '') {
+      const sbid = parseInt(String(sharedByUserId), 10);
+      if (!Number.isNaN(sbid)) {
+        individualWhereClause.sharedByUserId = sbid;
+      }
+    }
+
+    // Build where clauses for group shares
+    const groupWhereClause = { isActive: true };
+    if (sharedByUserId !== undefined && sharedByUserId !== null && String(sharedByUserId).trim() !== '') {
+      const sbid = parseInt(String(sharedByUserId), 10);
+      if (!Number.isNaN(sbid)) {
+        groupWhereClause.sharedByUserId = sbid;
+      }
+    }
+
+    // Get individual shares
+    const individualShares = await SharedNote.findAll({
+      where: individualWhereClause,
+      include: [
+        { 
+          model: Note, 
+          as: 'note', 
+          where: search ? noteWhere : undefined,
+          include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
+        },
+        { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ],
+    });
+
+    // Get group shares
+    const groupShares = await GroupSharedNote.findAll({
+      where: groupWhereClause,
+      include: [
+        { 
+          model: Note, 
+          as: 'note', 
+          where: search ? noteWhere : undefined,
+          include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
+        },
+        { model: Group, as: 'group', attributes: ['id', 'name', 'avatar'] },
+        { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ],
+    });
+
+    // Combine and format results
+    const combinedShares = [
+      ...individualShares.map(share => ({
+        ...share.toJSON(),
+        shareType: 'individual',
+      })),
+      ...groupShares.map(share => ({
+        ...share.toJSON(),
+        shareType: 'group',
+      }))
+    ];
+
+    // Sort combined results
+    combinedShares.sort((a, b) => {
+      const aDate = new Date(a.sharedAt);
+      const bDate = new Date(b.sharedAt);
+      return sortOrder === 'DESC' ? bDate - aDate : aDate - bDate;
+    });
+
+    // Apply pagination to combined results
+    const total = combinedShares.length;
+    const paginatedShares = combinedShares.slice(offset, offset + limitNum);
+
+    res.json({
+      sharedNotes: paginatedShares,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    });
+  });
+
+  // Get shared note detail by ID for admin
+  getSharedNoteDetail = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const sharedNote = await SharedNote.findByPk(id, {
+      include: [
+        { 
+          model: Note, 
+          as: 'note',
+          include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
+        },
+        { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
+      ],
+    });
+
+    if (!sharedNote) {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ' });
+    }
+
+    res.json({ sharedNote });
+  });
+
+  // Delete shared note (admin) - now supports both individual and group shares
+  deleteSharedNote = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    // Try to find individual shared note first
+    let sharedNote = await SharedNote.findByPk(id, {
+      include: [
+        { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
+      ],
+    });
+
+    let isGroupShare = false;
+    let groupSharedNote = null;
+
+    // If not found, try group shared note
+    if (!sharedNote) {
+      groupSharedNote = await GroupSharedNote.findByPk(id, {
+        include: [
+          { model: Group, as: 'group', attributes: ['id', 'name'] },
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
+        ],
+      });
+      
+      if (!groupSharedNote) {
+        return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ' });
+      }
+      
+      isGroupShare = true;
+    }
+
+    const targetNote = isGroupShare ? groupSharedNote : sharedNote;
+
+    try {
+      if (isGroupShare) {
+        // Handle group share deletion
+        const groupId = groupSharedNote.group.id;
+        const sharedByUserId = groupSharedNote.sharedByUser.id;
+        
+        // Delete associated group message if exists
+        if (groupSharedNote.groupMessageId) {
+          const groupMessage = await GroupMessage.findByPk(groupSharedNote.groupMessageId);
+          if (groupMessage) {
+            console.log(`🗑️ Deleting group message ${groupSharedNote.groupMessageId} for group ${groupId}`);
+            await groupMessage.destroy();
+            
+            // Emit to group members about message deletion
+            if (global.io) {
+              console.log(`📡 Emitting admin_group_message_deleted to group_${groupId}`);
+              global.io.to(`group_${groupId}`).emit('admin_group_message_deleted', {
+                messageId: groupSharedNote.groupMessageId,
+                groupId,
+                deletedBy: 'admin'
+              });
+              
+              // Also emit to all users in case they're not in the socket room
+              const groupMembers = await GroupMember.findAll({
+                where: { groupId },
+                attributes: ['userId']
+              });
+              
+              for (const member of groupMembers) {
+                emitToUser(member.userId, 'admin_group_message_deleted', {
+                  messageId: groupSharedNote.groupMessageId,
+                  groupId,
+                  deletedBy: 'admin'
+                });
+              }
+            }
+          } else {
+            console.log(`⚠️ Group message ${groupSharedNote.groupMessageId} not found`);
+          }
+        } else {
+          console.log(`⚠️ No groupMessageId found for GroupSharedNote ${groupSharedNote.id}`);
+        }
+        
+        await groupSharedNote.destroy();
+
+        // Notify group members and admin
+        if (global.io) {
+          global.io.to(`group_${groupId}`).emit('group_shared_note_deleted_by_admin', { 
+            id: groupSharedNote.id,
+            groupId 
+          });
+        }
+        emitToUser(sharedByUserId, 'shared_note_deleted_by_admin', { id: groupSharedNote.id, isGroupShare: true });
+        emitToAllAdmins('admin_shared_note_deleted', { 
+          id: groupSharedNote.id, 
+          groupId,
+          sharedByUserId,
+          isGroupShare: true 
+        });
+
+      } else {
+        // Handle individual share deletion
+        const sharedWithUserId = sharedNote.sharedWithUser.id;
+        const sharedByUserId = sharedNote.sharedByUser.id;
+        
+        // Delete associated message if exists
+        if (sharedNote.messageId) {
+          const message = await Message.findByPk(sharedNote.messageId);
+          if (message) {
+            console.log(`🗑️ Deleting message ${sharedNote.messageId} between users ${sharedByUserId} and ${sharedWithUserId}`);
+            await message.destroy();
+            
+            // Emit to both users about message deletion
+            console.log(`📡 Emitting admin_message_deleted to users ${sharedWithUserId} and ${sharedByUserId}`);
+            emitToUser(sharedWithUserId, 'admin_message_deleted', {
+              messageId: sharedNote.messageId,
+              chatUserId: sharedByUserId,
+              deletedBy: 'admin'
+            });
+            emitToUser(sharedByUserId, 'admin_message_deleted', {
+              messageId: sharedNote.messageId,
+              chatUserId: sharedWithUserId,
+              deletedBy: 'admin'
+            });
+          } else {
+            console.log(`⚠️ Message ${sharedNote.messageId} not found`);
+          }
+        } else {
+          console.log(`⚠️ No messageId found for SharedNote ${sharedNote.id}`);
+        }
+        
+        await sharedNote.destroy();
+
+        // Notify both users
+        emitToUser(sharedWithUserId, 'shared_note_deleted_by_admin', { id: sharedNote.id });
+        emitToUser(sharedByUserId, 'shared_note_deleted_by_admin', { id: sharedNote.id });
+        emitToAllAdmins('admin_shared_note_deleted', { 
+          id: sharedNote.id, 
+          sharedWithUserId, 
+          sharedByUserId,
+          isGroupShare: false 
+        });
+      }
+
+      res.json({ 
+        message: 'Xóa ghi chú chia sẻ thành công',
+        deletedMessageAlso: true,
+        shareType: isGroupShare ? 'group' : 'individual',
+        deletedMessageId: isGroupShare ? groupSharedNote?.groupMessageId : sharedNote?.messageId
+      });
+
+    } catch (error) {
+      console.error('Error deleting shared note and message:', error);
+      res.status(500).json({ message: 'Lỗi khi xóa ghi chú chia sẻ' });
+    }
   });
 }
 

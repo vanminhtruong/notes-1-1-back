@@ -9,6 +9,9 @@ const {
   createNoteForUser,
   updateUserNote,
   deleteUserNote,
+  getAllSharedNotes,
+  getSharedNoteDetail,
+  deleteSharedNote,
   getUserActivity,
   getAllUsers,
   toggleUserStatus,
@@ -131,5 +134,10 @@ router.get('/notes', requirePermission('manage_notes'), getAllUsersNotes);
 router.post('/notes', requirePermission('manage_notes'), createNoteForUser);
 router.put('/notes/:id', requirePermission('manage_notes'), updateUserNote);
 router.delete('/notes/:id', requirePermission('manage_notes'), deleteUserNote);
+
+// Shared notes management (require specific shared notes permissions) 
+router.get('/shared-notes', requirePermission('manage_notes.shared.view'), getAllSharedNotes);
+router.get('/shared-notes/:id', requirePermission('manage_notes.shared.view'), getSharedNoteDetail);
+router.delete('/shared-notes/:id', requirePermission('manage_notes.shared.delete'), deleteSharedNote);
 
 module.exports = router;
