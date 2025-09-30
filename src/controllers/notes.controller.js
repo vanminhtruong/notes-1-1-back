@@ -4,8 +4,23 @@ const { emitToUser, emitToAllAdmins } = require('../socket/socketHandler');
 
 const createNote = async (req, res) => {
   try {
-    const { title, content, imageUrl, category, priority, reminderAt } = req.body;
+    const { title, content, imageUrl, category, priority, reminderAt, sharedFromUserId } = req.body;
     const userId = req.user.id;
+
+    // If creating via canCreate permission, verify permission
+    if (sharedFromUserId) {
+      const permission = await SharedNote.findOne({
+        where: { 
+          sharedByUserId: sharedFromUserId,
+          sharedWithUserId: userId,
+          canCreate: true,
+          isActive: true
+        }
+      });
+      if (!permission) {
+        return res.status(403).json({ message: 'Bạn không có quyền tạo ghi chú' });
+      }
+    }
 
     const note = await Note.create({
       title,
@@ -130,8 +145,8 @@ const getNoteById = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    const note = await Note.findOne({
-      where: { id, userId },
+    // Load note by id first
+    const note = await Note.findByPk(id, {
       include: [{
         model: User,
         as: 'user',
@@ -141,6 +156,17 @@ const getNoteById = async (req, res) => {
 
     if (!note) {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
+
+    // Permission: owner OR shared recipient (read-only is fine)
+    if (note.userId !== userId) {
+      const shared = await SharedNote.findOne({
+        where: { noteId: id, sharedWithUserId: userId, isActive: true },
+        attributes: ['id']
+      });
+      if (!shared) {
+        return res.status(403).json({ message: 'Bạn không có quyền xem ghi chú này' });
+      }
     }
 
     res.json({ note });
@@ -155,10 +181,27 @@ const updateNote = async (req, res) => {
     const { title, content, imageUrl, category, priority, isArchived, reminderAt } = req.body;
     const userId = req.user.id;
 
-    const note = await Note.findOne({ where: { id, userId } });
+    // Load note by id first
+    const note = await Note.findByPk(id);
 
     if (!note) {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
+
+    // Permission: owner OR shared recipient with canEdit
+    let canEditByUser = false;
+    if (note.userId === userId) {
+      canEditByUser = true;
+    } else {
+      const sharedPerm = await SharedNote.findOne({
+        where: { noteId: id, sharedWithUserId: userId, isActive: true, canEdit: true },
+        attributes: ['id']
+      });
+      canEditByUser = !!sharedPerm;
+    }
+
+    if (!canEditByUser) {
+      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa ghi chú này' });
     }
 
     // Determine if reminderAt changed; normalize to Date or null
@@ -195,8 +238,26 @@ const updateNote = async (req, res) => {
       }],
     });
 
-    // Emit WebSocket event
-    emitToUser(userId, 'note_updated', updatedNote);
+    // Emit WebSocket event to owner
+    emitToUser(note.userId, 'note_updated', updatedNote);
+    
+    // Emit to all shared note receivers
+    try {
+      // Emit to shared users about the update
+      const shares = await SharedNote.findAll({
+        where: { noteId: note.id, isActive: true },
+        attributes: ['sharedWithUserId', 'sharedByUserId']
+      });
+      for (const share of shares) {
+        emitToUser(share.sharedWithUserId, 'note_updated', updatedNote);
+        // If current user is not the owner, also emit to owner (sharedByUserId)
+        if (userId !== note.userId) {
+          emitToUser(share.sharedByUserId, 'note_updated', updatedNote);
+        }
+      }
+    } catch (e) {
+      console.error('Error emitting note_updated to shared users:', e);
+    }
     
     // Emit to all admins for real-time admin panel updates
     emitToAllAdmins('user_note_updated', updatedNote);
@@ -221,10 +282,27 @@ const deleteNote = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
     }
 
+    // Before deleting note, collect all shares to notify receivers and remove share rows
+    const shares = await SharedNote.findAll({ where: { noteId: id } });
+    // Emit to each receiver to remove the shared message in realtime and cleanup share rows
+    for (const share of shares) {
+      try {
+        // Emit to receiver and to owner as well for multi-device sync
+        const payload = { id: share.id, noteId: id, messageId: share.messageId };
+        emitToUser(share.sharedWithUserId, 'shared_note_removed', payload);
+        // Emit to owner too so their own message disappears realtime
+        emitToUser(userId, 'shared_note_removed', payload);
+      } catch (e) {
+        // ignore
+      }
+    }
+    // Hard delete share records
+    await SharedNote.destroy({ where: { noteId: id } });
+
     await note.destroy();
 
-    // Emit WebSocket event
-    emitToUser(userId, 'note_deleted', { id: note.id });
+    // Emit WebSocket event to owner's devices
+    emitToUser(userId, 'note_deleted', { id: Number(id) });
     
     // Emit to all admins for real-time admin panel updates
     emitToAllAdmins('user_note_deleted', { id: note.id, userId });
@@ -316,7 +394,7 @@ const getNoteStats = async (req, res) => {
 const shareNote = async (req, res) => {
   try {
     const { id } = req.params; // note id
-    const { userId: sharedWithUserId, canEdit = false, canDelete = false, message, messageId } = req.body;
+    const { userId: sharedWithUserId, canEdit = false, canDelete = false, canCreate = false, message, messageId } = req.body;
     const sharedByUserId = req.user.id;
 
     // Check if note exists and belongs to the user
@@ -329,34 +407,24 @@ const shareNote = async (req, res) => {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú hoặc bạn không có quyền chia sẻ ghi chú này' });
     }
 
-    // Check if target user exists
-    const targetUser = await User.findByPk(sharedWithUserId, {
-      attributes: ['id', 'name', 'email']
-    });
-
-    if (!targetUser) {
-      return res.status(404).json({ message: 'Không tìm thấy người dùng muốn chia sẻ' });
-    }
-
-    // Check if already shared
+    // Check if already shared with this user
     const existingShare = await SharedNote.findOne({
-      where: { noteId: id, sharedWithUserId, sharedByUserId }
+      where: { noteId: id, sharedWithUserId, isActive: true }
     });
 
     if (existingShare) {
       return res.status(400).json({ message: 'Ghi chú đã được chia sẻ với người dùng này' });
     }
 
-    // Create shared note
     const sharedNote = await SharedNote.create({
       noteId: id,
       sharedWithUserId,
       sharedByUserId,
       canEdit,
       canDelete,
+      canCreate,
       message,
-      messageId, // Store the message ID for deletion tracking
-      isActive: true
+      messageId: messageId || null,
     });
 
     // Get complete shared note data for response
@@ -527,14 +595,17 @@ const removeSharedNote = async (req, res) => {
       return res.status(403).json({ message: 'Bạn không có quyền xóa chia sẻ này' });
     }
 
+    const payload = { id: sharedNote.id, noteId: sharedNote.noteId, messageId: sharedNote.messageId };
+
     await sharedNote.destroy();
 
-    // Emit real-time events
+    // Emit real-time events to both sides and current user's other devices
+    emitToUser(userId, 'shared_note_removed', payload);
     if (sharedNote.sharedByUserId !== userId) {
-      emitToUser(sharedNote.sharedByUserId, 'shared_note_removed', { id: sharedNote.id });
+      emitToUser(sharedNote.sharedByUserId, 'shared_note_removed', payload);
     }
     if (sharedNote.sharedWithUserId !== userId) {
-      emitToUser(sharedNote.sharedWithUserId, 'shared_note_removed', { id: sharedNote.id });
+      emitToUser(sharedNote.sharedWithUserId, 'shared_note_removed', payload);
     }
     emitToAllAdmins('user_shared_note_deleted', { 
       id: sharedNote.id, 
@@ -584,6 +655,115 @@ const getUsers = async (req, res) => {
   } catch (error) {
     console.error('Error getting users:', error);
     res.status(400).json({ message: error.message });
+  }
+};
+
+// Get shared note permissions for current user
+const getSharedNotePermissions = async (req, res) => {
+  try {
+    const { noteId } = req.params;
+    const userId = req.user.id;
+
+    console.log(`🔍 Getting permissions for note ${noteId}, user ${userId}`);
+
+    // First check if note exists
+    const note = await Note.findByPk(noteId);
+    if (!note) {
+      console.log(`❌ Note ${noteId} does not exist`);
+      return res.status(404).json({ message: 'Note not found' });
+    }
+
+    console.log(`✅ Note ${noteId} exists, owner: ${note.userId}`);
+
+    // Check if note belongs to current user (owner has full permissions)
+    if (note.userId === userId) {
+      console.log(`✅ User ${userId} is owner of note ${noteId}`);
+      return res.json({
+        canEdit: true,
+        canDelete: true,
+        isOwner: true
+      });
+    }
+
+    // Debug: Check all shared notes for this note
+    const allSharedNotes = await SharedNote.findAll({
+      where: { noteId: noteId },
+      attributes: ['id', 'sharedWithUserId', 'canEdit', 'canDelete', 'isActive']
+    });
+    console.log(`📋 All shared notes for note ${noteId}:`, allSharedNotes.map(sn => ({
+      id: sn.id,
+      sharedWithUserId: sn.sharedWithUserId,
+      canEdit: sn.canEdit,
+      canDelete: sn.canDelete,
+      isActive: sn.isActive
+    })));
+
+    // Check shared permissions
+    const sharedNote = await SharedNote.findOne({
+      where: {
+        noteId: noteId,
+        sharedWithUserId: userId,
+        isActive: true
+      },
+      attributes: ['id', 'canEdit', 'canDelete', 'canCreate']
+    });
+
+    if (!sharedNote) {
+      console.log(`❌ No active shared note found for note ${noteId}, user ${userId}`);
+      // Return no permissions instead of 404
+      return res.json({
+        canEdit: false,
+        canDelete: false,
+        isShared: false
+      });
+    }
+
+    console.log(`✅ Found shared note permissions: canEdit=${sharedNote.canEdit}, canDelete=${sharedNote.canDelete}, canCreate=${sharedNote.canCreate}`);
+    res.json({
+      canEdit: sharedNote.canEdit,
+      canDelete: sharedNote.canDelete,
+      canCreate: sharedNote.canCreate,
+      isShared: true,
+      sharedNoteId: sharedNote.id
+    });
+  } catch (error) {
+    console.error('Error getting shared note permissions:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get all create permissions for current user (to show "Add Note" button)
+const getCreatePermissions = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const createPermissions = await SharedNote.findAll({
+      where: {
+        sharedWithUserId: userId,
+        canCreate: true,
+        isActive: true
+      },
+      include: [
+        {
+          model: User,
+          as: 'sharedByUser',
+          attributes: ['id', 'name', 'email']
+        }
+      ],
+      attributes: ['id', 'sharedByUserId', 'canCreate']
+    });
+
+    res.json({
+      permissions: createPermissions.map(p => ({
+        id: p.id,
+        sharedByUserId: p.sharedByUserId,
+        sharedByUser: p.sharedByUser,
+        canCreate: p.canCreate
+      }))
+    });
+  } catch (error) {
+    console.error('Error getting create permissions:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
@@ -679,5 +859,7 @@ module.exports = {
   getSharedByMe,
   removeSharedNote,
   getUsers,
+  getSharedNotePermissions,
+  getCreatePermissions,
   shareNoteToGroup,
 };

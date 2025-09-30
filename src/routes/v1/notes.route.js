@@ -22,6 +22,8 @@ router.post('/:id/share', validateShareNote, notesController.shareNote);
 router.post('/:id/share-group', validateShareNoteToGroup, notesController.shareNoteToGroup);
 router.get('/shared/with-me', notesController.getSharedWithMe);
 router.get('/shared/by-me', notesController.getSharedByMe);
+router.get('/shared/permissions/:noteId', notesController.getSharedNotePermissions);
+router.get('/shared/create-permissions', notesController.getCreatePermissions);
 router.delete('/shared/:id', notesController.removeSharedNote);
 
 module.exports = router;

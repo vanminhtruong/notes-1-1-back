@@ -282,6 +282,13 @@ class ModelManager {
       },
       onDelete: 'SET NULL',
     });
+
+    // Ensure canCreate column exists (for allowing recipient to create new notes)
+    await this.ensureColumnExists('SharedNotes', 'canCreate', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
   }
 
   async createGroupSharedNotesTable() {

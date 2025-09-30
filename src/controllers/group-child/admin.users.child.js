@@ -31,7 +31,9 @@ class AdminUsersChild {
         { email: { [require('sequelize').Op.like]: `%${search}%` } }
       ];
     }
-    if (role) whereClause.role = role;
+    // Only show users with role 'user', not admin users (ignore role filter)
+    whereClause.role = 'user';
+    
     if (isActive !== undefined) {
       const wantActive = isActive === 'true';
       whereClause.isActive = wantActive;
@@ -53,23 +55,23 @@ class AdminUsersChild {
       } catch {}
     }
 
-    // Exclude Super Admin accounts from user list if requester is not Super Admin
-    try {
-      const me = req.user;
-      const requesterIsSuper = me && me.adminLevel === 'super_admin';
-      if (!requesterIsSuper) {
-        const Op = require('sequelize').Op;
-        // Ensure AND conditions exist, then add an OR to keep rows where adminLevel is NULL or not 'super_admin'
-        whereClause[Op.and] = [
-          ...(whereClause[Op.and] || []),
-          { [Op.or]: [ { adminLevel: null }, { adminLevel: { [Op.ne]: 'super_admin' } } ] }
-        ];
-      }
-    } catch {}
-
     const users = await User.findAndCountAll({
       where: whereClause,
-      attributes: ['id', 'name', 'email', 'role', 'isActive', 'avatar', 'lastSeenAt', 'createdAt'],
+      attributes: [
+        'id', 'name', 'email',
+        // Profile
+        'avatar', 'lastSeenAt',
+        // Contact
+        'phone', 'birthDate', 'gender',
+        // Account & role
+        'role', 'isActive',
+        // Settings
+        'theme', 'language', 'e2eeEnabled', 'readStatusEnabled',
+        // Privacy
+        'hidePhone', 'hideBirthDate', 'allowMessagesFromNonFriends',
+        // Timestamps
+        'createdAt', 'updatedAt'
+      ],
       offset,
       limit: limitNum,
       order: [[sortBy, sortOrder]]
@@ -131,6 +133,185 @@ class AdminUsersChild {
         email: user.email,
         isActive: newStatus
       }
+    });
+  });
+
+  // Create new user account
+  createUser = asyncHandler(async (req, res) => {
+    const { name, email, password } = req.body;
+
+    // Validate input
+    if (!name || !email || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Tên, email và mật khẩu là bắt buộc' 
+      });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email đã tồn tại trong hệ thống' 
+      });
+    }
+
+    // Hash password
+    const bcrypt = require('bcryptjs');
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Create user
+    const newUser = await User.create({
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password: hashedPassword,
+      role: 'user',
+      isActive: true
+    });
+
+    // Remove password from response
+    const userResponse = {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      isActive: newUser.isActive,
+      createdAt: newUser.createdAt
+    };
+
+    // Emit to all admins
+    emitToAllAdmins('user_registered', {
+      user: userResponse,
+      createdBy: req.user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Tạo tài khoản người dùng thành công',
+      user: userResponse
+    });
+  });
+
+  // Edit user account
+  editUser = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { name, email, phone, birthDate, gender, avatar } = req.body;
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Không tìm thấy người dùng' 
+      });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Không thể chỉnh sửa tài khoản admin' 
+      });
+    }
+
+    // Not allow email change
+    try {
+      if (typeof email === 'string') {
+        const incoming = email.trim().toLowerCase();
+        const current = (user.email || '').trim().toLowerCase();
+        if (incoming !== '' && incoming !== current) {
+          return res.status(400).json({
+            success: false,
+            message: 'Không được phép thay đổi email'
+          });
+        }
+      }
+    } catch {}
+
+    // Validate input
+    if (!name) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Tên người dùng là bắt buộc' 
+      });
+    }
+
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email là bắt buộc' 
+      });
+    }
+
+    // Check if email already exists (kept as safety, but will not reach if email changed)
+    if (email !== user.email) {
+      const existingUser = await User.findOne({ 
+        where: { 
+          email,
+          id: { [require('sequelize').Op.ne]: id }
+        } 
+      });
+      if (existingUser) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Email đã tồn tại trong hệ thống' 
+        });
+      }
+    }
+
+    // Prepare update data - handle empty strings as null
+    const updateData = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone && phone.trim() !== '' ? phone.trim() : null,
+      birthDate: birthDate && birthDate.trim() !== '' ? birthDate : null, 
+      gender: gender || 'unspecified'
+    };
+    if (typeof avatar === 'string') {
+      updateData.avatar = avatar.trim() || null;
+    }
+
+    // Update user with validation error handling
+    try {
+      await user.update(updateData);
+    } catch (validationError) {
+      if (validationError.name === 'SequelizeValidationError') {
+        const errorMessages = validationError.errors.map(err => err.message);
+        return res.status(400).json({
+          success: false,
+          message: `Validation error: ${errorMessages.join(', ')}`
+        });
+      }
+      throw validationError; // Re-throw if not validation error
+    }
+
+    // Remove sensitive data from response
+    const userResponse = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      phone: user.phone,
+      birthDate: user.birthDate,
+      gender: user.gender,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
+
+    // Emit to all admins
+    emitToAllAdmins('admin_user_updated', {
+      user: userResponse,
+      updatedBy: req.user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Cập nhật thông tin người dùng thành công',
+      user: userResponse
     });
   });
 

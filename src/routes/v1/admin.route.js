@@ -11,9 +11,12 @@ const {
   deleteUserNote,
   getAllSharedNotes,
   getSharedNoteDetail,
+  updateSharedNote,
   deleteSharedNote,
   getUserActivity,
   getAllUsers,
+  createUser,
+  editUser,
   toggleUserStatus,
   deleteUserPermanently,
   adminGetDMMessages,
@@ -110,6 +113,8 @@ router.delete('/admins/:adminId', superAdminOnly, deleteAdmin);
 
 // User management (require manage_users permission)
 router.get('/users', requirePermission('manage_users'), getAllUsers);
+router.post('/users', requirePermission('manage_users.create'), createUser);
+router.put('/users/:id', requirePermission('manage_users.edit'), editUser);
 router.get('/users/:userId/activity', requirePermission('manage_users.view'), getUserActivity);
 router.get('/users/:userId/notifications', requirePermission('manage_users.activity.notifications'), adminGetUserNotifications);
 router.delete('/users/:userId/notifications/:notificationId', requirePermission('manage_users.activity.notifications.delete'), adminDeleteUserNotification);
@@ -138,6 +143,7 @@ router.delete('/notes/:id', requirePermission('manage_notes'), deleteUserNote);
 // Shared notes management (require specific shared notes permissions) 
 router.get('/shared-notes', requirePermission('manage_notes.shared.view'), getAllSharedNotes);
 router.get('/shared-notes/:id', requirePermission('manage_notes.shared.view'), getSharedNoteDetail);
+router.put('/shared-notes/:id', requirePermission('manage_notes.shared.edit'), updateSharedNote);
 router.delete('/shared-notes/:id', requirePermission('manage_notes.shared.delete'), deleteSharedNote);
 
 module.exports = router;

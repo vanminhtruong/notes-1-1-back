@@ -37,6 +37,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    canCreate: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     message: {
       type: DataTypes.TEXT,
       allowNull: true,

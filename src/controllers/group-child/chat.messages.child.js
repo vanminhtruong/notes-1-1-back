@@ -415,12 +415,17 @@ class ChatMessagesChild {
         participants.add(m.receiverId);
       }
       const payload = { scope, messageIds, userId };
+      console.log(`🔄 Backend: Emitting messages_recalled, scope=${scope}, messageIds=${messageIds}, participants:`, Array.from(participants));
+      
       if (scope === 'self') {
+        console.log(`🔄 Backend: Emitting to user_${userId} (self recall)`);
         io.to(`user_${userId}`).emit('messages_recalled', payload);
         // Emit to admin for real-time monitoring
         io.emit('admin_messages_recalled', { ...payload, senderId: userId, receiverId: msgs[0]?.receiverId });
       } else {
+        console.log(`🔄 Backend: Emitting to all participants (recall for all):`, Array.from(participants));
         for (const pid of participants) {
+          console.log(`🔄 Backend: Emitting to user_${pid}`);
           io.to(`user_${pid}`).emit('messages_recalled', payload);
         }
         // Emit to admin for real-time monitoring

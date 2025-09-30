@@ -17,6 +17,10 @@ const validateCreateNote = (req, res, next) => {
       Joi.date().iso(),
       Joi.string().isoDate()
     ).allow(null).optional(),
+    sharedFromUserId: Joi.number().integer().positive().allow(null).optional().messages({
+      'number.base': 'Shared From User ID phải là số',
+      'number.positive': 'Shared From User ID phải là số dương',
+    }),
   });
 
   const { error } = schema.validate(req.body);
@@ -67,6 +71,7 @@ const validateShareNote = (req, res, next) => {
     }),
     canEdit: Joi.boolean().optional().default(false),
     canDelete: Joi.boolean().optional().default(false),
+    canCreate: Joi.boolean().optional().default(false),
     message: Joi.string().max(500).allow('').optional().messages({
       'string.max': 'Tin nhắn không được quá 500 ký tự',
     }),

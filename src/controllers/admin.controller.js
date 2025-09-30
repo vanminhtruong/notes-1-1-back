@@ -41,9 +41,12 @@ class AdminController {
   deleteUserNote = (...args) => this.notesChild.deleteUserNote(...args);
   getAllSharedNotes = (...args) => this.notesChild.getAllSharedNotes(...args);
   getSharedNoteDetail = (...args) => this.notesChild.getSharedNoteDetail(...args);
+  updateSharedNote = (...args) => this.notesChild.updateSharedNote(...args);
   deleteSharedNote = (...args) => this.notesChild.deleteSharedNote(...args);
   getUserActivity = (...args) => this.monitorChild.getUserActivity(...args);
   getAllUsers = (...args) => this.usersChild.getAllUsers(...args)
+  createUser = (...args) => this.usersChild.createUser(...args);
+  editUser = (...args) => this.usersChild.editUser(...args);
   toggleUserStatus = (...args) => this.usersChild.toggleUserStatus(...args);
   deleteUserPermanently = (...args) => this.usersChild.deleteUserPermanently(...args);
   refreshToken = (...args) => this.authChild.refreshToken(...args);
@@ -66,9 +69,12 @@ module.exports = {
   deleteUserNote: adminController.deleteUserNote,
   getAllSharedNotes: adminController.getAllSharedNotes,
   getSharedNoteDetail: adminController.getSharedNoteDetail,
+  updateSharedNote: adminController.updateSharedNote,
   deleteSharedNote: adminController.deleteSharedNote,
   getUserActivity: adminController.getUserActivity,
   getAllUsers: adminController.getAllUsers,
+  createUser: adminController.createUser,
+  editUser: adminController.editUser,
   toggleUserStatus: adminController.toggleUserStatus,
   deleteUserPermanently: adminController.deleteUserPermanently,
   adminGetDMMessages: adminController.adminGetDMMessages,

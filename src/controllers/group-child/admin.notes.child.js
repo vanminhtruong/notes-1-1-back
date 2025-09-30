@@ -635,6 +635,110 @@ class AdminNotesChild {
       res.status(500).json({ message: 'Lỗi khi xóa ghi chú chia sẻ' });
     }
   });
+
+  // Update shared note (admin): supports individual and group shares
+  updateSharedNote = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const sid = Number(id);
+    if (!Number.isFinite(sid)) {
+      return res.status(400).json({ message: 'Invalid shared note id' });
+    }
+
+    const { canCreate, canEdit, canDelete, message } = req.body || {};
+
+    // Try update individual share first
+    let sharedNote = await SharedNote.findByPk(sid, {
+      include: [
+        { model: Note, as: 'note', include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }] },
+        { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] },
+      ],
+    });
+
+    if (sharedNote) {
+      const fields = {};
+      if (typeof canCreate !== 'undefined') fields.canCreate = !!canCreate;
+      if (typeof canEdit !== 'undefined') fields.canEdit = !!canEdit;
+      if (typeof canDelete !== 'undefined') fields.canDelete = !!canDelete;
+      if (typeof message !== 'undefined') fields.message = message;
+
+      await sharedNote.update(fields);
+
+      sharedNote = await SharedNote.findByPk(sid, {
+        include: [
+          { model: Note, as: 'note', include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }] },
+          { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] },
+        ],
+      });
+
+      // Notify involved users (admin namespace specific + users app common events)
+      try { emitToUser(sharedNote.sharedWithUser.id, 'shared_note_updated_by_admin', { id: sid }); } catch {}
+      try { emitToUser(sharedNote.sharedByUser.id, 'shared_note_updated_by_admin', { id: sid }); } catch {}
+      // Also emit existing user-facing events so user apps refresh without F5
+      try { emitToUser(sharedNote.sharedWithUser.id, 'note_shared_with_me', sharedNote); } catch {}
+      try { emitToUser(sharedNote.sharedByUser.id, 'note_shared_by_me', sharedNote); } catch {}
+      // Emit dedicated permission-updated event to both parties for UI toggles like "Add note"
+      const permPayload = {
+        sharedNoteId: sharedNote.id,
+        noteId: sharedNote.noteId,
+        sharedByUserId: sharedNote.sharedByUser.id,
+        sharedWithUserId: sharedNote.sharedWithUser.id,
+        canCreate: !!sharedNote.canCreate,
+        canEdit: !!sharedNote.canEdit,
+        canDelete: !!sharedNote.canDelete,
+        message: sharedNote.message || null,
+      };
+      try { emitToUser(sharedNote.sharedWithUser.id, 'shared_permissions_updated', permPayload); } catch {}
+      try { emitToUser(sharedNote.sharedByUser.id, 'shared_permissions_updated', permPayload); } catch {}
+      // Also notify clients that cache create-permissions lists should be refreshed
+      try { emitToUser(sharedNote.sharedWithUser.id, 'create_permissions_changed', { byUserId: sharedNote.sharedByUser.id, canCreate: !!sharedNote.canCreate }); } catch {}
+      try { emitToUser(sharedNote.sharedByUser.id, 'create_permissions_changed', { withUserId: sharedNote.sharedWithUser.id, canCreate: !!sharedNote.canCreate }); } catch {}
+      try { emitToAllAdmins('admin_shared_note_updated', { id: sid, shareType: 'individual' }); } catch {}
+
+      return res.json({ message: 'Cập nhật chia sẻ thành công', sharedNote: { ...sharedNote.toJSON(), shareType: 'individual' } });
+    }
+
+    // Else, try group share
+    let groupShared = await GroupSharedNote.findByPk(sid, {
+      include: [
+        { model: Note, as: 'note', include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }] },
+        { model: Group, as: 'group', attributes: ['id', 'name', 'avatar'] },
+        { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] },
+      ],
+    });
+
+    if (!groupShared) {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ' });
+    }
+
+    // For group share, only message can be updated currently
+    const gFields = {};
+    if (typeof message !== 'undefined') gFields.message = message;
+    if (Object.keys(gFields).length > 0) {
+      await groupShared.update(gFields);
+    }
+
+    groupShared = await GroupSharedNote.findByPk(sid, {
+      include: [
+        { model: Note, as: 'note', include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }] },
+        { model: Group, as: 'group', attributes: ['id', 'name', 'avatar'] },
+        { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] },
+      ],
+    });
+
+    try {
+      if (global.io) {
+        global.io.to(`group_${groupShared.group.id}`).emit('group_shared_note_updated_by_admin', { id: sid });
+        // Emit a generic event that user/group clients may already handle
+        global.io.to(`group_${groupShared.group.id}`).emit('group_shared_note_updated', { id: sid });
+      }
+    } catch {}
+    try { emitToUser(groupShared.sharedByUser.id, 'shared_note_updated_by_admin', { id: sid, isGroupShare: true }); } catch {}
+    try { emitToAllAdmins('admin_shared_note_updated', { id: sid, shareType: 'group' }); } catch {}
+
+    return res.json({ message: 'Cập nhật chia sẻ nhóm thành công', sharedNote: { ...groupShared.toJSON(), shareType: 'group' } });
+  });
 }
 
 module.exports = AdminNotesChild;

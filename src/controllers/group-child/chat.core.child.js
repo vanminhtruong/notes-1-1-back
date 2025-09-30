@@ -31,7 +31,8 @@ class ChatCoreChild {
         ? friendship.addressee 
         : friendship.requester;
 
-      const lastMessage = await Message.findOne({
+      // Fetch a batch of recent messages and select the latest one visible to this user
+      const recentMessages = await Message.findAll({
         where: {
           [Op.or]: [
             { senderId: userId, receiverId: friend.id },
@@ -39,11 +40,21 @@ class ChatCoreChild {
           ]
         },
         order: [['createdAt', 'DESC']],
+        limit: 20,
         include: [
           { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
           { model: MessageReaction, as: 'Reactions', attributes: ['userId', 'type', 'count'] },
         ]
       });
+
+      // Filter out messages deleted for this user or deleted for all
+      const lastVisible = (recentMessages || [])
+        .map(m => (typeof m.toJSON === 'function' ? m.toJSON() : m))
+        .find(m => !m.isDeletedForAll && !(Array.isArray(m.deletedForUserIds) && m.deletedForUserIds.includes(userId)));
+
+      // Always preserve ordering by latest activity (even if last visible is null)
+      const mostRecent = recentMessages && recentMessages.length > 0 ? recentMessages[0] : null;
+      const mostRecentAt = mostRecent ? mostRecent.createdAt : null;
 
       const unreadCount = await Message.count({
         where: {
@@ -66,10 +77,11 @@ class ChatCoreChild {
           ...friend.toJSON(),
           isOnline: isUserOnline(friend.id)
         },
-        lastMessage: lastMessage || null,
+        lastMessage: lastVisible || null,
         unreadCount,
         friendshipId: friendship.id,
-        nickname
+        nickname,
+        lastActivityAt: mostRecentAt
       });
     }
 
@@ -85,9 +97,9 @@ class ChatCoreChild {
     chatList.sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
-      
-      const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt) : new Date(0);
-      const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt) : new Date(0);
+      // Use lastActivityAt for ordering to preserve position after user hides last message
+      const aTime = a.lastActivityAt ? new Date(a.lastActivityAt) : (a.lastMessage ? new Date(a.lastMessage.createdAt) : new Date(0));
+      const bTime = b.lastActivityAt ? new Date(b.lastActivityAt) : (b.lastMessage ? new Date(b.lastMessage.createdAt) : new Date(0));
       return bTime - aTime;
     });
 

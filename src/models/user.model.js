@@ -34,8 +34,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
       validate: {
-        // basic phone validation; allow +, digits, spaces, hyphens, parentheses
-        is: /^[+\d][\d\s\-()]{5,20}$/,
+        // Custom validator that only validates when phone is not empty
+        phoneFormat(value) {
+          if (value && value.trim() !== '') {
+            // Only validate if phone has value
+            if (!/^[+\d][\d\s\-()]{5,20}$/.test(value)) {
+              throw new Error('Phone number format is invalid. Use digits, +, spaces, hyphens, parentheses only.');
+            }
+          }
+        }
       },
     },
     // Optional birth date (no time component)

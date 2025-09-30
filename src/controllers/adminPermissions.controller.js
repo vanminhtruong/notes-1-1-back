@@ -12,6 +12,8 @@ class AdminPermissionsController {
     'manage_users',           // Quản lý người dùng (parent)
     'manage_users.view',      // Xem thông tin người dùng
     'manage_users.view_detail', // Xem chi tiết người dùng (modal chi tiết)
+    'manage_users.create',    // Tạo tài khoản người dùng mới
+    'manage_users.edit',      // Chỉnh sửa thông tin người dùng
     'manage_users.activate',  // Kích hoạt/vô hiệu hóa người dùng
     'manage_users.view_active_accounts', // Xem tài khoản hoạt động
     'manage_users.delete_permanently',   // Xóa tài khoản vĩnh viễn
@@ -41,6 +43,7 @@ class AdminPermissionsController {
     'manage_notes.archive',   // Lưu trữ/bỏ lưu trữ ghi chú
     'manage_notes.shared',    // Quản lý ghi chú chia sẻ (parent)
     'manage_notes.shared.view', // Xem danh sách ghi chú chia sẻ
+    'manage_notes.shared.edit', // Sửa ghi chú chia sẻ (quyền, tin nhắn)
     'manage_notes.shared.delete', // Xóa ghi chú chia sẻ
     'manage_admins',          // Quản lý admin khác (chỉ super admin)
     'manage_admins.create',   // Tạo admin
