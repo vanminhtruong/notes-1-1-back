@@ -39,10 +39,8 @@ class ChatController {
   getPinStatus = (...args) => this.preferencesChild.getPinStatus(...args);
   togglePinMessage = (...args) => this.preferencesChild.togglePinMessage(...args);
   listPinnedMessages = (...args) => this.preferencesChild.listPinnedMessages(...args);
-
   reactMessage = (...args) => this.reactionsChild.reactMessage(...args);
   unreactMessage = (...args) => this.reactionsChild.unreactMessage(...args);
-
 }
 
 module.exports = new ChatController();

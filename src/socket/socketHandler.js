@@ -847,8 +847,9 @@ const handleConnection = async (socket) => {
 };
 
 const emitToUser = (userId, event, data) => {
-  const userConnection = connectedUsers.get(userId);
-  if (userConnection) {
+  // Always emit to user's room, regardless of whether they're in connectedUsers map
+  // This ensures the event is sent to all of user's connected devices
+  if (global.io) {
     global.io.to(`user_${userId}`).emit(event, data);
   }
 };

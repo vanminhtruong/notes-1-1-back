@@ -49,6 +49,9 @@ class AdminController {
   editUser = (...args) => this.usersChild.editUser(...args);
   toggleUserStatus = (...args) => this.usersChild.toggleUserStatus(...args);
   deleteUserPermanently = (...args) => this.usersChild.deleteUserPermanently(...args);
+  getUserSessions = (...args) => this.usersChild.getUserSessions(...args);
+  logoutUserSession = (...args) => this.usersChild.logoutUserSession(...args);
+  logoutAllUserSessions = (...args) => this.usersChild.logoutAllUserSessions(...args);
   refreshToken = (...args) => this.authChild.refreshToken(...args);
   getMyProfile = (...args) => this.profileChild.getMyProfile(...args);
   updateMyProfile = (...args) => this.profileChild.updateMyProfile(...args);
@@ -95,4 +98,7 @@ module.exports = {
   uploadAvatar: adminController.uploadAvatar,
   getAdminProfile: adminController.getAdminProfile,
   updateAdminProfile: adminController.updateAdminProfile,
+  getUserSessions: adminController.getUserSessions,
+  logoutUserSession: adminController.logoutUserSession,
+  logoutAllUserSessions: adminController.logoutAllUserSessions,
 };

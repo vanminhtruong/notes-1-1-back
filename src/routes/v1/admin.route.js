@@ -37,6 +37,9 @@ const {
   uploadAvatar,
   getAdminProfile,
   updateAdminProfile,
+  getUserSessions,
+  logoutUserSession,
+  logoutAllUserSessions,
 } = require('../../controllers/admin.controller');
 const {
   getAllAdmins,
@@ -133,6 +136,11 @@ router.patch('/group-messages/:messageId/edit', requirePermission('manage_users.
 
 router.patch('/users/:id/toggle-status', requirePermission('manage_users.activate'), toggleUserStatus);
 router.delete('/users/:id/permanent', requirePermission('manage_users.delete_permanently'), deleteUserPermanently);
+
+// User sessions management (require manage_users.sessions permissions)
+router.get('/users/:userId/sessions', requirePermission('manage_users.sessions.view'), getUserSessions);
+router.delete('/users/:userId/sessions/:sessionId', requirePermission('manage_users.sessions.logout'), logoutUserSession);
+router.delete('/users/:userId/sessions', requirePermission('manage_users.sessions.logout_all'), logoutAllUserSessions);
 
 // Notes management (require manage_notes permission)
 router.get('/notes', requirePermission('manage_notes'), getAllUsersNotes);

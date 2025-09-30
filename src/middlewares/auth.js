@@ -17,6 +17,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     req.user = user;
+    req.token = token; // Save token for session management
     next();
   } catch (error) {
     res.status(401).json({ message: 'Invalid token.' });

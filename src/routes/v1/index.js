@@ -10,6 +10,7 @@ const settings = require('./settings.route');
 const blocks = require('./blocks.route');
 const notifications = require('./notifications.route');
 const admin = require('./admin.route');
+const userSessions = require('./userSession.route');
 
 router.use('/sample', sample);
 router.use('/auth', auth);
@@ -22,5 +23,6 @@ router.use('/settings', settings);
 router.use('/blocks', blocks);
 router.use('/notifications', notifications);
 router.use('/admin', admin);
+router.use('/sessions', userSessions);
 
 module.exports = router;

@@ -34,6 +34,10 @@ class AdminPermissionsController {
     'manage_users.activity.monitor.message_status.sent',   // Theo dõi trạng thái đã gửi
     'manage_users.activity.monitor.message_status.delivered', // Theo dõi trạng thái đã nhận
     'manage_users.activity.monitor.message_status.read',   // Theo dõi trạng thái đã xem
+    'manage_users.sessions',          // Quản lý sessions/thiết bị đăng nhập (parent)
+    'manage_users.sessions.view',     // Xem danh sách thiết bị đăng nhập
+    'manage_users.sessions.logout',   // Đăng xuất thiết bị cụ thể
+    'manage_users.sessions.logout_all', // Đăng xuất tất cả thiết bị
     'manage_notes',           // Quản lý ghi chú (parent)
     'manage_notes.create',    // Tạo ghi chú
     'manage_notes.edit',      // Sửa ghi chú

@@ -20,6 +20,7 @@ const defineMessageReaction = require('./messageReaction.model');
 const defineNotification = require('./notification.model');
 const defineSharedNote = require('./sharedNote.model');
 const defineGroupSharedNote = require('./groupSharedNote.model');
+const defineUserSession = require('./userSession.model');
 
 const Sample = defineSample(sequelize, DataTypes);
 const User = defineUser(sequelize, DataTypes);
@@ -41,10 +42,15 @@ const MessageReaction = defineMessageReaction(sequelize, DataTypes);
 const Notification = defineNotification(sequelize, DataTypes);
 const SharedNote = defineSharedNote(sequelize, DataTypes);
 const GroupSharedNote = defineGroupSharedNote(sequelize, DataTypes);
+const UserSession = defineUserSession(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
 Note.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// UserSession associations
+User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
+UserSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Friendship associations
 Friendship.belongsTo(User, { foreignKey: 'requesterId', as: 'requester' });
@@ -315,5 +321,6 @@ module.exports = {
   Notification,
   SharedNote,
   GroupSharedNote,
+  UserSession,
 };
 

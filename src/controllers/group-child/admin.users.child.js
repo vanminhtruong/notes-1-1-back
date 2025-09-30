@@ -1,4 +1,4 @@
-const { User } = require('../../models');
+const { User, UserSession } = require('../../models');
 const asyncHandler = require('../../middlewares/asyncHandler');
 const { isUserOnline, emitToAllAdmins, emitToUser } = require('../../socket/socketHandler');
 
@@ -335,6 +335,156 @@ class AdminUsersChild {
     emitToAllAdmins('user_deleted_permanently', userData);
 
     res.json({ message: 'Xóa tài khoản vĩnh viễn thành công', deletedUser: userData });
+  });
+
+  // Get user sessions
+  getUserSessions = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Không tìm thấy người dùng' 
+      });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Không thể xem sessions của tài khoản admin' 
+      });
+    }
+
+    const sessions = await UserSession.findAll({
+      where: { 
+        userId,
+        isActive: true 
+      },
+      order: [['lastActivityAt', 'DESC']],
+      attributes: [
+        'id', 'deviceType', 'deviceName', 'browser', 'os',
+        'ipAddress', 'location', 'lastActivityAt', 'createdAt'
+      ]
+    });
+
+    res.json({
+      success: true,
+      sessions: sessions.map(s => s.toJSON())
+    });
+  });
+
+  // Logout user from specific session
+  logoutUserSession = asyncHandler(async (req, res) => {
+    const { userId, sessionId } = req.params;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Không tìm thấy người dùng' 
+      });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Không thể đăng xuất tài khoản admin' 
+      });
+    }
+
+    const session = await UserSession.findOne({
+      where: { id: sessionId, userId }
+    });
+
+    if (!session) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Không tìm thấy session' 
+      });
+    }
+
+    // Mark session as inactive
+    await session.update({ isActive: false });
+
+    // Emit real-time event to user to force logout on that device
+    emitToUser(userId, 'session_terminated', {
+      sessionId,
+      reason: 'admin_logout',
+      message: 'Phiên đăng nhập của bạn đã bị đăng xuất bởi quản trị viên',
+      timestamp: new Date().toISOString()
+    });
+
+    // Notify all admins
+    emitToAllAdmins('user_session_logged_out', {
+      userId,
+      userName: user.name,
+      sessionId,
+      deviceInfo: {
+        deviceType: session.deviceType,
+        deviceName: session.deviceName,
+        browser: session.browser
+      },
+      loggedOutBy: req.user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Đã đăng xuất thiết bị thành công'
+    });
+  });
+
+  // Logout user from all sessions
+  logoutAllUserSessions = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Không tìm thấy người dùng' 
+      });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Không thể đăng xuất tài khoản admin' 
+      });
+    }
+
+    // Mark all active sessions as inactive
+    const updatedCount = await UserSession.update(
+      { isActive: false },
+      { 
+        where: { 
+          userId,
+          isActive: true 
+        }
+      }
+    );
+
+    // Emit real-time event to user to force logout on all devices
+    emitToUser(userId, 'all_sessions_terminated', {
+      reason: 'admin_logout_all',
+      message: 'Tất cả phiên đăng nhập của bạn đã bị đăng xuất bởi quản trị viên',
+      timestamp: new Date().toISOString()
+    });
+
+    // Notify all admins
+    emitToAllAdmins('user_all_sessions_logged_out', {
+      userId,
+      userName: user.name,
+      sessionsCount: updatedCount[0] || 0,
+      loggedOutBy: req.user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: `Đã đăng xuất ${updatedCount[0] || 0} thiết bị thành công`
+    });
   });
 }
 
