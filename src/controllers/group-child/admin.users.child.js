@@ -124,6 +124,16 @@ class AdminUsersChild {
       });
     }
 
+    // Broadcast to ALL users that this user's status changed
+    // So other users can update their chat UI in real-time
+    if (global.io) {
+      global.io.emit('user_status_updated', {
+        userId: user.id,
+        isActive: newStatus,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     res.json({
       success: true,
       message: `Tài khoản ${newStatus ? 'đã được kích hoạt' : 'đã bị vô hiệu hóa'}`,

@@ -217,6 +217,21 @@ class AuthCoreChild {
       // Deactivate account (soft delete)
       await user.update({ isActive: false });
 
+      // Notify all admins so Admin UsersList can update toggle in real-time
+      try {
+        await emitToAllAdmins('user_status_changed', {
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+          isActive: false,
+          action: 'deactivated',
+          timestamp: new Date().toISOString()
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Error emitting user_status_changed for self-deactivation:', e);
+      }
+
       // Emit real-time event to all of this user's sockets/tabs/devices
       try {
         if (global.io) {

@@ -26,7 +26,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.findAll({
     where: whereClause,
     limit: parseInt(limit),
-    attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'createdAt', 'lastSeenAt', 'hidePhone', 'hideBirthDate'],
+    attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'createdAt', 'lastSeenAt', 'hidePhone', 'hideBirthDate', 'isActive'],
     order: [['name', 'ASC']]
   });
 
@@ -358,8 +358,8 @@ const getFriends = asyncHandler(async (req, res) => {
       ]
     },
     include: [
-      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] },
-      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] }
+      { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate', 'isActive'] },
+      { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate', 'isActive'] }
     ]
   });
 

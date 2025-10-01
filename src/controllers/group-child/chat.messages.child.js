@@ -119,9 +119,21 @@ class ChatMessagesChild {
       return m;
     });
 
+    // Get recipient info including isActive status
+    const recipient = await User.findByPk(userId, {
+      attributes: ['id', 'name', 'email', 'avatar', 'isActive']
+    });
+
     res.json({
       success: true,
       data: normalized.reverse(),
+      recipient: recipient ? {
+        id: recipient.id,
+        name: recipient.name,
+        email: recipient.email,
+        avatar: recipient.avatar,
+        isActive: recipient.isActive
+      } : null,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -147,6 +159,14 @@ class ChatMessagesChild {
       return res.status(404).json({
         success: false,
         message: 'Receiver not found'
+      });
+    }
+
+    // Check if receiver is active
+    if (!receiver.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot send message to deactivated account'
       });
     }
 
