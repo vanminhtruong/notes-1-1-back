@@ -1,9 +1,10 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../../models');
+const { User, UserSession } = require('../../models');
 const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
 const crypto = require('crypto');
 const { emitToAllAdmins } = require('../../socket/socketHandler');
+const { parseDeviceInfo } = require('../../utils/deviceParser');
 
 const generateToken = (user, options = {}) => {
   const expiresIn = options.expiresIn || process.env.JWT_EXPIRES_IN || '7d';
@@ -81,6 +82,43 @@ class AuthOAuthChild {
 
       const token = generateToken(user);
 
+      // Parse device information
+      const userAgent = req.headers['user-agent'] || '';
+      const deviceInfo = parseDeviceInfo(userAgent);
+      const ipAddress = req.ip || req.connection.remoteAddress || '';
+
+      // Calculate token expiration (7 days for OAuth)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // Create session record
+      try {
+        await UserSession.create({
+          userId: user.id,
+          token: token,
+          deviceType: deviceInfo.deviceType,
+          deviceName: deviceInfo.deviceName,
+          browser: deviceInfo.browser,
+          os: deviceInfo.os,
+          ipAddress: ipAddress,
+          userAgent: userAgent,
+          lastActivityAt: new Date(),
+          expiresAt: expiresAt,
+          isActive: true,
+          isCurrent: true,
+        });
+
+        // Clean up old expired sessions for this user
+        await UserSession.destroy({
+          where: {
+            userId: user.id,
+            expiresAt: { [require('sequelize').Op.lt]: new Date() }
+          }
+        });
+      } catch (sessionErr) {
+        console.error('Error creating Google login session:', sessionErr);
+      }
+
       // Set theme and language cookies to prevent flash
       setThemeAndLangCookies(res, user);
 
@@ -141,6 +179,43 @@ class AuthOAuthChild {
       }
 
       const token = generateToken(user);
+
+      // Parse device information
+      const userAgent = req.headers['user-agent'] || '';
+      const deviceInfo = parseDeviceInfo(userAgent);
+      const ipAddress = req.ip || req.connection.remoteAddress || '';
+
+      // Calculate token expiration (7 days for OAuth)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // Create session record
+      try {
+        await UserSession.create({
+          userId: user.id,
+          token: token,
+          deviceType: deviceInfo.deviceType,
+          deviceName: deviceInfo.deviceName,
+          browser: deviceInfo.browser,
+          os: deviceInfo.os,
+          ipAddress: ipAddress,
+          userAgent: userAgent,
+          lastActivityAt: new Date(),
+          expiresAt: expiresAt,
+          isActive: true,
+          isCurrent: true,
+        });
+
+        // Clean up old expired sessions for this user
+        await UserSession.destroy({
+          where: {
+            userId: user.id,
+            expiresAt: { [require('sequelize').Op.lt]: new Date() }
+          }
+        });
+      } catch (sessionErr) {
+        console.error('Error creating Facebook login session:', sessionErr);
+      }
 
       // Set theme and language cookies to prevent flash
       setThemeAndLangCookies(res, user);

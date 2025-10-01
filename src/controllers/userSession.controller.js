@@ -80,12 +80,8 @@ class UserSessionController {
         return res.status(404).json({ message: 'Session không tồn tại' });
       }
 
-      // Prevent deleting current session
-      if (session.token === currentToken) {
-        return res.status(400).json({ 
-          message: 'Không thể xóa phiên đăng nhập hiện tại. Vui lòng sử dụng chức năng đăng xuất.' 
-        });
-      }
+      // Check if this is the current session
+      const isCurrentSession = session.token === currentToken;
 
       // Delete the session
       await session.destroy();
@@ -106,6 +102,7 @@ class UserSessionController {
       res.json({ 
         message: 'Đã xóa phiên đăng nhập thành công',
         sessionId,
+        isCurrentSession, // Flag to tell frontend to logout
       });
     } catch (error) {
       console.error('Error deleting session:', error);
