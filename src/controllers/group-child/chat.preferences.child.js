@@ -1,6 +1,6 @@
-const { User, Message, Friendship, ChatPreference, PinnedChat, PinnedMessage, GroupMember } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
+import { User, Message, Friendship, ChatPreference, PinnedChat, PinnedMessage, GroupMember } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
 
 class ChatPreferencesChild {
   constructor(parentController) {
@@ -271,4 +271,4 @@ class ChatPreferencesChild {
   });
 }
 
-module.exports = ChatPreferencesChild;
+export default ChatPreferencesChild;

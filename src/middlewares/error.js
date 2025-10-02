@@ -1,8 +1,8 @@
-exports.notFound = (req, res, _next) => {
+export const notFound = (req, res, _next) => {
   res.status(404).json({ message: 'Resource not found' });
 };
 
-exports.errorHandler = (err, req, res, _next) => {
+export const errorHandler = (err, req, res, _next) => {
   const status = err.status || err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
   if (process.env.NODE_ENV !== 'test') {

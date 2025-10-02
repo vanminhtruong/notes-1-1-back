@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.addColumn('Notes', 'reminderAcknowledged', {
       type: Sequelize.BOOLEAN,

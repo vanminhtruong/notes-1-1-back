@@ -1,6 +1,6 @@
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { User } = require('../../models');
-const { emitToUser } = require('../../socket/socketHandler');
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { User } from '../../models/index.js';
+import { emitToUser } from '../../socket/socketHandler.js';
 
 // Child controller: quản lý hồ sơ Admin (kế thừa qua composition từ AdminController)
 class AdminProfileChild {
@@ -221,4 +221,4 @@ class AdminProfileChild {
   });
 }
 
-module.exports = AdminProfileChild;
+export default AdminProfileChild;

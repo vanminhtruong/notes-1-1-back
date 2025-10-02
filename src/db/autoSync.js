@@ -4,12 +4,12 @@
   - Calls sequelize.sync({ alter: true }) so it adjusts tables without dropping data
 */
 
-const path = require('path');
-const fs = require('fs');
-require('dotenv').config();
-const { sequelize } = require('./index');
+import path from 'path';
+import fs from 'fs';
+import 'dotenv/config';
+import { sequelize } from './index.js';
 // Import models to ensure all are registered before sync
-require('../models');
+import '../models/index.js';
 
 async function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
@@ -110,8 +110,11 @@ async function autoSync() {
   }
 }
 
-if (require.main === module) {
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+
+if (process.argv[1] === __filename) {
   autoSync();
 }
 
-module.exports = { autoSync };
+export { autoSync };

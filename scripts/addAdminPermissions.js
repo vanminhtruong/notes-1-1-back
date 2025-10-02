@@ -1,5 +1,5 @@
-const { sequelize } = require('../src/db');
-const { QueryTypes } = require('sequelize');
+import { sequelize } from '../src/db/index.js';
+import { QueryTypes } from 'sequelize';
 
 async function addAdminPermissionsColumns() {
   try {
@@ -61,7 +61,7 @@ async function addAdminPermissionsColumns() {
 }
 
 // Chạy migration nếu file được gọi trực tiếp
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   addAdminPermissionsColumns()
     .then(() => {
       console.log('✅ Migration hoàn thành');
@@ -73,4 +73,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { addAdminPermissionsColumns };
+export { addAdminPermissionsColumns };

@@ -1,4 +1,4 @@
-const { Note } = require('../../models');
+import { Note } from '../../models/index.js';
 
 class NotesStatsChild {
   constructor(parent) {
@@ -48,4 +48,4 @@ class NotesStatsChild {
   };
 }
 
-module.exports = NotesStatsChild;
+export default NotesStatsChild;

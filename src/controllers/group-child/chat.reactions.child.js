@@ -1,6 +1,7 @@
-const { User, Message, MessageReaction, BlockedUser } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
+import { User, Message, MessageReaction, BlockedUser } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { emitToAllAdmins } from '../../socket/socketHandler.js';
 
 class ChatReactionsChild {
   constructor(parentController) {
@@ -57,7 +58,6 @@ class ChatReactionsChild {
             io.to(`user_${msg.receiverId}`).emit('message_unreacted', payloadUnreact);
             // Notify admins as well so Monitor cập nhật realtime
             try {
-              const { emitToAllAdmins } = require('../../socket/socketHandler');
               emitToAllAdmins && emitToAllAdmins('admin_dm_message_unreacted', { ...payloadUnreact });
             } catch (e) { /* noop */ }
           }
@@ -76,7 +76,6 @@ class ChatReactionsChild {
         io.to(`user_${b}`).emit('message_reacted', payload);
         // Emit to admins for monitoring (DM reaction)
         try {
-          const { emitToAllAdmins } = require('../../socket/socketHandler');
           emitToAllAdmins && emitToAllAdmins('admin_dm_message_reacted', { ...payload });
         } catch (e) { /* noop */ }
       }
@@ -123,7 +122,6 @@ class ChatReactionsChild {
         io.to(`user_${msg.receiverId}`).emit('message_unreacted', payload);
         // Emit to admins for monitoring (DM unreact)
         try {
-          const { emitToAllAdmins } = require('../../socket/socketHandler');
           emitToAllAdmins && emitToAllAdmins('admin_dm_message_unreacted', { ...payload });
         } catch (e) { /* noop */ }
       }
@@ -133,4 +131,4 @@ class ChatReactionsChild {
   });
 }
 
-module.exports = ChatReactionsChild;
+export default ChatReactionsChild;

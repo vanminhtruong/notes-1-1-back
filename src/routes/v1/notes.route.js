@@ -1,7 +1,9 @@
-const router = require('express').Router();
-const notesController = require('../../controllers/notes.controller');
-const authMiddleware = require('../../middlewares/auth');
-const { validateCreateNote, validateUpdateNote, validateShareNote, validateShareNoteToGroup } = require('../../validators/notes.validator');
+import { Router } from 'express';
+import * as notesController from '../../controllers/notes.controller.js';
+import authMiddleware from '../../middlewares/auth.js';
+import { validateCreateNote, validateUpdateNote, validateShareNote, validateShareNoteToGroup } from '../../validators/notes.validator.js';
+
+const router = Router();
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -26,4 +28,4 @@ router.get('/shared/permissions/:noteId', notesController.getSharedNotePermissio
 router.get('/shared/create-permissions', notesController.getCreatePermissions);
 router.delete('/shared/:id', notesController.removeSharedNote);
 
-module.exports = router;
+export default router;

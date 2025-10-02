@@ -1,6 +1,6 @@
-const NotesBasicChild = require('./notes-child/notes.basic.child');
-const NotesSharingChild = require('./notes-child/notes.sharing.child');
-const NotesStatsChild = require('./notes-child/notes.stats.child');
+import NotesBasicChild from './notes-child/notes.basic.child.js';
+import NotesSharingChild from './notes-child/notes.sharing.child.js';
+import NotesStatsChild from './notes-child/notes.stats.child.js';
 
 class NotesController {
   constructor() {
@@ -35,23 +35,21 @@ class NotesController {
 
 const notesController = new NotesController();
 
-module.exports = {
-  NotesController,
-  // Export bound instance methods so external code uses class-based handlers
-  createNote: notesController.createNote,
-  getNotes: notesController.getNotes,
-  getNoteById: notesController.getNoteById,
-  updateNote: notesController.updateNote,
-  deleteNote: notesController.deleteNote,
-  archiveNote: notesController.archiveNote,
-  getNoteStats: notesController.getNoteStats,
-  acknowledgeReminder: notesController.acknowledgeReminder,
-  shareNote: notesController.shareNote,
-  getSharedWithMe: notesController.getSharedWithMe,
-  getSharedByMe: notesController.getSharedByMe,
-  removeSharedNote: notesController.removeSharedNote,
-  getUsers: notesController.getUsers,
-  getSharedNotePermissions: notesController.getSharedNotePermissions,
-  getCreatePermissions: notesController.getCreatePermissions,
-  shareNoteToGroup: notesController.shareNoteToGroup,
-};
+export { NotesController };
+
+export const createNote = notesController.createNote;
+export const getNotes = notesController.getNotes;
+export const getNoteById = notesController.getNoteById;
+export const updateNote = notesController.updateNote;
+export const deleteNote = notesController.deleteNote;
+export const archiveNote = notesController.archiveNote;
+export const getNoteStats = notesController.getNoteStats;
+export const acknowledgeReminder = notesController.acknowledgeReminder;
+export const shareNote = notesController.shareNote;
+export const getSharedWithMe = notesController.getSharedWithMe;
+export const getSharedByMe = notesController.getSharedByMe;
+export const removeSharedNote = notesController.removeSharedNote;
+export const getUsers = notesController.getUsers;
+export const getSharedNotePermissions = notesController.getSharedNotePermissions;
+export const getCreatePermissions = notesController.getCreatePermissions;
+export const shareNoteToGroup = notesController.shareNoteToGroup;

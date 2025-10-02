@@ -1,6 +1,6 @@
-const { User, UserSession } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { isUserOnline, emitToAllAdmins, emitToUser } = require('../../socket/socketHandler');
+import { User, UserSession } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { isUserOnline, emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
 
 class AdminUsersChild {
   constructor(parent) {
@@ -498,4 +498,4 @@ class AdminUsersChild {
   });
 }
 
-module.exports = AdminUsersChild;
+export default AdminUsersChild;

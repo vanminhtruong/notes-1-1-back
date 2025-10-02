@@ -1,7 +1,7 @@
-const { User, PasswordReset } = require('../../models');
-const bcrypt = require('bcryptjs');
-const { sendEmail } = require('../../utils/email');
-const { sendSms } = require('../../utils/sms');
+import { User, PasswordReset } from '../../models/index.js';
+import bcrypt from 'bcryptjs';
+import { sendEmail } from '../../utils/email.js';
+import { sendSms } from '../../utils/sms.js';
 
 // Helper to resolve user by email or phone
 const findUserByIdentifier = async ({ email, phone }) => {
@@ -143,4 +143,4 @@ class AuthPasswordResetChild {
   };
 }
 
-module.exports = AuthPasswordResetChild;
+export default AuthPasswordResetChild;

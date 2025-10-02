@@ -1,17 +1,17 @@
-require('dotenv').config();
+import 'dotenv/config';
 if (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).trim() === '') {
   // eslint-disable-next-line no-console
   console.error('Missing JWT_SECRET in environment. Please set it in Back/.env or environment variables.');
   process.exit(1);
 }
-const http = require('http');
-const { Server } = require('socket.io');
-const app = require('./app');
-const { sequelize } = require('./db');
-const { authenticateSocket, handleConnection, emitToUser } = require('./socket/socketHandler');
-const { Note, User } = require('./models');
-const { Op } = require('sequelize');
-const ModelManager = require('../scripts/modelManager');
+import http from 'http';
+import { Server } from 'socket.io';
+import app from './app.js';
+import { sequelize } from './db/index.js';
+import { authenticateSocket, handleConnection, emitToUser } from './socket/socketHandler.js';
+import { Note, User } from './models/index.js';
+import { Op } from 'sequelize';
+import ModelManager from '../scripts/modelManager.js';
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);

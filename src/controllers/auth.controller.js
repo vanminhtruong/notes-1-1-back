@@ -1,7 +1,7 @@
-const AuthCoreChild = require('./group-child/auth.core.child');
-const AuthOAuthChild = require('./group-child/auth.oauth.child');
-const AuthProfileChild = require('./group-child/auth.profile.child');
-const AuthPasswordResetChild = require('./group-child/auth.password-reset.child');
+import AuthCoreChild from './group-child/auth.core.child.js';
+import AuthOAuthChild from './group-child/auth.oauth.child.js';
+import AuthProfileChild from './group-child/auth.profile.child.js';
+import AuthPasswordResetChild from './group-child/auth.password-reset.child.js';
 
 class AuthController {
   constructor() {
@@ -34,4 +34,21 @@ class AuthController {
   resetPassword = (...args) => this.passwordResetChild.resetPassword(...args);
 }
 
-module.exports = new AuthController();
+const authController = new AuthController();
+
+export default authController;
+
+// Export individual methods for routes
+export const register = authController.register;
+export const login = authController.login;
+export const logout = authController.logout;
+export const getRememberPreference = authController.getRememberPreference;
+export const deleteAccount = authController.deleteAccount;
+export const googleLogin = authController.googleLogin;
+export const facebookLogin = authController.facebookLogin;
+export const getProfile = authController.getProfile;
+export const updateProfile = authController.updateProfile;
+export const changePassword = authController.changePassword;
+export const forgotPasswordRequest = authController.forgotPasswordRequest;
+export const verifyOtp = authController.verifyOtp;
+export const resetPassword = authController.resetPassword;

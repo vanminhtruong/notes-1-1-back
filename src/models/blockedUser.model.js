@@ -1,4 +1,4 @@
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
   const BlockedUser = sequelize.define('BlockedUser', {
     id: {
       type: DataTypes.INTEGER,

@@ -1,4 +1,7 @@
-const { sequelize } = require('./index');
+import { sequelize } from './index.js';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
 
 async function fixMessageReadsConstraint() {
   try {
@@ -37,8 +40,8 @@ async function fixMessageReadsConstraint() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (process.argv[1] === __filename) {
   fixMessageReadsConstraint();
 }
 
-module.exports = { fixMessageReadsConstraint };
+export { fixMessageReadsConstraint };

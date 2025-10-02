@@ -1,35 +1,10 @@
-const express = require('express');
-const authenticate = require('../../middlewares/auth');
-const validate = require('../../middlewares/validate');
-const {
-  createGroup,
-  listMyGroups,
-  listUserGroups,
-  listCommonGroups,
-  getGroupMessages,
-  searchGroupMessages,
-  sendGroupMessage,
-  recallGroupMessages,
-  editGroupMessage,
-  inviteMembers,
-  removeMembers,
-  leaveGroup,
-  updateGroup,
-  deleteGroup,
-  acceptGroupInvite,
-  declineGroupInvite,
-  listMyInvites,
-  markGroupMessagesRead,
-  togglePinGroup,
-  getGroupPinStatus,
-  togglePinGroupMessage,
-  listGroupPinnedMessages,
-  listGroupMembers,
-  updateMemberRole,
-} = require('../../controllers/group.controller');
+import express from 'express';
+import authenticate from '../../middlewares/auth.js';
+import validate from '../../middlewares/validate.js';
+import groupController from '../../controllers/group.controller.js';
 // Moderation operations (subclassed controller)
-const { deleteAllGroupMessages } = require('../../controllers/group-child/group.moderation.controller');
-const {
+import { deleteAllGroupMessages } from '../../controllers/group-child/group.moderation.controller.js';
+import {
   createGroupSchema,
   inviteMembersSchema,
   removeMembersSchema,
@@ -47,57 +22,57 @@ const {
   unreactGroupMessageSchema,
   listGroupMembersSchema,
   updateMemberRoleSchema,
-} = require('../../validators/group.validator');
+} from '../../validators/group.validator.js';
 
 const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/', listMyGroups);
-router.get('/user/:userId', validate(userIdParamSchema), listUserGroups);
-router.get('/common/:userId', validate(userIdParamSchema), listCommonGroups);
-router.get('/invites', listMyInvites);
-router.post('/', validate(createGroupSchema), createGroup);
+router.get('/', groupController.listMyGroups);
+router.get('/user/:userId', validate(userIdParamSchema), groupController.listUserGroups);
+router.get('/common/:userId', validate(userIdParamSchema), groupController.listCommonGroups);
+router.get('/invites', groupController.listMyInvites);
+router.post('/', validate(createGroupSchema), groupController.createGroup);
 
-router.get('/:groupId/messages', validate(getGroupMessagesSchema), getGroupMessages);
-router.get('/:groupId/messages/search', validate(searchGroupMessagesSchema), searchGroupMessages);
-router.post('/:groupId/message', validate(sendGroupMessageSchema), sendGroupMessage);
-router.put('/:groupId/message/:messageId', validate(editGroupMessageSchema), editGroupMessage);
+router.get('/:groupId/messages', validate(getGroupMessagesSchema), groupController.getGroupMessages);
+router.get('/:groupId/messages/search', validate(searchGroupMessagesSchema), groupController.searchGroupMessages);
+router.post('/:groupId/message', validate(sendGroupMessageSchema), groupController.sendGroupMessage);
+router.put('/:groupId/message/:messageId', validate(editGroupMessageSchema), groupController.editGroupMessage);
 // Reactions on group messages
-router.post('/:groupId/message/:messageId/react', validate(reactGroupMessageSchema), require('../../controllers/group.controller').reactGroupMessage);
-router.delete('/:groupId/message/:messageId/react', validate(unreactGroupMessageSchema), require('../../controllers/group.controller').unreactGroupMessage);
-router.put('/:groupId/read', validate(groupIdParamSchema), markGroupMessagesRead);
-router.post('/:groupId/message/recall', validate(recallGroupMessagesSchema), recallGroupMessages);
+router.post('/:groupId/message/:messageId/react', validate(reactGroupMessageSchema), groupController.reactGroupMessage);
+router.delete('/:groupId/message/:messageId/react', validate(unreactGroupMessageSchema), groupController.unreactGroupMessage);
+router.put('/:groupId/read', validate(groupIdParamSchema), groupController.markGroupMessagesRead);
+router.post('/:groupId/message/recall', validate(recallGroupMessagesSchema), groupController.recallGroupMessages);
 
-router.post('/:groupId/invite', validate(inviteMembersSchema), inviteMembers);
-router.post('/:groupId/remove', validate(removeMembersSchema), removeMembers);
-router.post('/:groupId/leave', validate(groupIdParamSchema), leaveGroup);
+router.post('/:groupId/invite', validate(inviteMembersSchema), groupController.inviteMembers);
+router.post('/:groupId/remove', validate(removeMembersSchema), groupController.removeMembers);
+router.post('/:groupId/leave', validate(groupIdParamSchema), groupController.leaveGroup);
 
 // Group invite actions (invitee only)
-router.post('/:groupId/invites/:inviteId/accept', validate(inviteActionSchema), acceptGroupInvite);
-router.post('/:groupId/invites/:inviteId/decline', validate(inviteActionSchema), declineGroupInvite);
+router.post('/:groupId/invites/:inviteId/accept', validate(inviteActionSchema), groupController.acceptGroupInvite);
+router.post('/:groupId/invites/:inviteId/decline', validate(inviteActionSchema), groupController.declineGroupInvite);
 
 // Update group (owner only)
-router.patch('/:groupId', validate(updateGroupSchema), updateGroup);
+router.patch('/:groupId', validate(updateGroupSchema), groupController.updateGroup);
 
 // Delete group (owner only)
-router.delete('/:groupId', validate(groupIdParamSchema), deleteGroup);
+router.delete('/:groupId', validate(groupIdParamSchema), groupController.deleteGroup);
 
 // Pin/Unpin group
-router.put('/:groupId/pin', validate(groupIdParamSchema), togglePinGroup);
-router.get('/:groupId/pin', validate(groupIdParamSchema), getGroupPinStatus);
+router.put('/:groupId/pin', validate(groupIdParamSchema), groupController.togglePinGroup);
+router.get('/:groupId/pin', validate(groupIdParamSchema), groupController.getGroupPinStatus);
 
 // Pin/Unpin a specific group message and list pinned messages
-router.put('/:groupId/message/:messageId/pin', validate(togglePinGroupMessageSchema), togglePinGroupMessage);
-router.get('/:groupId/pins', validate(groupIdParamSchema), listGroupPinnedMessages);
+router.put('/:groupId/message/:messageId/pin', validate(togglePinGroupMessageSchema), groupController.togglePinGroupMessage);
+router.get('/:groupId/pins', validate(groupIdParamSchema), groupController.listGroupPinnedMessages);
 
 // List group members
-router.get('/:groupId/members', validate(listGroupMembersSchema), listGroupMembers);
+router.get('/:groupId/members', validate(listGroupMembersSchema), groupController.listGroupMembers);
 
 // Update member role (owner only)
-router.put('/:groupId/members/:memberId/role', validate(updateMemberRoleSchema), updateMemberRole);
+router.put('/:groupId/members/:memberId/role', validate(updateMemberRoleSchema), groupController.updateMemberRole);
 
 // Delete all messages in a group (owner only)
 router.delete('/:groupId/messages', validate(groupIdParamSchema), deleteAllGroupMessages);
 
-module.exports = router;
+export default router;

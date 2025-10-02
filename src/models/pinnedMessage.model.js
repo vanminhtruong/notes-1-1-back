@@ -1,6 +1,6 @@
-const { Op } = require('sequelize');
+import { Op } from 'sequelize';
 
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
   const PinnedMessage = sequelize.define('PinnedMessage', {
     id: {
       type: DataTypes.INTEGER,

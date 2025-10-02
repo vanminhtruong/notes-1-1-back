@@ -1,11 +1,11 @@
-const { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser, PinnedChat, PinnedMessage, MessageReaction, GroupMember, Notification } = require('../models');
-const asyncHandler = require('../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { isUserOnline } = require('../socket/socketHandler');
-const ChatMessagesChild = require('./group-child/chat.messages.child');
-const ChatPreferencesChild = require('./group-child/chat.preferences.child');
-const ChatReactionsChild = require('./group-child/chat.reactions.child');
-const ChatCoreChild = require('./group-child/chat.core.child');
+import { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser, PinnedChat, PinnedMessage, MessageReaction, GroupMember, Notification } from '../models/index.js';
+import asyncHandler from '../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { isUserOnline } from '../socket/socketHandler.js';
+import ChatMessagesChild from './group-child/chat.messages.child.js';
+import ChatPreferencesChild from './group-child/chat.preferences.child.js';
+import ChatReactionsChild from './group-child/chat.reactions.child.js';
+import ChatCoreChild from './group-child/chat.core.child.js';
 
 class ChatController {
   constructor() {
@@ -43,4 +43,8 @@ class ChatController {
   unreactMessage = (...args) => this.reactionsChild.unreactMessage(...args);
 }
 
-module.exports = new ChatController();
+const chatController = new ChatController();
+
+export { ChatController };
+
+export default chatController;

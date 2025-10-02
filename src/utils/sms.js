@@ -7,11 +7,11 @@ const isConfigured = () => {
 };
 
 let twilioClient = null;
-const getClient = () => {
+const getClient = async () => {
   if (!isConfigured()) return null;
   if (!twilioClient) {
-    const twilio = require('twilio');
-    twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    const twilio = await import('twilio');
+    twilioClient = twilio.default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
   }
   return twilioClient;
 };
@@ -24,7 +24,7 @@ const getClient = () => {
  * @param {string} params.body - Message content
  */
 async function sendSms({ to, body }) {
-  const client = getClient();
+  const client = await getClient();
   if (!client) {
     console.warn('[SMS] Twilio not configured. Printing SMS to console instead.');
     console.info(`[SMS -> ${to}] ${body}`);
@@ -37,4 +37,4 @@ async function sendSms({ to, body }) {
   });
 }
 
-module.exports = { sendSms, isConfigured };
+export { sendSms, isConfigured };

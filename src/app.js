@@ -1,11 +1,11 @@
-const express = require('express');
-const morgan = require('morgan');
-const helmet = require('helmet');
-const cors = require('cors');
-const compression = require('compression');
+import express from 'express';
+import morgan from 'morgan';
+import helmet from 'helmet';
+import cors from 'cors';
+import compression from 'compression';
 
-const routes = require('./routes');
-const { notFound, errorHandler } = require('./middlewares/error');
+import routes from './routes/index.js';
+import { notFound, errorHandler } from './middlewares/error.js';
 
 const FRONT_ORIGIN = process.env.FRONT_ORIGIN || 'http://localhost:5173';
 const isDev = process.env.NODE_ENV !== 'production';
@@ -53,4 +53,4 @@ app.use('/api', routes);
 app.use(notFound);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

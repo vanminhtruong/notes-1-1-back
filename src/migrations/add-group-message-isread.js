@@ -1,6 +1,4 @@
-'use strict';
-
-module.exports = {
+export default {
   up: async (queryInterface, Sequelize) => {
     const tableInfo = await queryInterface.describeTable('GroupMessages');
     if (!tableInfo.isRead) {

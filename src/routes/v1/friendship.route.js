@@ -1,21 +1,12 @@
-const express = require('express');
-const { 
-  getAllUsers,
-  sendFriendRequest,
-  getFriendRequests,
-  getSentRequests,
-  acceptFriendRequest,
-  rejectFriendRequest,
-  getFriends,
-  removeFriend
-} = require('../../controllers/friendship.controller');
-const authenticate = require('../../middlewares/auth');
-const validate = require('../../middlewares/validate');
-const { 
+import express from 'express';
+import friendshipController from '../../controllers/friendship.controller.js';
+import authenticate from '../../middlewares/auth.js';
+import validate from '../../middlewares/validate.js';
+import { 
   sendFriendRequestSchema,
   friendshipIdSchema,
   getUsersSchema
-} = require('../../validators/friendship.validator');
+} from '../../validators/friendship.validator.js';
 
 const router = express.Router();
 
@@ -23,27 +14,27 @@ const router = express.Router();
 router.use(authenticate);
 
 // Get all users (for searching)
-router.get('/users', validate(getUsersSchema), getAllUsers);
+router.get('/users', validate(getUsersSchema), friendshipController.getAllUsers);
 
 // Send friend request
-router.post('/request', validate(sendFriendRequestSchema), sendFriendRequest);
+router.post('/request', validate(sendFriendRequestSchema), friendshipController.sendFriendRequest);
 
 // Get received friend requests
-router.get('/requests', getFriendRequests);
+router.get('/requests', friendshipController.getFriendRequests);
 
 // Get sent friend requests
-router.get('/requests/sent', getSentRequests);
+router.get('/requests/sent', friendshipController.getSentRequests);
 
 // Accept friend request
-router.put('/requests/:friendshipId/accept', validate(friendshipIdSchema), acceptFriendRequest);
+router.put('/requests/:friendshipId/accept', validate(friendshipIdSchema), friendshipController.acceptFriendRequest);
 
 // Reject friend request
-router.delete('/requests/:friendshipId/reject', validate(friendshipIdSchema), rejectFriendRequest);
+router.delete('/requests/:friendshipId/reject', validate(friendshipIdSchema), friendshipController.rejectFriendRequest);
 
 // Get friends list
-router.get('/', getFriends);
+router.get('/', friendshipController.getFriends);
 
 // Remove friend
-router.delete('/:friendshipId', validate(friendshipIdSchema), removeFriend);
+router.delete('/:friendshipId', validate(friendshipIdSchema), friendshipController.removeFriend);
 
-module.exports = router;
+export default router;

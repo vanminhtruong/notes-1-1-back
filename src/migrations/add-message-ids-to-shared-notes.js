@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   up: async (queryInterface, Sequelize) => {
     // Add messageId to SharedNotes table
     await queryInterface.addColumn('SharedNotes', 'messageId', {

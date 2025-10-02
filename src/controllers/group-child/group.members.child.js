@@ -1,7 +1,8 @@
-const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { isBlockedBetween, getBlockedUserIdSetFor } = require('../../utils/block');
+import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
+import { emitToAllAdmins } from '../../socket/socketHandler.js';
 
 class GroupMembersChild {
   constructor(parent) {
@@ -182,7 +183,6 @@ class GroupMembersChild {
             });
             // Emit admin realtime to refresh notification tab in admin user activity
             try {
-              const { emitToAllAdmins } = require('../../socket/socketHandler');
               emitToAllAdmins && emitToAllAdmins('admin_notification_created', { userId: inviteeId, type: notif.type });
             } catch {}
           } catch (e) {}
@@ -576,4 +576,4 @@ class GroupMembersChild {
   });
 }
 
-module.exports = GroupMembersChild;
+export default GroupMembersChild;

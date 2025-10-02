@@ -1,7 +1,7 @@
-const { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { emitToAllAdmins, emitToUser } = require('../../socket/socketHandler');
+import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
 
 // Child controller to manage admin notifications and notes endpoints
 // Attached to AdminController instance in its constructor to keep API unchanged
@@ -741,4 +741,4 @@ class AdminNotesChild {
   });
 }
 
-module.exports = AdminNotesChild;
+export default AdminNotesChild;

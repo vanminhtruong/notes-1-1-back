@@ -1,6 +1,6 @@
-const express = require('express');
-const authenticate = require('../../middlewares/auth');
-const controller = require('../../controllers/notification.controller');
+import express from 'express';
+import authenticate from '../../middlewares/auth.js';
+import * as controller from '../../controllers/notification.controller.js';
 
 const router = express.Router();
 
@@ -21,4 +21,4 @@ router.post('/bell/dismiss', controller.deleteBellItem);
 // PUT /api/v1/notifications/read-all
 router.put('/read-all', controller.markAllRead);
 
-module.exports = router;
+export default router;

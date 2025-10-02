@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const sendMessageSchema = {
   body: Joi.object({
@@ -80,7 +80,7 @@ const setChatNicknameSchema = {
   })
 };
 
-module.exports = {
+export {
   sendMessageSchema,
   getChatMessagesSchema,
   searchChatMessagesSchema,

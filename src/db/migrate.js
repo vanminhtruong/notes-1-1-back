@@ -1,6 +1,11 @@
-const { sequelize } = require('./index');
-const fs = require('fs');
-const path = require('path');
+import { sequelize } from './index.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 async function runMigrations() {
   try {
@@ -14,7 +19,7 @@ async function runMigrations() {
 
     for (const file of migrationFiles) {
       console.log(`Running migration: ${file}`);
-      const migration = require(path.join(migrationsDir, file));
+      const migration = await import(path.join(migrationsDir, file));
       
       if (migration.up) {
         await migration.up(sequelize.getQueryInterface(), sequelize.constructor);
@@ -31,8 +36,8 @@ async function runMigrations() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (process.argv[1] === __filename) {
   runMigrations();
 }
 
-module.exports = { runMigrations };
+export { runMigrations };

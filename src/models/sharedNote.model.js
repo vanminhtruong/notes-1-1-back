@@ -1,4 +1,4 @@
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
   const SharedNote = sequelize.define('SharedNote', {
     id: {
       type: DataTypes.INTEGER,

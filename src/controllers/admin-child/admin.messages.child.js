@@ -1,5 +1,5 @@
-const { User, Message, Group, GroupMessage } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
+import { User, Message, Group, GroupMessage } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
 
 class AdminMessagesChild {
   constructor(parent) {
@@ -275,4 +275,4 @@ class AdminMessagesChild {
   });
 }
 
-module.exports = AdminMessagesChild;
+export default AdminMessagesChild;

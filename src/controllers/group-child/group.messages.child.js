@@ -1,7 +1,8 @@
-const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { isBlockedBetween, getBlockedUserIdSetFor } = require('../../utils/block');
+import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
+import { isUserOnline, emitToAllAdmins } from '../../socket/socketHandler.js';
 
 class GroupMessagesChild {
   constructor(parent) {
@@ -237,7 +238,6 @@ class GroupMessagesChild {
       };
       
       // Check which members are online to update status
-      const { isUserOnline } = require('../../socket/socketHandler');
       let hasOnlineMembers = false;
       
       for (const uid of members) {
@@ -265,7 +265,6 @@ class GroupMessagesChild {
 
     // Emit to all admins for monitoring UI
     try {
-      const { emitToAllAdmins } = require('../../socket/socketHandler');
       const adminPayload = {
         id: messageWithData.id,
         groupId: Number(groupId),
@@ -322,7 +321,6 @@ class GroupMessagesChild {
             for (const uid of members) io.to(`user_${uid}`).emit('group_message_unreacted', payloadUn);
             // Notify admins as well để Monitor cập nhật realtime
             try {
-              const { emitToAllAdmins } = require('../../socket/socketHandler');
               emitToAllAdmins && emitToAllAdmins('admin_group_message_unreacted', { ...payloadUn });
             } catch (e) { /* noop */ }
           }
@@ -339,7 +337,6 @@ class GroupMessagesChild {
       for (const uid of members) io.to(`user_${uid}`).emit('group_message_reacted', payload);
       // Emit to admins
       try {
-        const { emitToAllAdmins } = require('../../socket/socketHandler');
         emitToAllAdmins && emitToAllAdmins('admin_group_message_reacted', { ...payload });
       } catch (e) { /* noop */ }
     }
@@ -365,7 +362,6 @@ class GroupMessagesChild {
       for (const uid of members) io.to(`user_${uid}`).emit('group_message_unreacted', payload);
       // Emit to admins
       try {
-        const { emitToAllAdmins } = require('../../socket/socketHandler');
         emitToAllAdmins && emitToAllAdmins('admin_group_message_unreacted', { ...payload });
       } catch (e) { /* noop */ }
     }
@@ -634,4 +630,4 @@ class GroupMessagesChild {
   });
 }
 
-module.exports = GroupMessagesChild;
+export default GroupMessagesChild;

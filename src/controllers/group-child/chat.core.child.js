@@ -1,7 +1,7 @@
-const { User, Message, Friendship, MessageRead, ChatPreference, PinnedChat, Notification, MessageReaction } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { isUserOnline } = require('../../socket/socketHandler');
+import { User, Message, Friendship, MessageRead, ChatPreference, PinnedChat, Notification, MessageReaction } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { isUserOnline } from '../../socket/socketHandler.js';
 
 class ChatCoreChild {
   constructor(parentController) {
@@ -195,4 +195,4 @@ class ChatCoreChild {
   });
 }
 
-module.exports = ChatCoreChild;
+export default ChatCoreChild;

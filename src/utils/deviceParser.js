@@ -88,6 +88,6 @@ const parseDeviceInfo = (userAgent) => {
   };
 };
 
-module.exports = {
+export {
   parseDeviceInfo,
 };

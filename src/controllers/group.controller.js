@@ -1,11 +1,11 @@
-const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } = require('../models');
-const asyncHandler = require('../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { isBlockedBetween, getBlockedUserIdSetFor } = require('../utils/block');
-const GroupMessagesChild = require('./group-child/group.messages.child');
-const GroupMembersChild = require('./group-child/group.members.child');
-const GroupManagementChild = require('./group-child/group.management.child');
-const GroupPinsChild = require('./group-child/group.pins.child');
+import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../models/index.js';
+import asyncHandler from '../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { isBlockedBetween, getBlockedUserIdSetFor } from '../utils/block.js';
+import GroupMessagesChild from './group-child/group.messages.child.js';
+import GroupMembersChild from './group-child/group.members.child.js';
+import GroupManagementChild from './group-child/group.management.child.js';
+import GroupPinsChild from './group-child/group.pins.child.js';
 class GroupController {
   constructor() {
     // Attach child controllers to keep class short while preserving API surface
@@ -47,34 +47,6 @@ class GroupController {
 
 const groupController = new GroupController();
 
-module.exports = {
-  GroupController,
-  // export bound instance methods so external code uses class-based handlers
-  createGroup: groupController.createGroup,
-  listMyGroups: groupController.listMyGroups,
-  listUserGroups: groupController.listUserGroups,
-  listCommonGroups: groupController.listCommonGroups,
-  getGroupMessages: groupController.getGroupMessages,
-  searchGroupMessages: groupController.searchGroupMessages,
-  sendGroupMessage: groupController.sendGroupMessage,
-  reactGroupMessage: groupController.reactGroupMessage,
-  unreactGroupMessage: groupController.unreactGroupMessage,
-  recallGroupMessages: groupController.recallGroupMessages,
-  editGroupMessage: groupController.editGroupMessage,
-  deleteAllGroupMessages: groupController.deleteAllGroupMessages,
-  inviteMembers: groupController.inviteMembers,
-  removeMembers: groupController.removeMembers,
-  leaveGroup: groupController.leaveGroup,
-  updateGroup: groupController.updateGroup,
-  deleteGroup: groupController.deleteGroup,
-  acceptGroupInvite: groupController.acceptGroupInvite,
-  declineGroupInvite: groupController.declineGroupInvite,
-  listMyInvites: groupController.listMyInvites,
-  markGroupMessagesRead: groupController.markGroupMessagesRead,
-  togglePinGroup: groupController.togglePinGroup,
-  getGroupPinStatus: groupController.getGroupPinStatus,
-  updateMemberRole: groupController.updateMemberRole,
-  listGroupMembers: groupController.listGroupMembers,
-  togglePinGroupMessage: groupController.togglePinGroupMessage,
-  listGroupPinnedMessages: groupController.listGroupPinnedMessages,
-};
+export { GroupController };
+
+export default groupController;

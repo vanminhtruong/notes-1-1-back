@@ -1,18 +1,18 @@
-const router = require('express').Router();
-const sample = require('./sample.route');
-const auth = require('./auth.route');
-const notes = require('./notes.route');
-const friendship = require('./friendship.route');
-const chat = require('./chat.route');
-const uploads = require('./upload.route');
-const groups = require('./group.route');
-const settings = require('./settings.route');
-const blocks = require('./blocks.route');
-const notifications = require('./notifications.route');
-const admin = require('./admin.route');
-const userSessions = require('./userSession.route');
+import { Router } from 'express';
+import auth from './auth.route.js';
+import notes from './notes.route.js';
+import friendship from './friendship.route.js';
+import chat from './chat.route.js';
+import uploads from './upload.route.js';
+import groups from './group.route.js';
+import settings from './settings.route.js';
+import blocks from './blocks.route.js';
+import notifications from './notifications.route.js';
+import admin from './admin.route.js';
+import userSessions from './userSession.route.js';
 
-router.use('/sample', sample);
+const router = Router();
+
 router.use('/auth', auth);
 router.use('/notes', notes);
 router.use('/friends', friendship);
@@ -25,4 +25,4 @@ router.use('/notifications', notifications);
 router.use('/admin', admin);
 router.use('/sessions', userSessions);
 
-module.exports = router;
+export default router;

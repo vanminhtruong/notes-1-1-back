@@ -1,6 +1,6 @@
-const { Note, User, SharedNote, Group, GroupSharedNote } = require('../../models');
-const { Op } = require('sequelize');
-const { emitToUser, emitToAllAdmins } = require('../../socket/socketHandler');
+import { Note, User, SharedNote, Group, GroupSharedNote, GroupMember } from '../../models/index.js';
+import { Op } from 'sequelize';
+import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
 class NotesSharingChild {
   constructor(parent) {
@@ -405,7 +405,7 @@ class NotesSharingChild {
       const group = await Group.findByPk(groupId, {
         attributes: ['id', 'name', 'avatar'],
         include: [{
-          model: require('../../models').GroupMember,
+          model: GroupMember,
           as: 'members',
           where: { userId: sharedByUserId },
           required: true,
@@ -463,4 +463,4 @@ class NotesSharingChild {
   };
 }
 
-module.exports = NotesSharingChild;
+export default NotesSharingChild;

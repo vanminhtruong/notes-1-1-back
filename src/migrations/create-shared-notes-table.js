@@ -1,6 +1,4 @@
-'use strict';
-
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('SharedNotes', {
       id: {

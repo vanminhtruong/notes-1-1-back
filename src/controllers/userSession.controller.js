@@ -1,5 +1,5 @@
-const { UserSession } = require('../models');
-const { Op } = require('sequelize');
+import { UserSession } from '../models/index.js';
+import { Op } from 'sequelize';
 
 class UserSessionController {
   /**
@@ -173,4 +173,12 @@ class UserSessionController {
   };
 }
 
-module.exports = new UserSessionController();
+const userSessionController = new UserSessionController();
+
+export default userSessionController;
+
+// Export individual methods for routes
+export const getUserSessions = userSessionController.getUserSessions;
+export const deleteSession = userSessionController.deleteSession;
+export const deleteAllOtherSessions = userSessionController.deleteAllOtherSessions;
+export const updateSessionActivity = userSessionController.updateSessionActivity;

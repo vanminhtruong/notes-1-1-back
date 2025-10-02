@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const sendFriendRequestSchema = {
   body: Joi.object({
@@ -19,7 +19,7 @@ const getUsersSchema = {
   })
 };
 
-module.exports = {
+export {
   sendFriendRequestSchema,
   friendshipIdSchema,
   getUsersSchema

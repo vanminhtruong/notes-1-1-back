@@ -1,10 +1,10 @@
-const jwt = require('jsonwebtoken');
-const { User, UserSession } = require('../../models');
-const { OAuth2Client } = require('google-auth-library');
-const axios = require('axios');
-const crypto = require('crypto');
-const { emitToAllAdmins } = require('../../socket/socketHandler');
-const { parseDeviceInfo } = require('../../utils/deviceParser');
+import jwt from 'jsonwebtoken';
+import { User, UserSession } from '../../models/index.js';
+import { OAuth2Client } from 'google-auth-library';
+import axios from 'axios';
+import crypto from 'crypto';
+import { emitToAllAdmins } from '../../socket/socketHandler.js';
+import { parseDeviceInfo } from '../../utils/deviceParser.js';
 
 const generateToken = (user, options = {}) => {
   const expiresIn = options.expiresIn || process.env.JWT_EXPIRES_IN || '7d';
@@ -235,4 +235,4 @@ class AuthOAuthChild {
   };
 }
 
-module.exports = AuthOAuthChild;
+export default AuthOAuthChild;

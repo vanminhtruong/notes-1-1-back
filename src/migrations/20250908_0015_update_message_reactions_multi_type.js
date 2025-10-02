@@ -3,7 +3,7 @@
   Works for SQLite by recreating MessageReactions with new unique indexes.
 */
 
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     const dialect = queryInterface.sequelize.getDialect();
     if (dialect !== 'sqlite') {

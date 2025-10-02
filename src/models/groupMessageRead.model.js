@@ -1,4 +1,4 @@
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
   const GroupMessageRead = sequelize.define('GroupMessageRead', {
     id: {
       type: DataTypes.INTEGER,

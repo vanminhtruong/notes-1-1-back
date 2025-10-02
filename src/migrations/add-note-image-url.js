@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   up: async (queryInterface, Sequelize) => {
     try {
       const columns = await queryInterface.describeTable('Notes');

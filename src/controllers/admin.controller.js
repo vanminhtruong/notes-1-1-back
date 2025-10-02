@@ -1,14 +1,15 @@
-const { User, Note, Message, Group, GroupMember, Friendship, GroupMessage, Notification } = require('../models');
-const asyncHandler = require('../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const jwt = require('jsonwebtoken');
-const { emitToAllAdmins, isUserOnline, emitToUser } = require('../socket/socketHandler');
-const AdminNotesChild = require('./group-child/admin.notes.child');
-const AdminMessagesChild = require('./group-child/admin.messages.child');
-const AdminMonitorChild = require('./group-child/admin.monitor.child');
-const AdminUsersChild = require('./group-child/admin.users.child');
-const AdminAuthChild = require('./group-child/admin.auth.child');
-const AdminProfileChild = require('./group-child/admin.profile.child');
+import { User, Note, Message, Group, GroupMember, Friendship, GroupMessage, Notification } from '../models/index.js';
+import asyncHandler from '../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import jwt from 'jsonwebtoken';
+import { emitToAllAdmins, isUserOnline, emitToUser } from '../socket/socketHandler.js';
+import AdminNotesChild from './admin-child/admin.notes.child.js';
+import AdminMessagesChild from './admin-child/admin.messages.child.js';
+import AdminMonitorChild from './admin-child/admin.monitor.child.js';
+import AdminUsersChild from './admin-child/admin.users.child.js';
+import AdminAuthChild from './admin-child/admin.auth.child.js';
+import AdminProfileChild from './admin-child/admin.profile.child.js';
+
 // class này đã quá dài hãy tạo ra class con kế thừa để xử lý
 class AdminController {
   constructor() {
@@ -62,43 +63,6 @@ class AdminController {
 
 const adminController = new AdminController();
 
-module.exports = {
-  AdminController,
-  // export bound instance methods so external code uses class-based handlers
-  adminLogin: adminController.adminLogin,
-  getAllUsersNotes: adminController.getAllUsersNotes,
-  createNoteForUser: adminController.createNoteForUser,
-  updateUserNote: adminController.updateUserNote,
-  deleteUserNote: adminController.deleteUserNote,
-  getAllSharedNotes: adminController.getAllSharedNotes,
-  getSharedNoteDetail: adminController.getSharedNoteDetail,
-  updateSharedNote: adminController.updateSharedNote,
-  deleteSharedNote: adminController.deleteSharedNote,
-  getUserActivity: adminController.getUserActivity,
-  getAllUsers: adminController.getAllUsers,
-  createUser: adminController.createUser,
-  editUser: adminController.editUser,
-  toggleUserStatus: adminController.toggleUserStatus,
-  deleteUserPermanently: adminController.deleteUserPermanently,
-  adminGetDMMessages: adminController.adminGetDMMessages,
-  adminGetGroupMessages: adminController.adminGetGroupMessages,
-  adminGetGroupMembers: adminController.adminGetGroupMembers,
-  adminGetUserNotifications: adminController.adminGetUserNotifications,
-  adminDeleteUserNotification: adminController.adminDeleteUserNotification,
-  adminDeleteAllUserNotifications: adminController.adminDeleteAllUserNotifications,
-  adminRecallDMMessage: adminController.adminRecallDMMessage,
-  adminDeleteDMMessage: adminController.adminDeleteDMMessage,
-  adminEditDMMessage: adminController.adminEditDMMessage,
-  adminRecallGroupMessage: adminController.adminRecallGroupMessage,
-  adminDeleteGroupMessage: adminController.adminDeleteGroupMessage,
-  adminEditGroupMessage: adminController.adminEditGroupMessage,
-  refreshToken: adminController.refreshToken,
-  getMyProfile: adminController.getMyProfile,
-  updateMyProfile: adminController.updateMyProfile,
-  uploadAvatar: adminController.uploadAvatar,
-  getAdminProfile: adminController.getAdminProfile,
-  updateAdminProfile: adminController.updateAdminProfile,
-  getUserSessions: adminController.getUserSessions,
-  logoutUserSession: adminController.logoutUserSession,
-  logoutAllUserSessions: adminController.logoutAllUserSessions,
-};
+export { AdminController };
+
+export default adminController;

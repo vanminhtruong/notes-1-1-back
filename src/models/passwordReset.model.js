@@ -1,4 +1,4 @@
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
   const PasswordReset = sequelize.define('PasswordReset', {
     id: {
       type: DataTypes.INTEGER,

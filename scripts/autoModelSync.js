@@ -1,6 +1,10 @@
-const chokidar = require('chokidar');
-const path = require('path');
-const { sequelize } = require('../src/db');
+import chokidar from 'chokidar';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { sequelize } from '../src/db/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class AutoModelSync {
   constructor() {
@@ -19,12 +23,9 @@ class AutoModelSync {
     console.log('🔄 Model files changed, auto-syncing database...');
 
     try {
-      // Clear require cache for all model files
-      this.clearModelCache();
-      
-      // Re-import all models to get latest definitions
-      delete require.cache[require.resolve('../src/models')];
-      require('../src/models');
+      // Note: In ES6 modules, we cannot clear import cache dynamically
+      // This is a limitation of ES6 modules. Consider restarting the process
+      // or using a different approach for hot reloading in development
       
       // Run sequelize sync with alter to update schema automatically
       await sequelize.sync({ alter: true });
@@ -38,31 +39,9 @@ class AutoModelSync {
   }
 
   clearModelCache() {
-    // Clear cache for all model files
-    const modelFiles = [
-      '../src/models/index.js',
-      '../src/models/user.model.js',
-      '../src/models/message.model.js',
-      '../src/models/group.model.js',
-      '../src/models/friendship.model.js',
-      '../src/models/note.model.js',
-      '../src/models/sample.model.js',
-      '../src/models/passwordReset.model.js',
-      '../src/models/groupMember.model.js',
-      '../src/models/groupMessage.model.js',
-      '../src/models/groupInvite.model.js',
-      '../src/models/messageRead.model.js',
-      '../src/models/groupMessageRead.model.js',
-      '../src/models/chatPreference.model.js'
-    ];
-
-    modelFiles.forEach(file => {
-      try {
-        delete require.cache[require.resolve(file)];
-      } catch (error) {
-        // File might not exist, that's ok
-      }
-    });
+    // Note: ES6 modules don't support clearing import cache
+    // This method is kept for compatibility but won't work with ES6
+    console.log('⚠️  Warning: Cannot clear import cache with ES6 modules');
   }
 
   startWatching() {
@@ -114,7 +93,7 @@ class AutoModelSync {
 }
 
 // Chạy watcher nếu file được gọi trực tiếp
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const autoSync = new AutoModelSync();
   autoSync.startWatching();
   
@@ -124,4 +103,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = AutoModelSync;
+export default AutoModelSync;

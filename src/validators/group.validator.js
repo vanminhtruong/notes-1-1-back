@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const createGroupSchema = {
   body: Joi.object({
@@ -158,7 +158,7 @@ const updateMemberRoleSchema = {
   })
 };
 
-module.exports = {
+export {
   createGroupSchema,
   inviteMembersSchema,
   removeMembersSchema,

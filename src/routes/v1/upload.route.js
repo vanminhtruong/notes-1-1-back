@@ -1,8 +1,8 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
-const authenticate = require('../../middlewares/auth');
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import multer from 'multer';
+import authenticate from '../../middlewares/auth.js';
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
@@ -76,4 +76,4 @@ router.post('/file', uploadAny.single('file'), (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

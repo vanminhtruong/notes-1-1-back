@@ -1,7 +1,7 @@
-const { sequelize } = require('../src/db');
+import { sequelize } from '../src/db/index.js';
 // Import tất cả models để đăng ký với sequelize
-require('../src/models');
-const readline = require('readline');
+import '../src/models/index.js';
+import readline from 'readline';
 
 const rl = readline.createInterface({
   input: process.stdin,

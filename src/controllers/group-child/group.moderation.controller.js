@@ -1,7 +1,7 @@
-const { GroupController } = require('../group.controller');
-const { GroupMember, GroupMessage, GroupMessageRead, PinnedMessage, MessageReaction } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
+import { GroupController } from '../group.controller.js';
+import { GroupMember, GroupMessage, GroupMessageRead, PinnedMessage, MessageReaction } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
 
 // Subclass dedicated to moderation/maintenance operations for groups
 class GroupModerationController extends GroupController {
@@ -41,13 +41,12 @@ class GroupModerationController extends GroupController {
         io.to(`user_${uid}`).emit('group_messages_deleted', payload);
       }
     }
-
     return res.json({ success: true, data: { groupId: Number(groupId), count: messageIds.length } });
   });
 }
 
 const moderationController = new GroupModerationController();
-module.exports = {
-  GroupModerationController,
-  deleteAllGroupMessages: moderationController.deleteAllGroupMessages,
-};
+
+export { GroupModerationController };
+export const deleteAllGroupMessages = moderationController.deleteAllGroupMessages;
+export default moderationController;

@@ -1,7 +1,7 @@
-const router = require('express').Router();
-const authController = require('../../controllers/auth.controller');
-const authMiddleware = require('../../middlewares/auth');
-const { 
+import { Router } from 'express';
+import * as authController from '../../controllers/auth.controller.js';
+import authMiddleware from '../../middlewares/auth.js';
+import { 
   validateRegister, 
   validateLogin, 
   validateChangePassword,
@@ -10,7 +10,9 @@ const {
   validateResetPassword,
   validateUpdateProfile,
   validateRememberPref,
-} = require('../../validators/auth.validator');
+} from '../../validators/auth.validator.js';
+
+const router = Router();
 
 // Public routes   
 router.post('/register', validateRegister, authController.register);
@@ -30,4 +32,4 @@ router.put('/profile', validateUpdateProfile, authController.updateProfile);
 router.put('/change-password', validateChangePassword, authController.changePassword);
 router.delete('/account', authController.deleteAccount);
 
-module.exports = router;
+export default router;

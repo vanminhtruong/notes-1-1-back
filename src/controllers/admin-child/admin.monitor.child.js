@@ -1,6 +1,6 @@
-const { User, Message, Group, GroupMember, Friendship, GroupMessage, MessageRead, GroupMessageRead } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
+import { User, Message, Group, GroupMember, Friendship, GroupMessage, MessageRead, GroupMessageRead } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
 
 class AdminMonitorChild {
   constructor(parent) {
@@ -146,4 +146,4 @@ class AdminMonitorChild {
   });
 }
 
-module.exports = AdminMonitorChild;
+export default AdminMonitorChild;

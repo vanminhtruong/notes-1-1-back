@@ -1,4 +1,4 @@
-module.exports = (sequelize, DataTypes) => {
+export default (sequelize, DataTypes) => {
   const ChatPreference = sequelize.define('ChatPreference', {
     id: {
       type: DataTypes.INTEGER,

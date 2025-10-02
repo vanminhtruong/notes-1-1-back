@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
-const { User } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
+import jwt from 'jsonwebtoken';
+import { User } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
 
 class AdminAuthChild {
   constructor(parent) {
@@ -86,4 +86,4 @@ class AdminAuthChild {
   });
 }
 
-module.exports = AdminAuthChild;
+export default AdminAuthChild;

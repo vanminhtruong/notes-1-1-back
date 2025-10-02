@@ -1,5 +1,5 @@
-const { BlockedUser } = require('../models');
-const { Op } = require('sequelize');
+import { BlockedUser } from '../models/index.js';
+import { Op } from 'sequelize';
 
 /**
  * Returns true if there is a block between two users in either direction
@@ -40,4 +40,4 @@ async function getBlockedUserIdSetFor(userId) {
   return set;
 }
 
-module.exports = { isBlockedBetween, getBlockedUserIdSetFor };
+export { isBlockedBetween, getBlockedUserIdSetFor };

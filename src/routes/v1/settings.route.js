@@ -1,6 +1,6 @@
-const express = require('express');
-const authenticate = require('../../middlewares/auth');
-const { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage, getPrivacy, updatePrivacy } = require('../../controllers/settings.controller');
+import express from 'express';
+import authenticate from '../../middlewares/auth.js';
+import { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage, getPrivacy, updatePrivacy } from '../../controllers/settings.controller.js';
 
 const router = express.Router();
 
@@ -19,4 +19,4 @@ router.put('/language', updateLanguage);
 router.get('/privacy', getPrivacy);
 router.put('/privacy', updatePrivacy);
 
-module.exports = router;
+export default router;

@@ -1,7 +1,7 @@
-const { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { isBlockedBetween, getBlockedUserIdSetFor } = require('../../utils/block');
+import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
 
 class GroupManagementChild {
   constructor(parent) {
@@ -276,4 +276,4 @@ class GroupManagementChild {
   });
 }
 
-module.exports = GroupManagementChild;
+export default GroupManagementChild;

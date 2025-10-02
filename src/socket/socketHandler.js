@@ -1,5 +1,6 @@
-const jwt = require('jsonwebtoken');
-const { User, Friendship, GroupMember, MessageRead, GroupMessageRead, Message, GroupMessage, BlockedUser } = require('../models');
+import jwt from 'jsonwebtoken';
+import { User, Friendship, GroupMember, MessageRead, GroupMessageRead, Message, GroupMessage, BlockedUser } from '../models/index.js';
+import { Op } from 'sequelize';
 
 const connectedUsers = new Map(); // Store connected users
 
@@ -97,7 +98,6 @@ const handleConnection = async (socket) => {
     }
 
     // Do the same for group messages where this user is a member
-    const { GroupMember } = require('../models');
     const userGroups = await GroupMember.findAll({
       where: { userId },
       attributes: ['groupId']
@@ -108,9 +108,9 @@ const handleConnection = async (socket) => {
     if (groupIds.length > 0) {
       const undeliveredGroupMessages = await GroupMessage.findAll({
         where: {
-          groupId: { [require('sequelize').Op.in]: groupIds },
+          groupId: { [Op.in]: groupIds },
           status: 'sent',
-          senderId: { [require('sequelize').Op.ne]: userId } // Don't update own messages
+          senderId: { [Op.ne]: userId } // Don't update own messages
         }
       });
 
@@ -144,7 +144,7 @@ const handleConnection = async (socket) => {
   try {
     const friendships = await Friendship.findAll({
       where: {
-        [require('sequelize').Op.or]: [
+        [Op.or]: [
           { requesterId: userId, status: 'accepted' },
           { addresseeId: userId, status: 'accepted' }
         ]
@@ -175,7 +175,6 @@ const handleConnection = async (socket) => {
         online: true,
         at: new Date(),
       };
-      const { User } = require('../models');
       const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
       for (const admin of admins) {
         global.io.to(`user_${admin.id}`).emit('admin_user_online', payload);
@@ -235,7 +234,7 @@ const handleConnection = async (socket) => {
           // Suppress read receipt emissions if either party has blocked the other
           const blocked = await BlockedUser.findOne({
             where: {
-              [require('sequelize').Op.or]: [
+              [Op.or]: [
                 { userId: userId, blockedUserId: receiverId },
                 { userId: receiverId, blockedUserId: userId },
               ],
@@ -284,7 +283,7 @@ const handleConnection = async (socket) => {
       // Block guard: if either user has blocked the other, do not forward
       const blocked = await BlockedUser.findOne({
         where: {
-          [require('sequelize').Op.or]: [
+          [Op.or]: [
             { userId: userId, blockedUserId: receiverId },
             { userId: receiverId, blockedUserId: userId },
           ],
@@ -311,7 +310,7 @@ const handleConnection = async (socket) => {
       if (!receiverId) return;
       const blocked = await BlockedUser.findOne({
         where: {
-          [require('sequelize').Op.or]: [
+          [Op.or]: [
             { userId: userId, blockedUserId: receiverId },
             { userId: receiverId, blockedUserId: userId },
           ],
@@ -337,8 +336,7 @@ const handleConnection = async (socket) => {
         };
         // Reuse helper to emit to all admins if available at runtime
         if (global.io) {
-          const { User: _U } = require('../models');
-          const admins = await _U.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
           for (const admin of admins) {
             global.io.to(`user_${admin.id}`).emit('admin_user_typing', adminPayload);
           }
@@ -357,7 +355,7 @@ const handleConnection = async (socket) => {
       if (!receiverId) return;
       const blocked = await BlockedUser.findOne({
         where: {
-          [require('sequelize').Op.or]: [
+          [Op.or]: [
             { userId: userId, blockedUserId: receiverId },
             { userId: receiverId, blockedUserId: userId },
           ],
@@ -382,8 +380,7 @@ const handleConnection = async (socket) => {
           at: new Date(),
         };
         if (global.io) {
-          const { User: _U } = require('../models');
-          const admins = await _U.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
           for (const admin of admins) {
             global.io.to(`user_${admin.id}`).emit('admin_user_typing', adminPayload);
           }
@@ -418,8 +415,7 @@ const handleConnection = async (socket) => {
       // Notify admins as well for monitoring UI
       try {
         if (global.io) {
-          const { User: _U } = require('../models');
-          const admins = await _U.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
           const payload = { groupId: Number(groupId), userId, userName: socket.user?.name, isTyping: !!isTyping, at: new Date() };
           for (const admin of admins) {
             global.io.to(`user_${admin.id}`).emit('admin_group_typing', payload);
@@ -467,7 +463,7 @@ const handleConnection = async (socket) => {
       // Block guard
       const blocked = await BlockedUser.findOne({
         where: {
-          [require('sequelize').Op.or]: [
+          [Op.or]: [
             { userId: userId, blockedUserId: to },
             { userId: to, blockedUserId: userId },
           ],
@@ -501,7 +497,7 @@ const handleConnection = async (socket) => {
       // Block guard (redundant but consistent)
       const blocked = await BlockedUser.findOne({
         where: {
-          [require('sequelize').Op.or]: [
+          [Op.or]: [
             { userId: userId, blockedUserId: to },
             { userId: to, blockedUserId: userId },
           ],
@@ -622,7 +618,7 @@ const handleConnection = async (socket) => {
         // Before notifying sender, suppress if a block exists between users
         const blocked = await BlockedUser.findOne({
           where: {
-            [require('sequelize').Op.or]: [
+            [Op.or]: [
               { userId: userId, blockedUserId: message.senderId },
               { userId: message.senderId, blockedUserId: userId },
             ],
@@ -797,7 +793,7 @@ const handleConnection = async (socket) => {
     try {
       const friendships = await Friendship.findAll({
         where: {
-          [require('sequelize').Op.or]: [
+          [Op.or]: [
             { requesterId: userId, status: 'accepted' },
             { addresseeId: userId, status: 'accepted' }
           ]
@@ -829,7 +825,6 @@ const handleConnection = async (socket) => {
           online: false,
           lastSeenAt: new Date(),
         };
-        const { User } = require('../models');
         const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
         for (const admin of admins) {
           global.io.to(`user_${admin.id}`).emit('admin_user_offline', payload);
@@ -927,7 +922,8 @@ const isUserOnline = (userId) => {
   return connectedUsers.has(userId);
 };
 
-module.exports = {
+// Export all functions as named exports
+export {
   authenticateSocket,
   handleConnection,
   emitToUser,

@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const validateRegister = (req, res, next) => {
   const schema = Joi.object({
@@ -167,7 +167,19 @@ const validateUpdateProfile = (req, res, next) => {
   next();
 };
 
-module.exports = {
+const validateRememberPref = (req, res, next) => {
+  const schema = Joi.object({ email: Joi.string().email().required() });
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(d => d.message),
+    });
+  }
+  next();
+};
+
+export {
   validateRegister,
   validateLogin,
   validateChangePassword,
@@ -175,16 +187,6 @@ module.exports = {
   validateVerifyOtp,
   validateResetPassword,
   validateUpdateProfile,
-  validateRememberPref: (req, res, next) => {
-    const schema = Joi.object({ email: Joi.string().email().required() });
-    const { error } = schema.validate(req.body);
-    if (error) {
-      return res.status(400).json({
-        message: 'Dữ liệu không hợp lệ',
-        errors: error.details.map(d => d.message),
-      });
-    }
-    next();
-  },
+  validateRememberPref,
 };
 

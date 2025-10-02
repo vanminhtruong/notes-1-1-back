@@ -1,7 +1,7 @@
-const { User } = require('../models');
-const asyncHandler = require('../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { emitToAllAdmins, emitToUser } = require('../socket/socketHandler');
+import { User } from '../models/index.js';
+import asyncHandler from '../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { emitToAllAdmins, emitToUser } from '../socket/socketHandler.js';
 
 // Class con kế thừa để xử lý phân quyền admin
 class AdminPermissionsController {
@@ -446,13 +446,14 @@ class AdminPermissionsController {
 
 const adminPermissionsController = new AdminPermissionsController();
 
-module.exports = {
+export {
   AdminPermissionsController,
-  getAllAdmins: adminPermissionsController.getAllAdmins,
-  createSubAdmin: adminPermissionsController.createSubAdmin,
-  updateAdminPermissions: adminPermissionsController.updateAdminPermissions,
-  deleteAdmin: adminPermissionsController.deleteAdmin,
-  getMyPermissions: adminPermissionsController.getMyPermissions,
-  revokeAdminPermission: adminPermissionsController.revokeAdminPermission,
-  toggleAdminStatus: adminPermissionsController.toggleAdminStatus,
 };
+
+export const getAllAdmins = adminPermissionsController.getAllAdmins;
+export const createSubAdmin = adminPermissionsController.createSubAdmin;
+export const updateAdminPermissions = adminPermissionsController.updateAdminPermissions;
+export const deleteAdmin = adminPermissionsController.deleteAdmin;
+export const getMyPermissions = adminPermissionsController.getMyPermissions;
+export const revokeAdminPermission = adminPermissionsController.revokeAdminPermission;
+export const toggleAdminStatus = adminPermissionsController.toggleAdminStatus;

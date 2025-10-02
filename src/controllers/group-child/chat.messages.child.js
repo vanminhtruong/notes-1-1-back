@@ -1,7 +1,7 @@
-const { User, Message, Friendship, MessageRead, BlockedUser, PinnedMessage, MessageReaction, Notification } = require('../../models');
-const asyncHandler = require('../../middlewares/asyncHandler');
-const { Op } = require('sequelize');
-const { isUserOnline } = require('../../socket/socketHandler');
+import { User, Message, Friendship, MessageRead, BlockedUser, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import asyncHandler from '../../middlewares/asyncHandler.js';
+import { Op } from 'sequelize';
+import { isUserOnline, emitToAllAdmins } from '../../socket/socketHandler.js';
 
 class ChatMessagesChild {
   constructor(parentController) {
@@ -260,7 +260,6 @@ class ChatMessagesChild {
       } catch {}
       // Emit admin realtime to refresh notification tab in admin user activity
       try {
-        const { emitToAllAdmins } = require('../../socket/socketHandler');
         emitToAllAdmins && emitToAllAdmins('admin_notification_created', { userId: receiverId, type: notif.type });
       } catch {}
     } catch (e) {
@@ -301,7 +300,7 @@ class ChatMessagesChild {
         replyToMessage: replyPayload,
       };
       
-      const isReceiverOnline = require('../../socket/socketHandler').isUserOnline(receiverId);
+      const isReceiverOnline = isUserOnline(receiverId);
       const deliveryStatus = isReceiverOnline ? 'delivered' : 'sent';
       
       if (isReceiverOnline) {
@@ -333,7 +332,6 @@ class ChatMessagesChild {
 
     // Emit to all admins for monitoring UI
     try {
-      const { emitToAllAdmins } = require('../../socket/socketHandler');
       const adminPayload = {
         id: messageWithData.id,
         senderId,
@@ -575,4 +573,4 @@ class ChatMessagesChild {
   });
 }
 
-module.exports = ChatMessagesChild;
+export default ChatMessagesChild;

@@ -1,6 +1,6 @@
-const express = require('express');
-const authenticate = require('../../middlewares/auth');
-const { blockUser, unblockUser, getBlockStatus, listBlockedUsers } = require('../../controllers/block.controller');
+import express from 'express';
+import authenticate from '../../middlewares/auth.js';
+import { blockUser, unblockUser, getBlockStatus, listBlockedUsers } from '../../controllers/block.controller.js';
 
 const router = express.Router();
 
@@ -18,4 +18,4 @@ router.delete('/:targetId', unblockUser);
 // Check block status with a target
 router.get('/status', getBlockStatus);
 
-module.exports = router;
+export default router;

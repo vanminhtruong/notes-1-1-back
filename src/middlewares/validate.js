@@ -1,9 +1,9 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 // This middleware now supports validating multiple parts of the request
 // simultaneously (e.g. { params, body, query }). It will validate each
 // provided part independently and write the sanitized values back onto req.
-module.exports = (schema) => (req, res, next) => {
+export default (schema) => (req, res, next) => {
   const details = [];
 
   const validatePart = (partName, value, joiSchema) => {

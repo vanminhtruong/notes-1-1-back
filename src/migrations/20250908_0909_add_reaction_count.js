@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     // Add 'count' column to MessageReactions if missing, default 1
     try {

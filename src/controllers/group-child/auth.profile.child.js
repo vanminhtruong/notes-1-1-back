@@ -1,6 +1,6 @@
-const { User, Friendship } = require('../../models');
-const { emitToAllAdmins } = require('../../socket/socketHandler');
-const { Op } = require('sequelize');
+import { User, Friendship } from '../../models/index.js';
+import { emitToAllAdmins } from '../../socket/socketHandler.js';
+import { Op } from 'sequelize';
 
 class AuthProfileChild {
   constructor(parentController) {
@@ -131,4 +131,4 @@ class AuthProfileChild {
   };
 }
 
-module.exports = AuthProfileChild;
+export default AuthProfileChild;

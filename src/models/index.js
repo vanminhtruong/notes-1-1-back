@@ -1,28 +1,26 @@
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../db');
-const defineSample = require('./sample.model');
-const defineUser = require('./user.model');
-const defineNote = require('./note.model');
-const defineFriendship = require('./friendship.model');
-const defineMessage = require('./message.model');
-const definePasswordReset = require('./passwordReset.model');
-const defineGroup = require('./group.model');
-const defineGroupMember = require('./groupMember.model');
-const defineGroupMessage = require('./groupMessage.model');
-const defineGroupInvite = require('./groupInvite.model');
-const defineMessageRead = require('./messageRead.model');
-const defineGroupMessageRead = require('./groupMessageRead.model');
-const defineChatPreference = require('./chatPreference.model');
-const defineBlockedUser = require('./blockedUser.model');
-const definePinnedChat = require('./pinnedChat.model');
-const definePinnedMessage = require('./pinnedMessage.model');
-const defineMessageReaction = require('./messageReaction.model');
-const defineNotification = require('./notification.model');
-const defineSharedNote = require('./sharedNote.model');
-const defineGroupSharedNote = require('./groupSharedNote.model');
-const defineUserSession = require('./userSession.model');
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../db/index.js';
+import defineUser from './user.model.js';
+import defineNote from './note.model.js';
+import defineFriendship from './friendship.model.js';
+import defineMessage from './message.model.js';
+import definePasswordReset from './passwordReset.model.js';
+import defineGroup from './group.model.js';
+import defineGroupMember from './groupMember.model.js';
+import defineGroupMessage from './groupMessage.model.js';
+import defineGroupInvite from './groupInvite.model.js';
+import defineMessageRead from './messageRead.model.js';
+import defineGroupMessageRead from './groupMessageRead.model.js';
+import defineChatPreference from './chatPreference.model.js';
+import defineBlockedUser from './blockedUser.model.js';
+import definePinnedChat from './pinnedChat.model.js';
+import definePinnedMessage from './pinnedMessage.model.js';
+import defineMessageReaction from './messageReaction.model.js';
+import defineNotification from './notification.model.js';
+import defineSharedNote from './sharedNote.model.js';
+import defineGroupSharedNote from './groupSharedNote.model.js';
+import defineUserSession from './userSession.model.js';
 
-const Sample = defineSample(sequelize, DataTypes);
 const User = defineUser(sequelize, DataTypes);
 const Note = defineNote(sequelize, DataTypes);
 const Friendship = defineFriendship(sequelize, DataTypes);
@@ -299,9 +297,8 @@ if (Friendship && typeof Friendship.addHook === 'function') {
   });
 }
 
-module.exports = {
+export {
   sequelize,
-  Sample,
   User,
   Note,
   Friendship,

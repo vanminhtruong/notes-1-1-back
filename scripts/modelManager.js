@@ -1,5 +1,5 @@
-const { sequelize } = require('../src/db');
-const { DataTypes, QueryTypes } = require('sequelize');
+import { sequelize } from '../src/db/index.js';
+import { DataTypes, QueryTypes } from 'sequelize';
 
 class ModelManager {
   constructor() {
@@ -710,4 +710,4 @@ class ModelManager {
   }
 }
 
-module.exports = ModelManager;
+export default ModelManager;

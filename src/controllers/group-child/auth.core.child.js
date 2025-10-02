@@ -1,7 +1,7 @@
-const jwt = require('jsonwebtoken');
-const { User, UserSession } = require('../../models');
-const { emitToAllAdmins } = require('../../socket/socketHandler');
-const { parseDeviceInfo } = require('../../utils/deviceParser');
+import jwt from 'jsonwebtoken';
+import { User, UserSession } from '../../models/index.js';
+import { emitToAllAdmins } from '../../socket/socketHandler.js';
+import { parseDeviceInfo } from '../../utils/deviceParser.js';
 
 const generateToken = (user, options = {}) => {
   const expiresIn = options.expiresIn || process.env.JWT_EXPIRES_IN || '7d';
@@ -262,4 +262,4 @@ class AuthCoreChild {
   };
 }
 
-module.exports = AuthCoreChild;
+export default AuthCoreChild;

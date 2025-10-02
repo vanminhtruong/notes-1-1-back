@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import authMiddleware from '../../middlewares/auth.js';
+import * as userSessionController from '../../controllers/userSession.controller.js';
+
 const router = express.Router();
-const authMiddleware = require('../../middlewares/auth');
-const userSessionController = require('../../controllers/userSession.controller');
 
 // Get all active sessions for current user
 router.get('/', authMiddleware, userSessionController.getUserSessions);
@@ -15,4 +16,4 @@ router.delete('/others/all', authMiddleware, userSessionController.deleteAllOthe
 // Update session activity (optional, can be called periodically)
 router.patch('/activity', authMiddleware, userSessionController.updateSessionActivity);
 
-module.exports = router;
+export default router;

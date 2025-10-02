@@ -2,6 +2,7 @@
   "name": "expressjs-starter",
   "version": "1.0.0",
   "description": "Express.js project configured with best practices",
+  "type": "module",
   "main": "src/server.js",
   "engines": {
     "node": ">=18"
@@ -17,8 +18,8 @@
     "test:watch": "jest --watch",
     "db:sync": "node src/db/autoSync.js",
     "db:migrate": "node src/db/migrate.js",
-    "db:migrate:fresh": "node -e \"const {sequelize} = require('./src/db'); sequelize.drop().then(() => require('./src/db/migrate').runMigrations())\"",
-    "db:reset": "node -e \"const {sequelize} = require('./src/db'); sequelize.drop().then(() => sequelize.sync({force: true}))\"",
+    "db:migrate:fresh": "node -e \"import('./src/db/index.js').then(({sequelize}) => sequelize.drop().then(() => import('./src/db/migrate.js').then(m => m.runMigrations())))\"",
+    "db:reset": "node -e \"import('./src/db/index.js').then(({sequelize}) => sequelize.drop().then(() => sequelize.sync({force: true})))\"",
     "db:refresh": "npm run db:reset && npm run db:migrate",
     "db:truncate": "node src/db/truncate.js",
     "db:clear": "npm run db:truncate",

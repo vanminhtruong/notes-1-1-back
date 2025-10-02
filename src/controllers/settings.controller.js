@@ -1,4 +1,4 @@
-const { User } = require('../models');
+import { User } from '../models/index.js';
 
 // OOP-style controller similar to GroupController
 class SettingsController {
@@ -224,18 +224,17 @@ class SettingsController {
 
 const settingsController = new SettingsController();
 
-module.exports = {
-  SettingsController,
-  getE2EE: settingsController.getE2EE,
-  updateE2EE: settingsController.updateE2EE,
-  getE2EEPin: settingsController.getE2EEPin,
-  updateE2EEPin: settingsController.updateE2EEPin,
-  getReadStatus: settingsController.getReadStatus,
-  updateReadStatus: settingsController.updateReadStatus,
-  getTheme: settingsController.getTheme,
-  updateTheme: settingsController.updateTheme,
-  getLanguage: settingsController.getLanguage,
-  updateLanguage: settingsController.updateLanguage,
-  getPrivacy: settingsController.getPrivacy,
-  updatePrivacy: settingsController.updatePrivacy,
-};
+export { SettingsController };
+
+export const getE2EE = settingsController.getE2EE;
+export const updateE2EE = settingsController.updateE2EE;
+export const getE2EEPin = settingsController.getE2EEPin;
+export const updateE2EEPin = settingsController.updateE2EEPin;
+export const getReadStatus = settingsController.getReadStatus;
+export const updateReadStatus = settingsController.updateReadStatus;
+export const getTheme = settingsController.getTheme;
+export const updateTheme = settingsController.updateTheme;
+export const getLanguage = settingsController.getLanguage;
+export const updateLanguage = settingsController.updateLanguage;
+export const getPrivacy = settingsController.getPrivacy;
+export const updatePrivacy = settingsController.updatePrivacy;

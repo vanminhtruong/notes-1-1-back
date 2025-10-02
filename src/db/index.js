@@ -1,6 +1,6 @@
-const { Sequelize } = require('sequelize');
-const fs = require('fs');
-const path = require('path');
+import { Sequelize } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
 
 const isTest = process.env.NODE_ENV === 'test';
 const storage = isTest ? ':memory:' : process.env.SQLITE_STORAGE || path.join('data', 'app.sqlite');
@@ -15,4 +15,4 @@ if (!isTest && storage !== ':memory:') {
 
 const sequelize = new Sequelize({ dialect: 'sqlite', storage, logging });
 
-module.exports = { sequelize };
+export { sequelize };

@@ -1,12 +1,10 @@
-const nodemailerOptional = (() => {
-  try {
-    // Optional: only if installed
-    // eslint-disable-next-line global-require
-    return require('nodemailer');
-  } catch (_) {
-    return null;
-  }
-})();
+let nodemailerOptional = null;
+try {
+  const nodemailer = await import('nodemailer');
+  nodemailerOptional = nodemailer.default;
+} catch (_) {
+  nodemailerOptional = null;
+}
 
 /**
  * Send an email. If SMTP env is not configured or nodemailer is missing,
@@ -60,4 +58,4 @@ async function sendEmail({ to, subject, text, html }) {
   return info;
 }
 
-module.exports = { sendEmail };
+export { sendEmail };

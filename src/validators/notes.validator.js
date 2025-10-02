@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const validateCreateNote = (req, res, next) => {
   const schema = Joi.object({
@@ -117,7 +117,7 @@ const validateShareNoteToGroup = (req, res, next) => {
   next();
 };
 
-module.exports = {
+export {
   validateCreateNote,
   validateUpdateNote,
   validateShareNote,

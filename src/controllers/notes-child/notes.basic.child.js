@@ -1,6 +1,6 @@
-const { Note, User, SharedNote } = require('../../models');
-const { Op } = require('sequelize');
-const { emitToUser, emitToAllAdmins } = require('../../socket/socketHandler');
+import { Note, User, SharedNote } from '../../models/index.js';
+import { Op } from 'sequelize';
+import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
 class NotesBasicChild {
   constructor(parent) {
@@ -353,4 +353,4 @@ class NotesBasicChild {
   };
 }
 
-module.exports = NotesBasicChild;
+export default NotesBasicChild;
