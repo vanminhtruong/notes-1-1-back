@@ -9,6 +9,8 @@ const validateCreateNote = (req, res, next) => {
     }),
     content: Joi.string().allow('').optional(),
     imageUrl: Joi.string().uri().allow(null, '').optional(),
+    videoUrl: Joi.string().uri().allow(null, '').optional(),
+    youtubeUrl: Joi.string().uri().allow(null, '').optional(),
     category: Joi.string().max(50).optional().default('general'),
     priority: Joi.string().valid('low', 'medium', 'high').optional().default('medium').messages({
       'any.only': 'Mức độ ưu tiên phải là low, medium hoặc high',
@@ -41,6 +43,8 @@ const validateUpdateNote = (req, res, next) => {
     }),
     content: Joi.string().allow('').optional(),
     imageUrl: Joi.string().uri().allow(null, '').optional(),
+    videoUrl: Joi.string().uri().allow(null, '').optional(),
+    youtubeUrl: Joi.string().uri().allow(null, '').optional(),
     category: Joi.string().max(50).optional(),
     priority: Joi.string().valid('low', 'medium', 'high').optional().messages({
       'any.only': 'Mức độ ưu tiên phải là low, medium hoặc high',

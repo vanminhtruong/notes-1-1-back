@@ -174,6 +174,16 @@ class ModelManager {
       allowNull: true,
     });
 
+    await this.ensureColumnExists('Notes', 'videoUrl', {
+      type: DataTypes.STRING,
+      allowNull: true,
+    });
+
+    await this.ensureColumnExists('Notes', 'youtubeUrl', {
+      type: DataTypes.STRING,
+      allowNull: true,
+    });
+
     // Reminder fields
     await this.ensureColumnExists('Notes', 'reminderAt', {
       type: DataTypes.DATE,

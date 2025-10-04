@@ -9,7 +9,7 @@ class NotesBasicChild {
 
   createNote = async (req, res) => {
     try {
-      const { title, content, imageUrl, category, priority, reminderAt, sharedFromUserId } = req.body;
+      const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, reminderAt, sharedFromUserId } = req.body;
       const userId = req.user.id;
 
       // If creating via canCreate permission, verify permission
@@ -31,6 +31,8 @@ class NotesBasicChild {
         title,
         content,
         imageUrl: imageUrl || null,
+        videoUrl: videoUrl || null,
+        youtubeUrl: youtubeUrl || null,
         category,
         priority,
         reminderAt: reminderAt ? new Date(reminderAt) : null,
@@ -182,7 +184,7 @@ class NotesBasicChild {
   updateNote = async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, content, imageUrl, category, priority, isArchived, reminderAt } = req.body;
+      const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, isArchived, reminderAt } = req.body;
       const userId = req.user.id;
 
       // Load note by id first
@@ -224,6 +226,8 @@ class NotesBasicChild {
         title: title !== undefined ? title : note.title,
         content: content !== undefined ? content : note.content,
         imageUrl: imageUrl !== undefined ? (imageUrl || null) : note.imageUrl,
+        videoUrl: videoUrl !== undefined ? (videoUrl || null) : note.videoUrl,
+        youtubeUrl: youtubeUrl !== undefined ? (youtubeUrl || null) : note.youtubeUrl,
         category: category !== undefined ? category : note.category,
         priority: priority !== undefined ? priority : note.priority,
         isArchived: isArchived !== undefined ? isArchived : note.isArchived,

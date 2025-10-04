@@ -17,7 +17,7 @@ class NotesSharingChild {
       // Check if note exists and belongs to the user
       const note = await Note.findOne({ 
         where: { id, userId: sharedByUserId },
-        include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }]
+        include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
       });
 
       if (!note) {
@@ -50,10 +50,10 @@ class NotesSharingChild {
           { 
             model: Note, 
             as: 'note',
-            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }]
+            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
           },
-          { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email'] },
-          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
+          { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
         ]
       });
 
@@ -108,9 +108,9 @@ class NotesSharingChild {
             model: Note, 
             as: 'note', 
             where: search ? noteWhere : undefined,
-            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }]
+            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
           },
-          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
         ],
         order: [[sortBy, sortOrder]],
         limit: limitNum,
@@ -167,9 +167,9 @@ class NotesSharingChild {
             model: Note, 
             as: 'note', 
             where: search ? noteWhere : undefined,
-            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }]
+            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
           },
-          { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email'] }
+          { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] }
         ],
         order: [[sortBy, sortOrder]],
         limit: limitNum,
@@ -198,8 +198,8 @@ class NotesSharingChild {
 
       const sharedNote = await SharedNote.findByPk(id, {
         include: [
-          { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email'] },
-          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
+          { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
         ]
       });
 
@@ -364,7 +364,7 @@ class NotesSharingChild {
           {
             model: User,
             as: 'sharedByUser',
-            attributes: ['id', 'name', 'email']
+            attributes: ['id', 'name', 'email', 'avatar']
           }
         ],
         attributes: ['id', 'sharedByUserId', 'canCreate']

@@ -20,6 +20,14 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    videoUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    youtubeUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     category: {
       type: DataTypes.STRING,
       allowNull: true,

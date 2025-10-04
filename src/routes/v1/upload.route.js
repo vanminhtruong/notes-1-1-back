@@ -40,7 +40,7 @@ const upload = multer({
 // Separate uploader for generic files (allow any mimetype), larger size limit
 const uploadAny = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 } // 20MB
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB for videos
 });
 
 const router = express.Router();
@@ -63,17 +63,28 @@ router.post('/image', upload.single('file'), (req, res) => {
 });
 
 // POST /api/v1/uploads/file
-router.post('/file', uploadAny.single('file'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
+router.post('/file', (req, res) => {
+  uploadAny.single('file')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'File quá lớn. Giới hạn tối đa 100MB' });
+      }
+      return res.status(400).json({ success: false, message: err.message });
+    } else if (err) {
+      return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
     }
 
-    const publicUrl = `/uploads/${req.file.filename}`;
-    return res.status(201).json({ success: true, data: { url: publicUrl, filename: req.file.filename } });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message || 'Upload failed' });
-  }
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+      }
+
+      const publicUrl = `/uploads/${req.file.filename}`;
+      return res.status(201).json({ success: true, data: { url: publicUrl, filename: req.file.filename } });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message || 'Upload failed' });
+    }
+  });
 });
 
 export default router;

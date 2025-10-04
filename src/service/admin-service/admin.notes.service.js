@@ -257,7 +257,7 @@ class AdminNotesChild {
 
   // Create note for user (admin)
   createNoteForUser = asyncHandler(async (req, res) => {
-    const { userId, title, content, imageUrl, category, priority, reminderAt } = req.body;
+    const { userId, title, content, imageUrl, videoUrl, youtubeUrl, category, priority, reminderAt } = req.body;
 
     const targetUser = await User.findByPk(userId);
     if (!targetUser) {
@@ -268,6 +268,8 @@ class AdminNotesChild {
       title,
       content,
       imageUrl: imageUrl || null,
+      videoUrl: videoUrl || null,
+      youtubeUrl: youtubeUrl || null,
       category,
       priority,
       reminderAt: reminderAt ? new Date(reminderAt) : null,
@@ -291,7 +293,7 @@ class AdminNotesChild {
   // Update user's note (admin)
   updateUserNote = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { title, content, imageUrl, category, priority, isArchived, reminderAt } = req.body;
+    const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, isArchived, reminderAt } = req.body;
 
     const note = await Note.findByPk(id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
@@ -314,6 +316,8 @@ class AdminNotesChild {
       title: title !== undefined ? title : note.title,
       content: content !== undefined ? content : note.content,
       imageUrl: imageUrl !== undefined ? (imageUrl || null) : note.imageUrl,
+      videoUrl: videoUrl !== undefined ? (videoUrl || null) : note.videoUrl,
+      youtubeUrl: youtubeUrl !== undefined ? (youtubeUrl || null) : note.youtubeUrl,
       category: category !== undefined ? category : note.category,
       priority: priority !== undefined ? priority : note.priority,
       isArchived: isArchived !== undefined ? isArchived : note.isArchived,
