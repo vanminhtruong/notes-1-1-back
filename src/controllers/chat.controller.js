@@ -2,10 +2,10 @@ import { User, Message, Friendship, MessageRead, ChatPreference, BlockedUser, Pi
 import asyncHandler from '../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isUserOnline } from '../socket/socketHandler.js';
-import ChatMessagesChild from './chat-child/chat.messages.child.js';
-import ChatPreferencesChild from './chat-child/chat.preferences.child.js';
-import ChatReactionsChild from './chat-child/chat.reactions.child.js';
-import ChatCoreChild from './chat-child/chat.core.child.js';
+import ChatMessagesChild from '../service/chat-service/chat.messages.service.js';
+import ChatPreferencesChild from '../service/chat-service/chat.preferences.service.js';
+import ChatReactionsChild from '../service/chat-service/chat.reactions.service.js';
+import ChatCoreChild from '../service/chat-service/chat.core.service.js';
 
 class ChatController {
   constructor() {

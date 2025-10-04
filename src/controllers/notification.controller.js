@@ -1,5 +1,5 @@
-import NotificationCoreChild from './notification-child/notification.core.child.js';
-import NotificationBellChild from './notification-child/notification.bell.child.js';
+import NotificationCoreChild from '../service/notification-service/notification.core.service.js';
+import NotificationBellChild from '../service/notification-service/notification.bell.service.js';
 
 class NotificationController {
   constructor() {

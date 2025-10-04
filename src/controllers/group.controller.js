@@ -2,10 +2,10 @@ import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupM
 import asyncHandler from '../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isBlockedBetween, getBlockedUserIdSetFor } from '../utils/block.js';
-import GroupMessagesChild from './group-child/group.messages.child.js';
-import GroupMembersChild from './group-child/group.members.child.js';
-import GroupManagementChild from './group-child/group.management.child.js';
-import GroupPinsChild from './group-child/group.pins.child.js';
+import GroupMessagesChild from '../service/group-service/group.messages.service.js';
+import GroupMembersChild from '../service/group-service/group.members.service.js';
+import GroupManagementChild from '../service/group-service/group.management.service.js';
+import GroupPinsChild from '../service/group-service/group.pins.service.js';
 class GroupController {
   constructor() {
     // Attach child controllers to keep class short while preserving API surface

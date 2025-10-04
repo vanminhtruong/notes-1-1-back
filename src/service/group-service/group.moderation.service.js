@@ -1,4 +1,4 @@
-import { GroupController } from '../group.controller.js';
+import { GroupController } from '../../controllers/group.controller.js';
 import { GroupMember, GroupMessage, GroupMessageRead, PinnedMessage, MessageReaction } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';

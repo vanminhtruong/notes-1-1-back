@@ -1,6 +1,6 @@
-import FriendshipManagementChild from './friendship-child/friendship.management.child.js';
-import FriendshipRequestsChild from './friendship-child/friendship.requests.child.js';
-import FriendshipListChild from './friendship-child/friendship.list.child.js';
+import FriendshipManagementChild from '../service/friendship-service/friendship.management.service.js';
+import FriendshipRequestsChild from '../service/friendship-service/friendship.requests.service.js';
+import FriendshipListChild from '../service/friendship-service/friendship.list.service.js';
 
 class FriendshipController {
   constructor() {

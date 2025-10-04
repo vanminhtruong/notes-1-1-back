@@ -97,11 +97,11 @@ router.get('/users/:userId/sessions', requirePermission('manage_users.sessions.v
 router.delete('/users/:userId/sessions/:sessionId', requirePermission('manage_users.sessions.logout'), adminController.logoutUserSession);
 router.delete('/users/:userId/sessions', requirePermission('manage_users.sessions.logout_all'), adminController.logoutAllUserSessions);
 
-// Notes management (require manage_notes permission)
-router.get('/notes', requirePermission('manage_notes'), adminController.getAllUsersNotes);
-router.post('/notes', requirePermission('manage_notes'), adminController.createNoteForUser);
-router.put('/notes/:id', requirePermission('manage_notes'), adminController.updateUserNote);
-router.delete('/notes/:id', requirePermission('manage_notes'), adminController.deleteUserNote);
+// Notes management (require specific manage_notes permissions)
+router.get('/notes', requirePermission('manage_notes.view'), adminController.getAllUsersNotes);
+router.post('/notes', requirePermission('manage_notes.create'), adminController.createNoteForUser);
+router.put('/notes/:id', requirePermission('manage_notes.edit'), adminController.updateUserNote);
+router.delete('/notes/:id', requirePermission('manage_notes.delete'), adminController.deleteUserNote);
 
 // Shared notes management (require specific shared notes permissions) 
 router.get('/shared-notes', requirePermission('manage_notes.shared.view'), adminController.getAllSharedNotes);

@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    // JavaScript/Node.js
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    
+    // IntelliSense và Auto Import
+    "christian-kohler.path-intellisense",
+    "christian-kohler.npm-intellisense",
+    
+    // Utilities
+    "usernamehw.errorlens",
+    "wayou.vscode-todo-highlight",
+    "eamodio.gitlens",
+    
+    // REST API Testing
+    "humao.rest-client"
+  ]
+}

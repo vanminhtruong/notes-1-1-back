@@ -1,7 +1,7 @@
-import AuthCoreChild from './group-child/auth.core.child.js';
-import AuthOAuthChild from './group-child/auth.oauth.child.js';
-import AuthProfileChild from './group-child/auth.profile.child.js';
-import AuthPasswordResetChild from './group-child/auth.password-reset.child.js';
+import AuthCoreChild from '../service/auth-service/auth.core.service.js';
+import AuthOAuthChild from '../service/auth-service/auth.oauth.service.js';
+import AuthProfileChild from '../service/auth-service/auth.profile.service.js';
+import AuthPasswordResetChild from '../service/auth-service/auth.password-reset.service.js';
 
 class AuthController {
   constructor() {

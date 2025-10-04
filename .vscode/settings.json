@@ -1,0 +1,50 @@
+{
+  // ========================================
+  // TỰ ĐỘNG CẬP NHẬT IMPORTS - LUÔN LUÔN
+  // ========================================
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  
+  // Tự động sửa imports và organize khi save
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "never",
+    "source.fixAll": "never"
+  },
+  
+  // IntelliSense và auto-import
+  "javascript.suggest.autoImports": true,
+  "javascript.suggest.paths": true,
+  "javascript.suggest.enabled": true,
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "javascript.preferences.importModuleSpecifierEnding": "js",
+  
+  // Validate và IntelliSense cho JS
+  "javascript.validate.enable": true,
+  "javascript.suggestionActions.enabled": true,
+  
+  // Format on save
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  
+  // Quick suggestions
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  },
+  
+  // Exclude từ search
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/coverage": true
+  },
+  
+  // Files watching
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/build/**": true
+  }
+}

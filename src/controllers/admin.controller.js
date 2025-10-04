@@ -3,12 +3,12 @@ import asyncHandler from '../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
 import { emitToAllAdmins, isUserOnline, emitToUser } from '../socket/socketHandler.js';
-import AdminNotesChild from './admin-child/admin.notes.child.js';
-import AdminMessagesChild from './admin-child/admin.messages.child.js';
-import AdminMonitorChild from './admin-child/admin.monitor.child.js';
-import AdminUsersChild from './admin-child/admin.users.child.js';
-import AdminAuthChild from './admin-child/admin.auth.child.js';
-import AdminProfileChild from './admin-child/admin.profile.child.js';
+import AdminNotesChild from '../service/admin-service/admin.notes.service.js';
+import AdminMessagesChild from '../service/admin-service/admin.messages.service.js';
+import AdminMonitorChild from '../service/admin-service/admin.monitor.service.js';
+import AdminUsersChild from '../service/admin-service/admin.users.service.js';
+import AdminAuthChild from '../service/admin-service/admin.auth.service.js';
+import AdminProfileChild from '../service/admin-service/admin.profile.service.js';
 
 // class này đã quá dài hãy tạo ra class con kế thừa để xử lý
 class AdminController {

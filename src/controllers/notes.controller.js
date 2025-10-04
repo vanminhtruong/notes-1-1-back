@@ -1,6 +1,6 @@
-import NotesBasicChild from './notes-child/notes.basic.child.js';
-import NotesSharingChild from './notes-child/notes.sharing.child.js';
-import NotesStatsChild from './notes-child/notes.stats.child.js';
+import NotesBasicChild from '../service/notes-service/notes.basic.service.js';
+import NotesSharingChild from '../service/notes-service/notes.sharing.service.js';
+import NotesStatsChild from '../service/notes-service/notes.stats.service.js';
 
 class NotesController {
   constructor() {

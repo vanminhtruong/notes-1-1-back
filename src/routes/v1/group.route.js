@@ -3,7 +3,7 @@ import authenticate from '../../middlewares/auth.js';
 import validate from '../../middlewares/validate.js';
 import groupController from '../../controllers/group.controller.js';
 // Moderation operations (subclassed controller)
-import { deleteAllGroupMessages } from '../../controllers/group-child/group.moderation.controller.js';
+import { deleteAllGroupMessages } from '../../service/group-service/group.moderation.service.js';
 import {
   createGroupSchema,
   inviteMembersSchema,
