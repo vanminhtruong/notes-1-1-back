@@ -1,7 +1,7 @@
 import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
-import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
+import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile, hasUploadedFile } from '../../utils/fileHelper.js';
 
 class GroupManagementChild {
   constructor(parent) {
@@ -227,6 +227,29 @@ class GroupManagementChild {
     // Collect members for notification before deletion
     const members = await this.parent.membersChild.getGroupMemberIds(groupId);
 
+    // Lấy thông tin group để xóa files
+    const group = await Group.findByPk(groupId);
+    
+    // Xóa avatar và background của group
+    const filesToDelete = [];
+    if (group?.avatar) filesToDelete.push(group.avatar);
+    if (group?.background) filesToDelete.push(group.background);
+    
+    // Lấy tất cả messages và xóa files đính kèm
+    const messages = await GroupMessage.findAll({ 
+      where: { groupId }, 
+      attributes: ['id', 'content', 'messageType'] 
+    });
+    for (const msg of messages) {
+      if (hasUploadedFile(msg)) {
+        filesToDelete.push(msg.content);
+      }
+    }
+    
+    if (filesToDelete.length > 0) {
+      deleteMultipleFiles(filesToDelete);
+    }
+
     // Remove messages and memberships, then the group
     await GroupMessage.destroy({ where: { groupId } });
     await GroupMember.destroy({ where: { groupId } });
@@ -253,13 +276,40 @@ class GroupManagementChild {
       return res.status(403).json({ success: false, message: 'Only group owner can update group' });
     }
 
+    // Lấy thông tin group hiện tại để lưu giá trị cũ
+    const currentGroup = await Group.findByPk(groupId);
+    const oldAvatar = currentGroup.avatar;
+    const oldBackground = currentGroup.background;
+    let shouldDeleteOldAvatar = false;
+    let shouldDeleteOldBackground = false;
+    
     const fieldsToUpdate = {};
     if (typeof name !== 'undefined') fieldsToUpdate.name = name;
-    if (typeof avatar !== 'undefined') fieldsToUpdate.avatar = avatar;
-    if (typeof background !== 'undefined') fieldsToUpdate.background = background;
+    if (typeof avatar !== 'undefined') {
+      fieldsToUpdate.avatar = avatar;
+      // Check xem có cần xóa avatar cũ không
+      if (avatar !== oldAvatar && oldAvatar && isUploadedFile(oldAvatar)) {
+        shouldDeleteOldAvatar = true;
+      }
+    }
+    if (typeof background !== 'undefined') {
+      fieldsToUpdate.background = background;
+      // Check xem có cần xóa background cũ không
+      if (background !== oldBackground && oldBackground && isUploadedFile(oldBackground)) {
+        shouldDeleteOldBackground = true;
+      }
+    }
     if (typeof adminsOnly !== 'undefined') fieldsToUpdate.adminsOnly = !!adminsOnly;
 
     await Group.update(fieldsToUpdate, { where: { id: groupId } });
+
+    // Xóa files cũ SAU khi update thành công
+    if (shouldDeleteOldAvatar) {
+      deleteOldFileOnUpdate(oldAvatar, fieldsToUpdate.avatar);
+    }
+    if (shouldDeleteOldBackground) {
+      deleteOldFileOnUpdate(oldBackground, fieldsToUpdate.background);
+    }
     const updated = await Group.findByPk(groupId);
     const members = await this.parent.membersChild.getGroupMemberIds(groupId);
 

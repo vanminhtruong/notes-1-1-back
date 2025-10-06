@@ -1,6 +1,7 @@
 import { User, Message, Friendship, ChatPreference, PinnedChat, PinnedMessage, GroupMember } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
+import { deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
 class ChatPreferencesChild {
   constructor(parentController) {
@@ -114,12 +115,28 @@ class ChatPreferencesChild {
       return res.status(403).json({ success: false, message: 'You can only set preferences with friends' });
     }
 
-    const [pref] = await ChatPreference.findOrCreate({
+    const [pref, created] = await ChatPreference.findOrCreate({
       where: { userId: currentUserId, otherUserId: userId },
       defaults: { userId: currentUserId, otherUserId: userId, backgroundUrl: backgroundUrl || null }
     });
-    if (pref.backgroundUrl !== backgroundUrl) {
-      await pref.update({ backgroundUrl: backgroundUrl || null });
+    
+    // Nếu không phải mới tạo và có thay đổi background
+    if (!created && pref.backgroundUrl !== backgroundUrl) {
+      const oldBackground = pref.backgroundUrl;
+      const newBackground = backgroundUrl || null;
+      let shouldDeleteOldBackground = false;
+      
+      // Check xem có cần xóa background cũ không
+      if (newBackground !== oldBackground && oldBackground && isUploadedFile(oldBackground)) {
+        shouldDeleteOldBackground = true;
+      }
+      
+      await pref.update({ backgroundUrl: newBackground });
+      
+      // Xóa background cũ SAU khi update thành công
+      if (shouldDeleteOldBackground) {
+        deleteOldFileOnUpdate(oldBackground, newBackground);
+      }
     }
     return res.json({ success: true, data: { backgroundUrl: pref.backgroundUrl || null } });
   });

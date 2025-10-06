@@ -1,7 +1,7 @@
-import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import { Group, GroupMember, User, Friendship, GroupInvite, GroupMessage, PinnedChat, Notification } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
-import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
+import { deleteMultipleFiles, hasUploadedFile } from '../../utils/fileHelper.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 
 class GroupMembersChild {
@@ -257,6 +257,27 @@ class GroupMembersChild {
     // If owner removed everyone (except maybe themselves), handle empty group
     const remaining = await this.getGroupMemberIds(groupId);
     if (remaining.length === 0) {
+      // Xóa files trước khi xóa group
+      const group = await Group.findByPk(groupId);
+      const filesToDelete = [];
+      if (group?.avatar) filesToDelete.push(group.avatar);
+      if (group?.background) filesToDelete.push(group.background);
+      
+      // Xóa files trong messages
+      const messages = await GroupMessage.findAll({ 
+        where: { groupId }, 
+        attributes: ['id', 'content', 'messageType'] 
+      });
+      for (const msg of messages) {
+        if (hasUploadedFile(msg)) {
+          filesToDelete.push(msg.content);
+        }
+      }
+      
+      if (filesToDelete.length > 0) {
+        deleteMultipleFiles(filesToDelete);
+      }
+      
       await GroupMessage.destroy({ where: { groupId } });
       await Group.destroy({ where: { id: groupId } });
     }

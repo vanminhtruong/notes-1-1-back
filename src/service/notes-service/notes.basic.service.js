@@ -1,6 +1,7 @@
-import { Note, User, SharedNote } from '../../models/index.js';
+import { Note, User, SharedNote, GroupSharedNote, Notification } from '../../models/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
+import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
 class NotesBasicChild {
   constructor(parent) {
@@ -222,11 +223,28 @@ class NotesBasicChild {
         (nextReminderAt !== null && note.reminderAt !== null && nextReminderAt.getTime() !== new Date(note.reminderAt).getTime())
       );
 
+      // Lưu giá trị cũ TRƯỚC khi update
+      const oldImageUrl = note.imageUrl;
+      const oldVideoUrl = note.videoUrl;
+      let shouldDeleteOldImage = false;
+      let shouldDeleteOldVideo = false;
+
+      const newImageUrl = imageUrl !== undefined ? (imageUrl || null) : note.imageUrl;
+      const newVideoUrl = videoUrl !== undefined ? (videoUrl || null) : note.videoUrl;
+      
+      // Check xem có cần xóa file cũ không
+      if (imageUrl !== undefined && newImageUrl !== oldImageUrl && oldImageUrl && isUploadedFile(oldImageUrl)) {
+        shouldDeleteOldImage = true;
+      }
+      if (videoUrl !== undefined && newVideoUrl !== oldVideoUrl && oldVideoUrl && isUploadedFile(oldVideoUrl)) {
+        shouldDeleteOldVideo = true;
+      }
+
       await note.update({
         title: title !== undefined ? title : note.title,
         content: content !== undefined ? content : note.content,
-        imageUrl: imageUrl !== undefined ? (imageUrl || null) : note.imageUrl,
-        videoUrl: videoUrl !== undefined ? (videoUrl || null) : note.videoUrl,
+        imageUrl: newImageUrl,
+        videoUrl: newVideoUrl,
         youtubeUrl: youtubeUrl !== undefined ? (youtubeUrl || null) : note.youtubeUrl,
         category: category !== undefined ? category : note.category,
         priority: priority !== undefined ? priority : note.priority,
@@ -237,6 +255,14 @@ class NotesBasicChild {
         // If rescheduled, user hasn't acknowledged the new schedule yet
         reminderAcknowledged: reminderChanged ? false : note.reminderAcknowledged,
       });
+
+      // Xóa file cũ SAU khi update thành công
+      if (shouldDeleteOldImage) {
+        deleteOldFileOnUpdate(oldImageUrl, newImageUrl);
+      }
+      if (shouldDeleteOldVideo) {
+        deleteOldFileOnUpdate(oldVideoUrl, newVideoUrl);
+      }
 
       const updatedNote = await Note.findByPk(note.id, {
         include: [{
@@ -306,6 +332,14 @@ class NotesBasicChild {
       }
       // Hard delete share records
       await SharedNote.destroy({ where: { noteId: id } });
+
+      // Xóa các file liên quan đến note
+      const filesToDelete = [];
+      if (note.imageUrl) filesToDelete.push(note.imageUrl);
+      if (note.videoUrl) filesToDelete.push(note.videoUrl);
+      if (filesToDelete.length > 0) {
+        deleteMultipleFiles(filesToDelete);
+      }
 
       await note.destroy();
 

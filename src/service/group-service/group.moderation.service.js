@@ -1,7 +1,8 @@
 import { GroupController } from '../../controllers/group.controller.js';
-import { GroupMember, GroupMessage, GroupMessageRead, PinnedMessage, MessageReaction } from '../../models/index.js';
+import { GroupMember, GroupMessage, MessageReaction, GroupMessageRead, PinnedMessage } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
+import { deleteMultipleFiles, hasUploadedFile } from '../../utils/fileHelper.js';
 
 // Subclass dedicated to moderation/maintenance operations for groups
 class GroupModerationController extends GroupController {
@@ -20,9 +21,24 @@ class GroupModerationController extends GroupController {
       return res.status(403).json({ success: false, message: 'Only group owner can delete messages' });
     }
 
-    // Collect all message IDs for this group
-    const rows = await GroupMessage.findAll({ where: { groupId }, attributes: ['id'] });
-    const messageIds = rows.map((r) => r.id);
+    // Collect all messages for this group (get full messages to extract file URLs)
+    const messages = await GroupMessage.findAll({ 
+      where: { groupId }, 
+      attributes: ['id', 'content', 'messageType'] 
+    });
+    const messageIds = messages.map((m) => m.id);
+
+    // Xóa các file đính kèm trong messages (image/file type)
+    const filesToDelete = [];
+    for (const msg of messages) {
+      if (hasUploadedFile(msg)) {
+        filesToDelete.push(msg.content);
+      }
+    }
+    if (filesToDelete.length > 0) {
+      console.log('[DeleteAllGroupMessages-Moderation] Deleting files:', filesToDelete);
+      deleteMultipleFiles(filesToDelete);
+    }
 
     // Cleanup related records then delete messages
     if (messageIds.length > 0) {

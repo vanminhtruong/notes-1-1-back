@@ -1,5 +1,6 @@
 import { User, Message, Group, GroupMessage } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
+import { deleteUploadedFile, hasUploadedFile } from '../../utils/fileHelper.js';
 
 class AdminMessagesChild {
   constructor(parent) {
@@ -14,6 +15,12 @@ class AdminMessagesChild {
     
     if (!message) {
       return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    // Xóa file đính kèm nếu message có file upload
+    if (hasUploadedFile(message)) {
+      console.log('[AdminRecallDM] Deleting file:', message.content);
+      deleteUploadedFile(message.content);
     }
 
     await message.update({
@@ -82,13 +89,18 @@ class AdminMessagesChild {
         deletedForUserIds.push(tuid);
       }
       await message.update({ deletedForUserIds }, { hooks: true });
-
       if (io) {
         io.to(`user_${tuid}`).emit('message_deleted_by_admin', { messageId: message.id });
         console.log('🗑️ Backend: Emitted message_deleted_by_admin to user', tuid);
       }
 
       return res.json({ success: true, message: 'Message deleted for user successfully' });
+    }
+
+    // Xóa file đính kèm nếu delete for all và message có file upload
+    if (hasUploadedFile(message)) {
+      console.log('[AdminDeleteDM] Deleting file:', message.content);
+      deleteUploadedFile(message.content);
     }
 
     await message.update({ isDeletedForAll: true }, { hooks: false });
@@ -128,6 +140,12 @@ class AdminMessagesChild {
     
     if (!message) {
       return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    // Xóa file đính kèm nếu message có file upload
+    if (hasUploadedFile(message)) {
+      console.log('[AdminRecallGroup] Deleting file:', message.content);
+      deleteUploadedFile(message.content);
     }
 
     await message.update({
@@ -182,6 +200,12 @@ class AdminMessagesChild {
       }
 
       return res.json({ success: true, message: 'Group message deleted for user successfully' });
+    }
+
+    // Xóa file đính kèm nếu delete for all và message có file upload
+    if (hasUploadedFile(message)) {
+      console.log('[AdminDeleteGroup] Deleting file:', message.content);
+      deleteUploadedFile(message.content);
     }
 
     // Mặc định: xóa cho tất cả

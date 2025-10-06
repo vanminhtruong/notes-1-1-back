@@ -1,6 +1,7 @@
 import { User, Friendship } from '../../models/index.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 import { Op } from 'sequelize';
+import { deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
 class AuthProfileChild {
   constructor(parentController) {
@@ -30,12 +31,30 @@ class AuthProfileChild {
       const { name, avatar, phone, birthDate, gender } = req.body;
       const user = req.user;
 
+      // Lưu giá trị avatar cũ TRƯỚC khi update
+      const oldAvatar = user.avatar;
+      console.log('[UpdateProfile] Old avatar:', oldAvatar);
+
       const updates = {};
       if (typeof name === 'string' && name.trim()) updates.name = name.trim();
+      
+      // Xử lý avatar riêng để track thay đổi
+      let shouldDeleteOldAvatar = false;
+      let newAvatar = null;
+      
       if (typeof avatar === 'string') {
         const t = avatar.trim();
-        updates.avatar = t ? t : null; // empty string clears avatar
+        newAvatar = t ? t : null;
+        updates.avatar = newAvatar;
+        
+        // Chỉ xóa khi có thay đổi thực sự và oldAvatar tồn tại
+        if (newAvatar !== oldAvatar && oldAvatar && isUploadedFile(oldAvatar)) {
+          shouldDeleteOldAvatar = true;
+          console.log('[UpdateProfile] Will delete old avatar:', oldAvatar);
+          console.log('[UpdateProfile] New avatar:', newAvatar);
+        }
       }
+      
       if (typeof phone !== 'undefined') {
         if (phone === '' || phone === null) updates.phone = null; else updates.phone = String(phone).trim();
       }
@@ -47,6 +66,13 @@ class AuthProfileChild {
       }
 
       await user.update(updates);
+
+      // Xóa avatar cũ SAU khi update thành công
+      if (shouldDeleteOldAvatar) {
+        console.log('[UpdateProfile] Deleting old avatar now...');
+        const deleted = deleteOldFileOnUpdate(oldAvatar, newAvatar);
+        console.log('[UpdateProfile] Delete result:', deleted);
+      }
 
       // Emit profile update to all connected friends for real-time sync
       try {

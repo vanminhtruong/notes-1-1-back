@@ -1,6 +1,7 @@
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { User } from '../../models/index.js';
-import { emitToUser } from '../../socket/socketHandler.js';
+import { emitToAllAdmins } from '../../socket/socketHandler.js';
+import { deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
 // Child controller: quản lý hồ sơ Admin (kế thừa qua composition từ AdminController)
 class AdminProfileChild {
@@ -74,9 +75,21 @@ class AdminProfileChild {
       return res.status(400).json({ message: 'Theme không hợp lệ' });
     }
 
+    // Lưu giá trị avatar cũ TRƯỚC khi update
+    const oldAvatar = me.avatar;
+    let shouldDeleteOldAvatar = false;
+
     const patch = {};
     if (typeof name !== 'undefined') patch.name = String(name).slice(0, 50);
-    if (typeof avatar !== 'undefined') patch.avatar = String(avatar);
+    if (typeof avatar !== 'undefined') {
+      const newAvatar = String(avatar);
+      patch.avatar = newAvatar;
+      
+      // Check xem có cần xóa avatar cũ không
+      if (newAvatar !== oldAvatar && oldAvatar && isUploadedFile(oldAvatar)) {
+        shouldDeleteOldAvatar = true;
+      }
+    }
     if (typeof phone !== 'undefined') patch.phone = phone;
     if (typeof birthDate !== 'undefined') patch.birthDate = birthDate;
     if (typeof gender !== 'undefined') patch.gender = gender;
@@ -88,6 +101,11 @@ class AdminProfileChild {
     if (typeof allowMessagesFromNonFriends !== 'undefined') patch.allowMessagesFromNonFriends = !!allowMessagesFromNonFriends;
 
     await me.update(patch);
+
+    // Xóa avatar cũ SAU khi update thành công
+    if (shouldDeleteOldAvatar) {
+      deleteOldFileOnUpdate(oldAvatar, patch.avatar);
+    }
 
     const sanitized = await User.findByPk(me.id, {
       attributes: [
@@ -189,9 +207,21 @@ class AdminProfileChild {
       return res.status(400).json({ message: 'Theme không hợp lệ' });
     }
 
+    // Lưu giá trị avatar cũ TRƯỚC khi update
+    const oldAvatar = admin.avatar;
+    let shouldDeleteOldAvatar = false;
+
     const patch = {};
     if (typeof name !== 'undefined') patch.name = String(name).slice(0, 50);
-    if (typeof avatar !== 'undefined') patch.avatar = String(avatar);
+    if (typeof avatar !== 'undefined') {
+      const newAvatar = String(avatar);
+      patch.avatar = newAvatar;
+      
+      // Check xem có cần xóa avatar cũ không
+      if (newAvatar !== oldAvatar && oldAvatar && isUploadedFile(oldAvatar)) {
+        shouldDeleteOldAvatar = true;
+      }
+    }
     if (typeof phone !== 'undefined') patch.phone = phone;
     if (typeof birthDate !== 'undefined') patch.birthDate = birthDate;
     if (typeof gender !== 'undefined') patch.gender = gender;
@@ -203,6 +233,11 @@ class AdminProfileChild {
     if (typeof allowMessagesFromNonFriends !== 'undefined') patch.allowMessagesFromNonFriends = !!allowMessagesFromNonFriends;
 
     await admin.update(patch);
+
+    // Xóa avatar cũ SAU khi update thành công
+    if (shouldDeleteOldAvatar) {
+      deleteOldFileOnUpdate(oldAvatar, patch.avatar);
+    }
 
     const sanitized = await User.findByPk(admin.id, {
       attributes: [

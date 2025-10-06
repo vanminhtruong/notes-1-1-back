@@ -2,6 +2,7 @@ import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, Sh
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
+import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
 // Child controller to manage admin notifications and notes endpoints
 // Attached to AdminController instance in its constructor to keep API unchanged
@@ -303,6 +304,12 @@ class AdminNotesChild {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
     }
 
+    // Lưu giá trị cũ TRƯỚC khi update
+    const oldImageUrl = note.imageUrl;
+    const oldVideoUrl = note.videoUrl;
+    let shouldDeleteOldImage = false;
+    let shouldDeleteOldVideo = false;
+
     let nextReminderAt = (reminderAt === undefined)
       ? note.reminderAt
       : (reminderAt ? new Date(reminderAt) : null);
@@ -312,11 +319,22 @@ class AdminNotesChild {
       (nextReminderAt !== null && note.reminderAt !== null && nextReminderAt.getTime() !== new Date(note.reminderAt).getTime())
     );
 
+    const newImageUrl = imageUrl !== undefined ? (imageUrl || null) : note.imageUrl;
+    const newVideoUrl = videoUrl !== undefined ? (videoUrl || null) : note.videoUrl;
+    
+    // Check xem có cần xóa file cũ không
+    if (imageUrl !== undefined && newImageUrl !== oldImageUrl && oldImageUrl && isUploadedFile(oldImageUrl)) {
+      shouldDeleteOldImage = true;
+    }
+    if (videoUrl !== undefined && newVideoUrl !== oldVideoUrl && oldVideoUrl && isUploadedFile(oldVideoUrl)) {
+      shouldDeleteOldVideo = true;
+    }
+
     await note.update({
       title: title !== undefined ? title : note.title,
       content: content !== undefined ? content : note.content,
-      imageUrl: imageUrl !== undefined ? (imageUrl || null) : note.imageUrl,
-      videoUrl: videoUrl !== undefined ? (videoUrl || null) : note.videoUrl,
+      imageUrl: newImageUrl,
+      videoUrl: newVideoUrl,
       youtubeUrl: youtubeUrl !== undefined ? (youtubeUrl || null) : note.youtubeUrl,
       category: category !== undefined ? category : note.category,
       priority: priority !== undefined ? priority : note.priority,
@@ -325,6 +343,14 @@ class AdminNotesChild {
       reminderSent: reminderChanged ? false : note.reminderSent,
       reminderAcknowledged: reminderChanged ? false : note.reminderAcknowledged,
     });
+
+    // Xóa file cũ SAU khi update thành công
+    if (shouldDeleteOldImage) {
+      deleteOldFileOnUpdate(oldImageUrl, newImageUrl);
+    }
+    if (shouldDeleteOldVideo) {
+      deleteOldFileOnUpdate(oldVideoUrl, newVideoUrl);
+    }
 
     const updatedNote = await Note.findByPk(note.id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
@@ -352,6 +378,15 @@ class AdminNotesChild {
     }
 
     const userId = note.user.id;
+    
+    // Xóa các file liên quan đến note
+    const filesToDelete = [];
+    if (note.imageUrl) filesToDelete.push(note.imageUrl);
+    if (note.videoUrl) filesToDelete.push(note.videoUrl);
+    if (filesToDelete.length > 0) {
+      deleteMultipleFiles(filesToDelete);
+    }
+    
     await note.destroy();
 
     emitToUser(userId, 'admin_note_deleted', { id: note.id });

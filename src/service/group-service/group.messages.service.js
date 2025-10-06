@@ -1,8 +1,8 @@
-import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import { Group, GroupMember, GroupMessage, User, MessageReaction, Notification, PinnedMessage, GroupMessageRead } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
-import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
-import { isUserOnline, emitToAllAdmins } from '../../socket/socketHandler.js';
+import { emitToAllAdmins, isUserOnline } from '../../socket/socketHandler.js';
+import { deleteMultipleFiles, hasUploadedFile } from '../../utils/fileHelper.js';
 
 class GroupMessagesChild {
   constructor(parent) {
@@ -417,6 +417,18 @@ class GroupMessagesChild {
         console.log('Failed to cleanup user pins on recallGroupMessages(self):', e?.name || e);
       }
     } else {
+      // Xóa files đính kèm khi recall for all
+      const filesToDelete = [];
+      for (const msg of msgs) {
+        if (hasUploadedFile(msg)) {
+          filesToDelete.push(msg.content);
+        }
+      }
+      if (filesToDelete.length > 0) {
+        console.log('[RecallGroupMessages] Deleting files:', filesToDelete);
+        deleteMultipleFiles(filesToDelete);
+      }
+      
       await GroupMessage.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds }, groupId } });
       // Remove pins associated with these group messages
       await PinnedMessage.destroy({ where: { groupMessageId: { [Op.in]: messageIds } } });
@@ -592,28 +604,45 @@ class GroupMessagesChild {
       return res.status(403).json({ success: false, message: 'Only group owner can delete all messages' });
     }
 
+    // Lấy tất cả messages để xóa files trước
+    const messages = await GroupMessage.findAll({ 
+      where: { groupId }, 
+      attributes: ['id', 'content', 'messageType'] 
+    });
+    const messageIds = messages.map(m => m.id);
+
+    // Xóa các file đính kèm trong messages (image/file type)
+    const filesToDelete = [];
+    for (const msg of messages) {
+      if (msg.messageType === 'image' || msg.messageType === 'file') {
+        if (msg.content && isUploadedFile(msg.content)) {
+          filesToDelete.push(msg.content);
+        }
+      }
+    }
+    if (filesToDelete.length > 0) {
+      console.log('[DeleteAllGroupMessages] Deleting files:', filesToDelete);
+      deleteMultipleFiles(filesToDelete);
+    }
+
     // Hard delete all messages and related data
-    await MessageReaction.destroy({ 
-      where: { 
-        groupMessageId: { 
-          [Op.in]: await GroupMessage.findAll({ where: { groupId }, attributes: ['id'] }).then(msgs => msgs.map(m => m.id))
+    if (messageIds.length > 0) {
+      await MessageReaction.destroy({ 
+        where: { 
+          groupMessageId: { [Op.in]: messageIds }
         }
-      }
-    });
-    await GroupMessageRead.destroy({ 
-      where: { 
-        messageId: { 
-          [Op.in]: await GroupMessage.findAll({ where: { groupId }, attributes: ['id'] }).then(msgs => msgs.map(m => m.id))
+      });
+      await GroupMessageRead.destroy({ 
+        where: { 
+          messageId: { [Op.in]: messageIds }
         }
-      }
-    });
-    await PinnedMessage.destroy({ 
-      where: { 
-        groupMessageId: { 
-          [Op.in]: await GroupMessage.findAll({ where: { groupId }, attributes: ['id'] }).then(msgs => msgs.map(m => m.id))
+      });
+      await PinnedMessage.destroy({ 
+        where: { 
+          groupMessageId: { [Op.in]: messageIds }
         }
-      }
-    });
+      });
+    }
     await GroupMessage.destroy({ where: { groupId } });
 
     // Emit to all group members

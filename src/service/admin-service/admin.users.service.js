@@ -1,6 +1,7 @@
-import { User, UserSession } from '../../models/index.js';
+import { User } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
-import { isUserOnline, emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
+import { emitToAllAdmins, isUserOnline } from '../../socket/socketHandler.js';
+import { deleteUploadedFile, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
 class AdminUsersChild {
   constructor(parent) {
@@ -270,6 +271,9 @@ class AdminUsersChild {
       }
     }
 
+    // Lưu giá trị avatar cũ TRƯỚC khi update
+    const oldAvatar = user.avatar;
+
     // Prepare update data - handle empty strings as null
     const updateData = {
       name: name.trim(),
@@ -278,13 +282,25 @@ class AdminUsersChild {
       birthDate: birthDate && birthDate.trim() !== '' ? birthDate : null, 
       gender: gender || 'unspecified'
     };
+    let shouldDeleteOldAvatar = false;
     if (typeof avatar === 'string') {
-      updateData.avatar = avatar.trim() || null;
+      const newAvatar = avatar.trim() || null;
+      updateData.avatar = newAvatar;
+      
+      // Check xem có cần xóa avatar cũ không
+      if (newAvatar !== oldAvatar && oldAvatar && isUploadedFile(oldAvatar)) {
+        shouldDeleteOldAvatar = true;
+      }
     }
 
     // Update user with validation error handling
     try {
       await user.update(updateData);
+      
+      // Xóa avatar cũ SAU khi update thành công
+      if (shouldDeleteOldAvatar) {
+        deleteOldFileOnUpdate(oldAvatar, updateData.avatar);
+      }
     } catch (validationError) {
       if (validationError.name === 'SequelizeValidationError') {
         const errorMessages = validationError.errors.map(err => err.message);
@@ -339,6 +355,11 @@ class AdminUsersChild {
     }
 
     const userData = { id: user.id, name: user.name, email: user.email };
+
+    // Xóa avatar khi xóa user
+    if (user.avatar) {
+      deleteUploadedFile(user.avatar);
+    }
 
     await user.destroy();
 

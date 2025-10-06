@@ -2,6 +2,7 @@ import { User, Message, Friendship, MessageRead, BlockedUser, PinnedMessage, Mes
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isUserOnline, emitToAllAdmins } from '../../socket/socketHandler.js';
+import { deleteMultipleFiles, hasUploadedFile } from '../../utils/fileHelper.js';
 
 class ChatMessagesChild {
   constructor(parentController) {
@@ -421,6 +422,18 @@ class ChatMessagesChild {
         console.log('Failed to cleanup user pins on recallMessages(self):', e?.name || e);
       }
     } else {
+      // Xóa files đính kèm khi recall for all
+      const filesToDelete = [];
+      for (const msg of msgs) {
+        if (hasUploadedFile(msg)) {
+          filesToDelete.push(msg.content);
+        }
+      }
+      if (filesToDelete.length > 0) {
+        console.log('[RecallMessages] Deleting files:', filesToDelete);
+        deleteMultipleFiles(filesToDelete);
+      }
+      
       await Message.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds } } });
       await PinnedMessage.destroy({ where: { messageId: { [Op.in]: messageIds } } });
     }
