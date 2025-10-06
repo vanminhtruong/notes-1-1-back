@@ -11,6 +11,7 @@ router.use(authMiddleware);
 // Notes CRUD
 router.post('/', validateCreateNote, notesController.createNote);
 router.get('/', notesController.getNotes);
+router.get('/search/autocomplete', notesController.searchAutocomplete);
 router.get('/stats', notesController.getNoteStats);
 router.get('/users', notesController.getUsers); // Move before /:id to avoid conflict
 router.get('/:id', notesController.getNoteById);

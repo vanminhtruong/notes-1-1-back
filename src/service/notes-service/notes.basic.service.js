@@ -147,6 +147,90 @@ class NotesBasicChild {
     }
   };
 
+  searchAutocomplete = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { q } = req.query;
+
+      // Return empty if no query
+      if (!q || q.trim().length === 0) {
+        return res.json({ suggestions: [] });
+      }
+
+      const searchTerm = q.trim();
+      const limit = 10; // Max autocomplete suggestions
+
+      // Search in both title and content, prioritizing title matches
+      const titleMatches = await Note.findAll({
+        where: {
+          userId,
+          isArchived: false,
+          title: { [Op.like]: `%${searchTerm}%` }
+        },
+        attributes: ['id', 'title', 'content', 'category', 'priority', 'createdAt'],
+        order: [['updatedAt', 'DESC']],
+        limit: limit,
+      });
+
+      // If we have fewer than limit title matches, search content too
+      let contentMatches = [];
+      if (titleMatches.length < limit) {
+        const titleIds = titleMatches.map(n => n.id);
+        contentMatches = await Note.findAll({
+          where: {
+            userId,
+            isArchived: false,
+            id: { [Op.notIn]: titleIds.length > 0 ? titleIds : [-1] },
+            content: { [Op.like]: `%${searchTerm}%` }
+          },
+          attributes: ['id', 'title', 'content', 'category', 'priority', 'createdAt'],
+          order: [['updatedAt', 'DESC']],
+          limit: limit - titleMatches.length,
+        });
+      }
+
+      // Combine results with title matches first
+      const allMatches = [...titleMatches, ...contentMatches];
+
+      // Format suggestions with highlighted text
+      const suggestions = allMatches.map(note => {
+        const titleMatch = note.title && note.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const contentMatch = note.content && note.content.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        // Extract snippet from content if it matches
+        let snippet = '';
+        if (contentMatch && note.content) {
+          const contentLower = note.content.toLowerCase();
+          const searchLower = searchTerm.toLowerCase();
+          const matchIndex = contentLower.indexOf(searchLower);
+          const start = Math.max(0, matchIndex - 40);
+          const end = Math.min(note.content.length, matchIndex + searchTerm.length + 40);
+          snippet = (start > 0 ? '...' : '') + 
+                    note.content.substring(start, end) + 
+                    (end < note.content.length ? '...' : '');
+        }
+
+        return {
+          id: note.id,
+          title: note.title || 'Untitled',
+          snippet: snippet,
+          category: note.category,
+          priority: note.priority,
+          matchType: titleMatch ? 'title' : 'content',
+          createdAt: note.createdAt
+        };
+      });
+
+      res.json({ 
+        suggestions,
+        query: searchTerm,
+        count: suggestions.length
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  };
+
   getNoteById = async (req, res) => {
     try {
       const { id } = req.params;

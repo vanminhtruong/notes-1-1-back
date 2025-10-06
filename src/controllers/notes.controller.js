@@ -14,6 +14,7 @@ class NotesController {
   createNote = (...args) => this.basicChild.createNote(...args);
   acknowledgeReminder = (...args) => this.basicChild.acknowledgeReminder(...args);
   getNotes = (...args) => this.basicChild.getNotes(...args);
+  searchAutocomplete = (...args) => this.basicChild.searchAutocomplete(...args);
   getNoteById = (...args) => this.basicChild.getNoteById(...args);
   updateNote = (...args) => this.basicChild.updateNote(...args);
   deleteNote = (...args) => this.basicChild.deleteNote(...args);
@@ -39,6 +40,7 @@ export { NotesController };
 
 export const createNote = notesController.createNote;
 export const getNotes = notesController.getNotes;
+export const searchAutocomplete = notesController.searchAutocomplete;
 export const getNoteById = notesController.getNoteById;
 export const updateNote = notesController.updateNote;
 export const deleteNote = notesController.deleteNote;
