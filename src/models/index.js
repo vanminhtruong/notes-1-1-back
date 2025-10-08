@@ -2,6 +2,7 @@ import { DataTypes } from 'sequelize';
 import { sequelize } from '../db/index.js';
 import defineUser from './user.model.js';
 import defineNote from './note.model.js';
+import defineNoteFolder from './noteFolder.model.js';
 import defineFriendship from './friendship.model.js';
 import defineMessage from './message.model.js';
 import definePasswordReset from './passwordReset.model.js';
@@ -23,6 +24,7 @@ import defineUserSession from './userSession.model.js';
 
 const User = defineUser(sequelize, DataTypes);
 const Note = defineNote(sequelize, DataTypes);
+const NoteFolder = defineNoteFolder(sequelize, DataTypes);
 const Friendship = defineFriendship(sequelize, DataTypes);
 const Message = defineMessage(sequelize, DataTypes);
 const PasswordReset = definePasswordReset(sequelize, DataTypes);
@@ -45,6 +47,12 @@ const UserSession = defineUserSession(sequelize, DataTypes);
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
 Note.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// NoteFolder associations
+User.hasMany(NoteFolder, { foreignKey: 'userId', as: 'noteFolders' });
+NoteFolder.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+NoteFolder.hasMany(Note, { foreignKey: 'folderId', as: 'notes' });
+Note.belongsTo(NoteFolder, { foreignKey: 'folderId', as: 'folder' });
 
 // UserSession associations
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
@@ -301,6 +309,7 @@ export {
   sequelize,
   User,
   Note,
+  NoteFolder,
   Friendship,
   Message,
   PasswordReset,

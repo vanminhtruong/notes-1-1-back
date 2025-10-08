@@ -53,6 +53,18 @@ class AdminPermissionsController {
     'manage_notes.shared.view', // Xem danh sách ghi chú chia sẻ
     'manage_notes.shared.edit', // Sửa ghi chú chia sẻ (quyền, tin nhắn)
     'manage_notes.shared.delete', // Xóa ghi chú chia sẻ
+    'manage_notes.folders',    // Quản lý thư mục ghi chú (parent)
+    'manage_notes.folders.view', // Xem danh sách thư mục
+    'manage_notes.folders.view_detail', // Xem chi tiết thư mục và ghi chú bên trong
+    'manage_notes.folders.create', // Tạo thư mục cho người dùng
+    'manage_notes.folders.edit', // Sửa thư mục
+    'manage_notes.folders.delete', // Xóa thư mục
+    'manage_notes.folders.move',   // Di chuyển note vào folder
+    'manage_notes.folders.notes',  // Quản lý notes trong folder (parent)
+    'manage_notes.folders.notes.create', // Tạo note trong folder
+    'manage_notes.folders.notes.edit',   // Sửa note trong folder
+    'manage_notes.folders.notes.delete', // Xóa note trong folder
+    'manage_notes.folders.notes.remove', // Di chuyển note ra khỏi folder
     'manage_admins',          // Quản lý admin khác (chỉ super admin)
     'manage_admins.create',   // Tạo admin
     'manage_admins.edit',     // Sửa quyền admin

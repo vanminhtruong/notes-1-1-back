@@ -40,10 +40,16 @@ class AdminController {
   createNoteForUser = (...args) => this.notesChild.createNoteForUser(...args)
   updateUserNote = (...args) => this.notesChild.updateUserNote(...args);
   deleteUserNote = (...args) => this.notesChild.deleteUserNote(...args);
+  moveNoteToFolder = (...args) => this.notesChild.moveNoteToFolder(...args);
   getAllSharedNotes = (...args) => this.notesChild.getAllSharedNotes(...args);
   getSharedNoteDetail = (...args) => this.notesChild.getSharedNoteDetail(...args);
   updateSharedNote = (...args) => this.notesChild.updateSharedNote(...args);
   deleteSharedNote = (...args) => this.notesChild.deleteSharedNote(...args);
+  getAllFolders = (...args) => this.notesChild.getAllFolders(...args);
+  getFolderById = (...args) => this.notesChild.getFolderById(...args);
+  createFolderForUser = (...args) => this.notesChild.createFolderForUser(...args);
+  updateUserFolder = (...args) => this.notesChild.updateUserFolder(...args);
+  deleteUserFolder = (...args) => this.notesChild.deleteUserFolder(...args);
   getUserActivity = (...args) => this.monitorChild.getUserActivity(...args);
   getAllUsers = (...args) => this.usersChild.getAllUsers(...args)
   createUser = (...args) => this.usersChild.createUser(...args);

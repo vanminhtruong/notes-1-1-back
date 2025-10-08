@@ -102,11 +102,19 @@ router.get('/notes', requirePermission('manage_notes.view'), adminController.get
 router.post('/notes', requirePermission('manage_notes.create'), adminController.createNoteForUser);
 router.put('/notes/:id', requirePermission('manage_notes.edit'), adminController.updateUserNote);
 router.delete('/notes/:id', requirePermission('manage_notes.delete'), adminController.deleteUserNote);
+router.patch('/notes/:noteId/move-to-folder', requirePermission('manage_notes.folders.move'), adminController.moveNoteToFolder);
 
 // Shared notes management (require specific shared notes permissions) 
 router.get('/shared-notes', requirePermission('manage_notes.shared.view'), adminController.getAllSharedNotes);
 router.get('/shared-notes/:id', requirePermission('manage_notes.shared.view'), adminController.getSharedNoteDetail);
 router.put('/shared-notes/:id', requirePermission('manage_notes.shared.edit'), adminController.updateSharedNote);
 router.delete('/shared-notes/:id', requirePermission('manage_notes.shared.delete'), adminController.deleteSharedNote);
+
+// Folders management (require specific folders permissions)
+router.get('/folders', requirePermission('manage_notes.folders.view'), adminController.getAllFolders);
+router.get('/folders/:id', requirePermission('manage_notes.folders.view_detail'), adminController.getFolderById);
+router.post('/folders', requirePermission('manage_notes.folders.create'), adminController.createFolderForUser);
+router.put('/folders/:id', requirePermission('manage_notes.folders.edit'), adminController.updateUserFolder);
+router.delete('/folders/:id', requirePermission('manage_notes.folders.delete'), adminController.deleteUserFolder);
 
 export default router;

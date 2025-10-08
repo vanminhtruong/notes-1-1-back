@@ -202,6 +202,61 @@ class ModelManager {
       allowNull: false,
       defaultValue: false,
     });
+
+    // Folder support for organizing notes by topic
+    await this.ensureColumnExists('Notes', 'folderId', {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'NoteFolders',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+    });
+  }
+
+  async createNoteFoldersTable() {
+    console.log('Creating NoteFolders table if missing...');
+    await this.ensureTableExists('NoteFolders', {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+      },
+      color: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        defaultValue: 'blue',
+      },
+      icon: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: 'folder',
+      },
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Users', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    }, [
+      { fields: ['userId'], name: 'notefolders_userid_idx' },
+      { fields: ['name'], name: 'notefolders_name_idx' },
+    ]);
   }
 
   async createSharedNotesTable() {
@@ -695,7 +750,11 @@ class ModelManager {
       await this.updateGroupMessageTable();
       await this.updateUsersTable();
       await this.updateGroupsTable();
+      
+      // Note Folders migrations - must be before updateNotesTable
+      await this.createNoteFoldersTable();
       await this.updateNotesTable();
+      
       await this.createReadTables();
       await this.createChatPreferenceTable();
       

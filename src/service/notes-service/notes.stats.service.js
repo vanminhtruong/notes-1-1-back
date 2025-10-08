@@ -9,12 +9,13 @@ class NotesStatsChild {
     try {
       const userId = req.user.id;
 
-      const totalNotes = await Note.count({ where: { userId } });
-      const archivedNotes = await Note.count({ where: { userId, isArchived: true } });
-      const activeNotes = await Note.count({ where: { userId, isArchived: false } });
+      // Only count notes that are NOT in any folder
+      const totalNotes = await Note.count({ where: { userId, folderId: null } });
+      const archivedNotes = await Note.count({ where: { userId, isArchived: true, folderId: null } });
+      const activeNotes = await Note.count({ where: { userId, isArchived: false, folderId: null } });
 
       const notesByPriority = await Note.findAll({
-        where: { userId, isArchived: false },
+        where: { userId, isArchived: false, folderId: null },
         attributes: [
           'priority',
           [Note.sequelize.fn('COUNT', Note.sequelize.col('id')), 'count']
@@ -24,7 +25,7 @@ class NotesStatsChild {
       });
 
       const notesByCategory = await Note.findAll({
-        where: { userId, isArchived: false },
+        where: { userId, isArchived: false, folderId: null },
         attributes: [
           'category',
           [Note.sequelize.fn('COUNT', Note.sequelize.col('id')), 'count']

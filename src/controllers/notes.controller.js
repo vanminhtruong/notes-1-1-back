@@ -1,6 +1,7 @@
 import NotesBasicChild from '../service/notes-service/notes.basic.service.js';
 import NotesSharingChild from '../service/notes-service/notes.sharing.service.js';
 import NotesStatsChild from '../service/notes-service/notes.stats.service.js';
+import NotesFoldersChild from '../service/notes-service/notes.folders.service.js';
 
 class NotesController {
   constructor() {
@@ -8,6 +9,7 @@ class NotesController {
     this.basicChild = new NotesBasicChild(this);
     this.sharingChild = new NotesSharingChild(this);
     this.statsChild = new NotesStatsChild(this);
+    this.foldersChild = new NotesFoldersChild(this);
   }
 
   // Basic CRUD operations - delegate to basicChild
@@ -32,6 +34,14 @@ class NotesController {
   getSharedNotePermissions = (...args) => this.sharingChild.getSharedNotePermissions(...args);
   getCreatePermissions = (...args) => this.sharingChild.getCreatePermissions(...args);
   shareNoteToGroup = (...args) => this.sharingChild.shareNoteToGroup(...args);
+  
+  // Folder operations - delegate to foldersChild
+  getFolders = (...args) => this.foldersChild.getFolders(...args);
+  getFolderById = (...args) => this.foldersChild.getFolderById(...args);
+  createFolder = (...args) => this.foldersChild.createFolder(...args);
+  updateFolder = (...args) => this.foldersChild.updateFolder(...args);
+  deleteFolder = (...args) => this.foldersChild.deleteFolder(...args);
+  moveNoteToFolder = (...args) => this.foldersChild.moveNoteToFolder(...args);
 }
 
 const notesController = new NotesController();
@@ -55,3 +65,9 @@ export const getUsers = notesController.getUsers;
 export const getSharedNotePermissions = notesController.getSharedNotePermissions;
 export const getCreatePermissions = notesController.getCreatePermissions;
 export const shareNoteToGroup = notesController.shareNoteToGroup;
+export const getFolders = notesController.getFolders;
+export const getFolderById = notesController.getFolderById;
+export const createFolder = notesController.createFolder;
+export const updateFolder = notesController.updateFolder;
+export const deleteFolder = notesController.deleteFolder;
+export const moveNoteToFolder = notesController.moveNoteToFolder;

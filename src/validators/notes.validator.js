@@ -23,6 +23,10 @@ const validateCreateNote = (req, res, next) => {
       'number.base': 'Shared From User ID phải là số',
       'number.positive': 'Shared From User ID phải là số dương',
     }),
+    folderId: Joi.number().integer().positive().allow(null).optional().messages({
+      'number.base': 'ID thư mục phải là số',
+      'number.positive': 'ID thư mục phải là số dương',
+    }),
   });
 
   const { error } = schema.validate(req.body);
@@ -121,9 +125,71 @@ const validateShareNoteToGroup = (req, res, next) => {
   next();
 };
 
+const validateCreateFolder = (req, res, next) => {
+  const schema = Joi.object({
+    name: Joi.string().min(1).max(100).required().messages({
+      'string.min': 'Tên thư mục không được để trống',
+      'string.max': 'Tên thư mục không được quá 100 ký tự',
+      'any.required': 'Tên thư mục là bắt buộc',
+    }),
+    color: Joi.string().max(20).optional().default('blue'),
+    icon: Joi.string().max(50).optional().default('folder'),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
+const validateUpdateFolder = (req, res, next) => {
+  const schema = Joi.object({
+    name: Joi.string().min(1).max(100).optional().messages({
+      'string.min': 'Tên thư mục không được để trống',
+      'string.max': 'Tên thư mục không được quá 100 ký tự',
+    }),
+    color: Joi.string().max(20).optional(),
+    icon: Joi.string().max(50).optional(),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
+const validateMoveNoteToFolder = (req, res, next) => {
+  const schema = Joi.object({
+    folderId: Joi.number().integer().positive().allow(null).optional().messages({
+      'number.base': 'ID thư mục phải là số',
+      'number.positive': 'ID thư mục phải là số dương',
+    }),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
 export {
   validateCreateNote,
   validateUpdateNote,
   validateShareNote,
   validateShareNoteToGroup,
+  validateCreateFolder,
+  validateUpdateFolder,
+  validateMoveNoteToFolder,
 };

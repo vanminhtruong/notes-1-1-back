@@ -10,7 +10,7 @@ class NotesBasicChild {
 
   createNote = async (req, res) => {
     try {
-      const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, reminderAt, sharedFromUserId } = req.body;
+      const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, reminderAt, sharedFromUserId, folderId } = req.body;
       const userId = req.user.id;
 
       // If creating via canCreate permission, verify permission
@@ -38,6 +38,7 @@ class NotesBasicChild {
         priority,
         reminderAt: reminderAt ? new Date(reminderAt) : null,
         reminderSent: false,
+        folderId: folderId || null,
         userId,
       });
 
@@ -105,7 +106,11 @@ class NotesBasicChild {
       const archivedBool = typeof isArchived === 'string' ? isArchived.toLowerCase() === 'true' : !!isArchived;
 
       const offset = (pageNum - 1) * limitNum;
-      const whereClause = { userId, isArchived: archivedBool };
+      const whereClause = { 
+        userId, 
+        isArchived: archivedBool,
+        folderId: null // Only show notes that are NOT in any folder
+      };
 
       // Add filters
       if (category) {
@@ -165,6 +170,7 @@ class NotesBasicChild {
         where: {
           userId,
           isArchived: false,
+          folderId: null, // Only search notes not in folders
           title: { [Op.like]: `%${searchTerm}%` }
         },
         attributes: ['id', 'title', 'content', 'category', 'priority', 'createdAt'],
@@ -180,6 +186,7 @@ class NotesBasicChild {
           where: {
             userId,
             isArchived: false,
+            folderId: null, // Only search notes not in folders
             id: { [Op.notIn]: titleIds.length > 0 ? titleIds : [-1] },
             content: { [Op.like]: `%${searchTerm}%` }
           },
@@ -425,13 +432,16 @@ class NotesBasicChild {
         deleteMultipleFiles(filesToDelete);
       }
 
+      // Store folderId before destroying
+      const folderId = note.folderId;
+
       await note.destroy();
 
-      // Emit WebSocket event to owner's devices
-      emitToUser(userId, 'note_deleted', { id: Number(id) });
+      // Emit WebSocket event to owner's devices with folderId
+      emitToUser(userId, 'note_deleted', { id: Number(id), folderId });
       
       // Emit to all admins for real-time admin panel updates
-      emitToAllAdmins('user_note_deleted', { id: note.id, userId });
+      emitToAllAdmins('user_note_deleted', { id: note.id, userId, folderId });
 
       res.json({ message: 'Xóa ghi chú thành công' });
     } catch (error) {
@@ -452,16 +462,18 @@ class NotesBasicChild {
 
       await note.update({ isArchived: !note.isArchived });
 
-      // Emit WebSocket event
+      // Emit WebSocket event with folderId
       emitToUser(userId, 'note_archived', {
         id: note.id,
         isArchived: note.isArchived,
+        folderId: note.folderId,
       });
       
       // Emit to all admins for real-time admin panel updates
       emitToAllAdmins('user_note_archived', {
         id: note.id,
         isArchived: note.isArchived,
+        folderId: note.folderId,
         userId
       });
 

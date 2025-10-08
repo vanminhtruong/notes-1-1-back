@@ -63,12 +63,24 @@ export default (sequelize, DataTypes) => {
         key: 'id',
       },
     },
+    folderId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'NoteFolders',
+        key: 'id',
+      },
+    },
   });
 
   Note.associate = function(models) {
     Note.belongsTo(models.User, {
       foreignKey: 'userId',
       as: 'user',
+    });
+    Note.belongsTo(models.NoteFolder, {
+      foreignKey: 'folderId',
+      as: 'folder',
     });
   };
 

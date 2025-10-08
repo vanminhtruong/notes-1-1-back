@@ -1,4 +1,4 @@
-import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote } from '../../models/index.js';
+import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote, NoteFolder } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
@@ -209,7 +209,7 @@ class AdminNotesChild {
 
   // Get all users notes for admin
   getAllUsersNotes = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, userId, category, priority, search, isArchived, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+    const { page = 1, limit = 20, userId, category, priority, search, isArchived, folderId, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
 
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 20;
@@ -228,6 +228,22 @@ class AdminNotesChild {
         whereClause.userId = uid;
       }
     }
+    
+    // Filter by folderId - Default to null (only show notes NOT in any folder)
+    if (folderId !== undefined && String(folderId).trim() !== '') {
+      if (String(folderId).toLowerCase() === 'null' || String(folderId) === '') {
+        whereClause.folderId = null;
+      } else {
+        const fid = parseInt(String(folderId), 10);
+        if (!Number.isNaN(fid)) {
+          whereClause.folderId = fid;
+        }
+      }
+    } else {
+      // Default: only show notes not in any folder (like user app behavior)
+      whereClause.folderId = null;
+    }
+    
     if (category) whereClause.category = category;
     if (priority) whereClause.priority = priority;
     if (search) {
@@ -258,7 +274,7 @@ class AdminNotesChild {
 
   // Create note for user (admin)
   createNoteForUser = asyncHandler(async (req, res) => {
-    const { userId, title, content, imageUrl, videoUrl, youtubeUrl, category, priority, reminderAt } = req.body;
+    const { userId, title, content, imageUrl, videoUrl, youtubeUrl, category, priority, reminderAt, folderId } = req.body;
 
     const targetUser = await User.findByPk(userId);
     if (!targetUser) {
@@ -275,6 +291,7 @@ class AdminNotesChild {
       priority,
       reminderAt: reminderAt ? new Date(reminderAt) : null,
       reminderSent: false,
+      folderId: folderId || null,
       userId,
     });
 
@@ -294,7 +311,7 @@ class AdminNotesChild {
   // Update user's note (admin)
   updateUserNote = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, isArchived, reminderAt } = req.body;
+    const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, isArchived, reminderAt, folderId } = req.body;
 
     const note = await Note.findByPk(id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
@@ -339,6 +356,7 @@ class AdminNotesChild {
       category: category !== undefined ? category : note.category,
       priority: priority !== undefined ? priority : note.priority,
       isArchived: isArchived !== undefined ? isArchived : note.isArchived,
+      folderId: folderId !== undefined ? (folderId || null) : note.folderId,
       reminderAt: nextReminderAt,
       reminderSent: reminderChanged ? false : note.reminderSent,
       reminderAcknowledged: reminderChanged ? false : note.reminderAcknowledged,
@@ -393,6 +411,51 @@ class AdminNotesChild {
     emitToAllAdmins('note_deleted_by_admin', { id: note.id, userId });
 
     res.json({ message: 'Xóa ghi chú thành công' });
+  });
+
+  // Move note to folder (admin)
+  moveNoteToFolder = asyncHandler(async (req, res) => {
+    const { noteId } = req.params;
+    const { folderId } = req.body;
+
+    const note = await Note.findByPk(noteId, {
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
+    });
+
+    if (!note) {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
+
+    const userId = note.user.id;
+
+    // Verify folder belongs to user if folderId is provided
+    if (folderId) {
+      const folder = await NoteFolder.findOne({
+        where: { id: folderId, userId }
+      });
+      if (!folder) {
+        return res.status(404).json({ message: 'Không tìm thấy thư mục' });
+      }
+    }
+
+    await note.update({ folderId: folderId || null });
+
+    const noteWithUser = await Note.findByPk(note.id, {
+      include: [{
+        model: User,
+        as: 'user',
+        attributes: ['id', 'name', 'email', 'avatar'],
+      }],
+    });
+
+    // Emit socket events for real-time update
+    emitToUser(userId, 'note_moved_to_folder', noteWithUser.toJSON());
+    emitToAllAdmins('admin_note_moved_to_folder', { noteId: note.id, folderId, userId });
+
+    res.json({
+      message: folderId ? 'Chuyển ghi chú vào thư mục thành công' : 'Xóa ghi chú khỏi thư mục thành công',
+      note: noteWithUser.toJSON()
+    });
   });
 
   // Get all shared notes for admin (both individual and group shares)
@@ -777,6 +840,201 @@ class AdminNotesChild {
     try { emitToAllAdmins('admin_shared_note_updated', { id: sid, shareType: 'group' }); } catch {}
 
     return res.json({ message: 'Cập nhật chia sẻ nhóm thành công', sharedNote: { ...groupShared.toJSON(), shareType: 'group' } });
+  });
+
+  // ==================== FOLDER MANAGEMENT ====================
+
+  // Get all folders for admin (all users' folders)
+  getAllFolders = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, userId, search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 20;
+    const offset = (pageNum - 1) * limitNum;
+
+    const whereClause = {};
+
+    // Filter by userId if provided
+    if (userId !== undefined && userId !== null && String(userId).trim() !== '') {
+      const uid = parseInt(String(userId), 10);
+      if (!Number.isNaN(uid)) {
+        whereClause.userId = uid;
+      }
+    }
+
+    // Search by name
+    if (search) {
+      whereClause.name = { [Op.like]: `%${search}%` };
+    }
+
+    const { count, rows: folders } = await NoteFolder.findAndCountAll({
+      where: whereClause,
+      include: [
+        { 
+          model: User, 
+          as: 'user', 
+          attributes: ['id', 'name', 'email', 'avatar'] 
+        },
+        {
+          model: Note,
+          as: 'notes',
+          attributes: ['id'],
+          where: { isArchived: false },
+          required: false
+        }
+      ],
+      order: [[sortBy, sortOrder]],
+      limit: limitNum,
+      offset,
+    });
+
+    // Add notes count to each folder
+    const foldersWithCount = folders.map(folder => {
+      const folderData = folder.toJSON();
+      folderData.notesCount = folderData.notes ? folderData.notes.length : 0;
+      delete folderData.notes;
+      return folderData;
+    });
+
+    res.json({
+      folders: foldersWithCount,
+      pagination: {
+        total: count,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(count / limitNum),
+      },
+    });
+  });
+
+  // Get folder by ID for admin
+  getFolderById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const folder = await NoteFolder.findByPk(id, {
+      include: [
+        { 
+          model: User, 
+          as: 'user', 
+          attributes: ['id', 'name', 'email', 'avatar'] 
+        },
+        {
+          model: Note,
+          as: 'notes',
+          where: { isArchived: false },
+          required: false,
+          include: [
+            { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
+          ]
+        }
+      ],
+    });
+
+    if (!folder) {
+      return res.status(404).json({ message: 'Không tìm thấy thư mục' });
+    }
+
+    res.json({ folder });
+  });
+
+  // Create folder for user (admin)
+  createFolderForUser = asyncHandler(async (req, res) => {
+    const { userId, name, color, icon } = req.body;
+
+    const targetUser = await User.findByPk(userId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    const folder = await NoteFolder.create({
+      name,
+      color: color || 'blue',
+      icon: icon || 'folder',
+      userId,
+    });
+
+    const folderWithUser = await NoteFolder.findByPk(folder.id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
+      ],
+    });
+
+    // Emit real-time events
+    emitToUser(userId, 'folder_created', folderWithUser);
+    emitToAllAdmins('admin_folder_created', folderWithUser);
+
+    res.status(201).json({
+      message: 'Tạo thư mục cho người dùng thành công',
+      folder: folderWithUser,
+    });
+  });
+
+  // Update user's folder (admin)
+  updateUserFolder = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { name, color, icon } = req.body;
+
+    const folder = await NoteFolder.findByPk(id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
+      ],
+    });
+
+    if (!folder) {
+      return res.status(404).json({ message: 'Không tìm thấy thư mục' });
+    }
+
+    await folder.update({
+      name: name !== undefined ? name : folder.name,
+      color: color !== undefined ? color : folder.color,
+      icon: icon !== undefined ? icon : folder.icon,
+    });
+
+    const updatedFolder = await NoteFolder.findByPk(folder.id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
+      ],
+    });
+
+    // Emit real-time events
+    emitToUser(folder.user.id, 'folder_updated', updatedFolder);
+    emitToAllAdmins('admin_folder_updated', updatedFolder);
+
+    res.json({
+      message: 'Cập nhật thư mục thành công',
+      folder: updatedFolder,
+    });
+  });
+
+  // Delete user's folder (admin)
+  deleteUserFolder = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const folder = await NoteFolder.findByPk(id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
+      ],
+    });
+
+    if (!folder) {
+      return res.status(404).json({ message: 'Không tìm thấy thư mục' });
+    }
+
+    const userId = folder.user.id;
+
+    // Remove folderId from all notes in this folder
+    await Note.update(
+      { folderId: null },
+      { where: { folderId: id } }
+    );
+
+    await folder.destroy();
+
+    // Emit real-time events
+    emitToUser(userId, 'folder_deleted', { id: parseInt(id) });
+    emitToAllAdmins('admin_folder_deleted', { id: parseInt(id), userId });
+
+    res.json({ message: 'Xóa thư mục thành công' });
   });
 }
 
