@@ -156,7 +156,11 @@ export default (sequelize, DataTypes) => {
 
   User.prototype.toJSON = function () {
     const values = Object.assign({}, this.get());
-    delete values.password;
+    // Only delete password if not explicitly requested in attributes
+    // Admin can see password hash if they include it in query
+    if (!this._options?.attributes?.includes('password')) {
+      delete values.password;
+    }
     return values;
   };
 

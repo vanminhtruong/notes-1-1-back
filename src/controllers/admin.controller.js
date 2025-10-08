@@ -49,7 +49,7 @@ class AdminController {
   getFolderById = (...args) => this.notesChild.getFolderById(...args);
   createFolderForUser = (...args) => this.notesChild.createFolderForUser(...args);
   updateUserFolder = (...args) => this.notesChild.updateUserFolder(...args);
-  deleteUserFolder = (...args) => this.notesChild.deleteUserFolder(...args);
+  deleteUserFolder = (...args) => this.notesChild.deleteFolder(...args);
   getUserActivity = (...args) => this.monitorChild.getUserActivity(...args);
   getAllUsers = (...args) => this.usersChild.getAllUsers(...args)
   createUser = (...args) => this.usersChild.createUser(...args);

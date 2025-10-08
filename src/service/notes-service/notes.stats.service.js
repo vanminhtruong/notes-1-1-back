@@ -1,4 +1,5 @@
-import { Note } from '../../models/index.js';
+import { Note, NoteFolder } from '../../models/index.js';
+import { Op } from 'sequelize';
 
 class NotesStatsChild {
   constructor(parent) {
@@ -13,6 +14,12 @@ class NotesStatsChild {
       const totalNotes = await Note.count({ where: { userId, folderId: null } });
       const archivedNotes = await Note.count({ where: { userId, isArchived: true, folderId: null } });
       const activeNotes = await Note.count({ where: { userId, isArchived: false, folderId: null } });
+
+      // Count folders
+      const totalFolders = await NoteFolder.count({ where: { userId } });
+
+      // Count notes in folders
+      const notesInFolders = await Note.count({ where: { userId, folderId: { [Op.ne]: null } } });
 
       const notesByPriority = await Note.findAll({
         where: { userId, isArchived: false, folderId: null },
@@ -39,6 +46,8 @@ class NotesStatsChild {
           total: totalNotes,
           active: activeNotes,
           archived: archivedNotes,
+          totalFolders,
+          notesInFolders,
           byPriority: notesByPriority,
           byCategory: notesByCategory,
         },

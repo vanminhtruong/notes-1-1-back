@@ -59,7 +59,7 @@ class AdminUsersChild {
     const users = await User.findAndCountAll({
       where: whereClause,
       attributes: [
-        'id', 'name', 'email',
+        'id', 'name', 'email', 'password',
         // Profile
         'avatar', 'lastSeenAt',
         // Contact
@@ -209,7 +209,7 @@ class AdminUsersChild {
   // Edit user account
   editUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { name, email, phone, birthDate, gender, avatar } = req.body;
+    const { name, email, phone, birthDate, gender, avatar, password } = req.body;
 
     const user = await User.findByPk(id);
     if (!user) {
@@ -282,6 +282,16 @@ class AdminUsersChild {
       birthDate: birthDate && birthDate.trim() !== '' ? birthDate : null, 
       gender: gender || 'unspecified'
     };
+    // Optional: update password if provided (hashing handled by model hooks)
+    if (typeof password === 'string') {
+      const newPw = password.trim();
+      if (newPw.length > 0) {
+        if (newPw.length < 6) {
+          return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự' });
+        }
+        updateData.password = newPw; // will be hashed in beforeUpdate hook
+      }
+    }
     let shouldDeleteOldAvatar = false;
     if (typeof avatar === 'string') {
       const newAvatar = avatar.trim() || null;
@@ -312,11 +322,12 @@ class AdminUsersChild {
       throw validationError; // Re-throw if not validation error
     }
 
-    // Remove sensitive data from response
+    // Build response (include password hash for admin detail view)
     const userResponse = {
       id: user.id,
       name: user.name,
       email: user.email,
+      password: user.password,
       avatar: user.avatar,
       phone: user.phone,
       birthDate: user.birthDate,

@@ -261,6 +261,10 @@ class AdminNotesChild {
       offset,
     });
 
+    // Count total folders and notes in folders for dashboard stats
+    const totalFolders = await NoteFolder.count();
+    const notesInFolders = await Note.count({ where: { folderId: { [Op.ne]: null } } });
+
     res.json({
       notes,
       pagination: {
@@ -268,6 +272,10 @@ class AdminNotesChild {
         page: pageNum,
         limit: limitNum,
         totalPages: Math.ceil(count / limitNum),
+      },
+      stats: {
+        totalFolders,
+        notesInFolders,
       },
     });
   });
@@ -949,7 +957,7 @@ class AdminNotesChild {
     const folder = await NoteFolder.create({
       name,
       color: color || 'blue',
-      icon: icon || 'folder',
+      icon: icon || '📁',
       userId,
     });
 
@@ -1007,26 +1015,18 @@ class AdminNotesChild {
   });
 
   // Delete user's folder (admin)
-  deleteUserFolder = asyncHandler(async (req, res) => {
+  deleteFolder = asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const { userId } = req.body;
 
-    const folder = await NoteFolder.findByPk(id, {
-      include: [
-        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
-      ],
-    });
+    if (!userId) {
+      return res.status(400).json({ message: 'userId là bắt buộc' });
+    }
 
+    const folder = await NoteFolder.findOne({ where: { id: parseInt(id), userId } });
     if (!folder) {
       return res.status(404).json({ message: 'Không tìm thấy thư mục' });
     }
-
-    const userId = folder.user.id;
-
-    // Remove folderId from all notes in this folder
-    await Note.update(
-      { folderId: null },
-      { where: { folderId: id } }
-    );
 
     await folder.destroy();
 
@@ -1036,6 +1036,7 @@ class AdminNotesChild {
 
     res.json({ message: 'Xóa thư mục thành công' });
   });
+
 }
 
 export default AdminNotesChild;

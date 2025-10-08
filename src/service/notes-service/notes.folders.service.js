@@ -1,6 +1,6 @@
 import { NoteFolder, Note, User } from '../../models/index.js';
 import { Op } from 'sequelize';
-import { emitToUser } from '../../socket/socketHandler.js';
+import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
 class NotesFoldersChild {
   constructor(parent) {
@@ -111,12 +111,13 @@ class NotesFoldersChild {
       const folder = await NoteFolder.create({
         name,
         color: color || 'blue',
-        icon: icon || 'folder',
+        icon: icon || '📁',
         userId,
       });
 
       // Emit socket event for real-time update
       emitToUser(userId, 'folder_created', folder.toJSON());
+      emitToAllAdmins('folder_created', { ...folder.toJSON(), userId });
 
       return res.status(201).json({
         message: 'Tạo thư mục thành công',
@@ -151,6 +152,7 @@ class NotesFoldersChild {
 
       // Emit socket event for real-time update
       emitToUser(userId, 'folder_updated', folder.toJSON());
+      emitToAllAdmins('folder_updated', { ...folder.toJSON(), userId });
 
       return res.status(200).json({
         message: 'Cập nhật thư mục thành công',
@@ -186,6 +188,7 @@ class NotesFoldersChild {
 
       // Emit socket event for real-time update
       emitToUser(userId, 'folder_deleted', { id: parseInt(id) });
+      emitToAllAdmins('folder_deleted', { id: parseInt(id), userId });
 
       return res.status(200).json({
         message: 'Xóa thư mục thành công'
@@ -233,6 +236,7 @@ class NotesFoldersChild {
 
       // Emit socket event for real-time update
       emitToUser(userId, 'note_moved_to_folder', noteWithUser.toJSON());
+      emitToAllAdmins('note_moved_to_folder', { ...noteWithUser.toJSON(), userId });
 
       return res.status(200).json({
         message: folderId ? 'Chuyển ghi chú vào thư mục thành công' : 'Xóa ghi chú khỏi thư mục thành công',
