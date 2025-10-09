@@ -117,7 +117,7 @@ class NotesFoldersChild {
 
       // Emit socket event for real-time update
       emitToUser(userId, 'folder_created', folder.toJSON());
-      emitToAllAdmins('folder_created', { ...folder.toJSON(), userId });
+      emitToAllAdmins('user_folder_created', { ...folder.toJSON(), userId });
 
       return res.status(201).json({
         message: 'Tạo thư mục thành công',
@@ -152,7 +152,7 @@ class NotesFoldersChild {
 
       // Emit socket event for real-time update
       emitToUser(userId, 'folder_updated', folder.toJSON());
-      emitToAllAdmins('folder_updated', { ...folder.toJSON(), userId });
+      emitToAllAdmins('user_folder_updated', { ...folder.toJSON(), userId });
 
       return res.status(200).json({
         message: 'Cập nhật thư mục thành công',
@@ -188,7 +188,7 @@ class NotesFoldersChild {
 
       // Emit socket event for real-time update
       emitToUser(userId, 'folder_deleted', { id: parseInt(id) });
-      emitToAllAdmins('folder_deleted', { id: parseInt(id), userId });
+      emitToAllAdmins('user_folder_deleted', { id: parseInt(id), userId });
 
       return res.status(200).json({
         message: 'Xóa thư mục thành công'
