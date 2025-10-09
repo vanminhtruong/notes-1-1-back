@@ -41,6 +41,7 @@ class NotesController {
   createFolder = (...args) => this.foldersChild.createFolder(...args);
   updateFolder = (...args) => this.foldersChild.updateFolder(...args);
   deleteFolder = (...args) => this.foldersChild.deleteFolder(...args);
+  searchFolders = (...args) => this.foldersChild.searchFolders(...args);
   moveNoteToFolder = (...args) => this.foldersChild.moveNoteToFolder(...args);
 }
 
@@ -70,4 +71,5 @@ export const getFolderById = notesController.getFolderById;
 export const createFolder = notesController.createFolder;
 export const updateFolder = notesController.updateFolder;
 export const deleteFolder = notesController.deleteFolder;
+export const searchFolders = notesController.searchFolders;
 export const moveNoteToFolder = notesController.moveNoteToFolder;

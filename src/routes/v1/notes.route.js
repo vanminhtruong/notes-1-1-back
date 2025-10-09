@@ -17,6 +17,7 @@ router.get('/users', notesController.getUsers); // Move before /:id to avoid con
 
 // Folder routes - Must be before /:id to avoid conflict
 router.get('/folders', notesController.getFolders);
+router.get('/folders/search/all', notesController.searchFolders);
 router.post('/folders', validateCreateFolder, notesController.createFolder);
 router.get('/folders/:id', notesController.getFolderById);
 router.put('/folders/:id', validateUpdateFolder, notesController.updateFolder);

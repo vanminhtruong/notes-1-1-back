@@ -199,6 +199,85 @@ class NotesFoldersChild {
     }
   };
 
+  // Search folders and notes in folders
+  searchFolders = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+
+      if (!search || search.trim() === '') {
+        return res.status(200).json({
+          folders: [],
+          notes: [],
+          total: 0
+        });
+      }
+
+      const searchTerm = search.trim();
+
+      // Search folders by name
+      const folders = await NoteFolder.findAll({
+        where: {
+          userId,
+          name: { [Op.like]: `%${searchTerm}%` }
+        },
+        include: [{
+          model: Note,
+          as: 'notes',
+          attributes: ['id'],
+          where: { isArchived: false },
+          required: false
+        }],
+        order: [[sortBy, sortOrder]],
+      });
+
+      // Add note count to each folder
+      const foldersWithCount = folders.map(folder => {
+        const folderData = folder.toJSON();
+        folderData.notesCount = folderData.notes ? folderData.notes.length : 0;
+        delete folderData.notes;
+        return folderData;
+      });
+
+      // Search notes inside folders by title or content
+      const notes = await Note.findAll({
+        where: {
+          userId,
+          folderId: { [Op.not]: null }, // Only notes in folders
+          isArchived: false,
+          [Op.or]: [
+            { title: { [Op.like]: `%${searchTerm}%` } },
+            { content: { [Op.like]: `%${searchTerm}%` } }
+          ]
+        },
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email', 'avatar'],
+          },
+          {
+            model: NoteFolder,
+            as: 'folder',
+            attributes: ['id', 'name', 'color', 'icon']
+          }
+        ],
+        order: [['updatedAt', 'DESC']],
+        limit: 50, // Limit results to avoid too many results
+      });
+
+      return res.status(200).json({
+        folders: foldersWithCount,
+        notes: notes.map(note => note.toJSON()),
+        total: foldersWithCount.length + notes.length,
+        query: searchTerm
+      });
+    } catch (error) {
+      console.error('Search folders error:', error);
+      return res.status(500).json({ message: 'Lỗi khi tìm kiếm thư mục' });
+    }
+  };
+
   // Move note to folder
   moveNoteToFolder = async (req, res) => {
     try {
