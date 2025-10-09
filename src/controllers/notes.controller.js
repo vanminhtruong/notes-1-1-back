@@ -21,6 +21,8 @@ class NotesController {
   updateNote = (...args) => this.basicChild.updateNote(...args);
   deleteNote = (...args) => this.basicChild.deleteNote(...args);
   archiveNote = (...args) => this.basicChild.archiveNote(...args);
+  pinNote = (...args) => this.basicChild.pinNote(...args);
+  unpinNote = (...args) => this.basicChild.unpinNote(...args);
   
   // Stats operations - delegate to statsChild
   getNoteStats = (...args) => this.statsChild.getNoteStats(...args);
@@ -73,3 +75,5 @@ export const updateFolder = notesController.updateFolder;
 export const deleteFolder = notesController.deleteFolder;
 export const searchFolders = notesController.searchFolders;
 export const moveNoteToFolder = notesController.moveNoteToFolder;
+export const pinNote = notesController.pinNote;
+export const unpinNote = notesController.unpinNote;

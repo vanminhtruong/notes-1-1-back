@@ -103,6 +103,8 @@ router.post('/notes', requirePermission('manage_notes.create'), adminController.
 router.put('/notes/:id', requirePermission('manage_notes.edit'), adminController.updateUserNote);
 router.delete('/notes/:id', requirePermission('manage_notes.delete'), adminController.deleteUserNote);
 router.patch('/notes/:noteId/move-to-folder', requirePermission('manage_notes.folders.move'), adminController.moveNoteToFolder);
+router.patch('/notes/:id/pin', requirePermission('manage_notes.edit'), adminController.pinUserNote);
+router.patch('/notes/:id/unpin', requirePermission('manage_notes.edit'), adminController.unpinUserNote);
 
 // Shared notes management (require specific shared notes permissions) 
 router.get('/shared-notes', requirePermission('manage_notes.shared.view'), adminController.getAllSharedNotes);

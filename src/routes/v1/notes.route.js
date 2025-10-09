@@ -35,6 +35,8 @@ router.get('/:id', notesController.getNoteById);
 router.put('/:id', validateUpdateNote, notesController.updateNote);
 router.patch('/:id/ack-reminder', notesController.acknowledgeReminder);
 router.patch('/:id/archive', notesController.archiveNote);
+router.patch('/:id/pin', notesController.pinNote);
+router.patch('/:id/unpin', notesController.unpinNote);
 router.delete('/:id', notesController.deleteNote);
 router.post('/:id/share', validateShareNote, notesController.shareNote);
 router.post('/:id/share-group', validateShareNoteToGroup, notesController.shareNoteToGroup);

@@ -57,7 +57,7 @@ class NotesFoldersChild {
     try {
       const { id } = req.params;
       const userId = req.user.id;
-      const { page = 1, limit = 20 } = req.query;
+      const { page = 1, limit = 9 } = req.query;
 
       const offset = (page - 1) * limit;
 
@@ -81,7 +81,10 @@ class NotesFoldersChild {
           as: 'user',
           attributes: ['id', 'name', 'email', 'avatar'],
         }],
-        order: [['createdAt', 'DESC']],
+        order: [
+          ['isPinned', 'DESC'], // Ghim notes lên đầu
+          ['createdAt', 'DESC']  // Sau đó sắp xếp theo ngày tạo
+        ],
         limit: parseInt(limit),
         offset: parseInt(offset),
       });

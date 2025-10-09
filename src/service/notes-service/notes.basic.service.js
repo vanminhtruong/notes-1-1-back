@@ -133,7 +133,10 @@ class NotesBasicChild {
           as: 'user',
           attributes: ['id', 'name', 'email'],
         }],
-        order: [[sortBy, sortOrder]],
+        order: [
+          ['isPinned', 'DESC'], // Ghim notes lên đầu
+          [sortBy, sortOrder]    // Sau đó sắp xếp theo tiêu chí đã chọn
+        ],
         limit: limitNum,
         offset: offset,
       });
@@ -480,6 +483,102 @@ class NotesBasicChild {
       res.json({
         message: note.isArchived ? 'Lưu trữ ghi chú thành công' : 'Bỏ lưu trữ ghi chú thành công',
         note,
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  };
+
+  pinNote = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+
+      const note = await Note.findOne({
+        where: { id, userId }
+      });
+
+      if (!note) {
+        return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+      }
+
+      note.isPinned = true;
+      await note.save();
+
+      // Trả về note với thông tin user
+      const updatedNote = await Note.findByPk(note.id, {
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'avatar']
+        }]
+      });
+
+      // Emit real-time update to user and admin
+      emitToUser(userId, 'note:pinned', {
+        noteId: note.id,
+        note: updatedNote,
+        isPinned: true
+      });
+      
+      // Emit to all admins for admin panel real-time sync
+      emitToAllAdmins('user_note_pinned', {
+        noteId: note.id,
+        note: updatedNote,
+        isPinned: true
+      });
+
+      res.json({
+        message: 'notes.pinSuccess',
+        note: updatedNote,
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  };
+
+  unpinNote = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+
+      const note = await Note.findOne({
+        where: { id, userId }
+      });
+
+      if (!note) {
+        return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+      }
+
+      note.isPinned = false;
+      await note.save();
+
+      // Trả về note với thông tin user
+      const updatedNote = await Note.findByPk(note.id, {
+        include: [{
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'avatar']
+        }]
+      });
+
+      // Emit real-time update to user and admin
+      emitToUser(userId, 'note:unpinned', {
+        noteId: note.id,
+        note: updatedNote,
+        isPinned: false
+      });
+      
+      // Emit to all admins for admin panel real-time sync
+      emitToAllAdmins('user_note_unpinned', {
+        noteId: note.id,
+        note: updatedNote,
+        isPinned: false
+      });
+
+      res.json({
+        message: 'notes.unpinSuccess',
+        note: updatedNote,
       });
     } catch (error) {
       res.status(400).json({ message: error.message });

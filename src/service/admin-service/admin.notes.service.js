@@ -256,7 +256,10 @@ class AdminNotesChild {
     const { count, rows: notes } = await Note.findAndCountAll({
       where: whereClause,
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
-      order: [[sortBy, sortOrder]],
+      order: [
+        ['isPinned', 'DESC'], // Ghim notes lên đầu
+        [sortBy, sortOrder]    // Sau đó sắp xếp theo tiêu chí đã chọn
+      ],
       limit: limitNum,
       offset,
     });
@@ -1035,6 +1038,78 @@ class AdminNotesChild {
     emitToAllAdmins('admin_folder_deleted', { id: parseInt(id), userId });
 
     res.json({ message: 'Xóa thư mục thành công' });
+  });
+
+  // Pin note (admin)
+  pinUserNote = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const note = await Note.findByPk(id, {
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
+    });
+
+    if (!note) {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
+
+    await note.update({ isPinned: true });
+
+    const updatedNote = await Note.findByPk(note.id, {
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
+    });
+
+    // Emit real-time updates to both user and admin
+    emitToUser(note.user.id, 'note:pinned', {
+      noteId: note.id,
+      note: updatedNote,
+      isPinned: true
+    });
+    emitToAllAdmins('admin_note_pinned', {
+      noteId: note.id,
+      note: updatedNote,
+      isPinned: true
+    });
+
+    res.json({
+      message: 'Ghim ghi chú thành công',
+      note: updatedNote,
+    });
+  });
+
+  // Unpin note (admin)
+  unpinUserNote = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const note = await Note.findByPk(id, {
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
+    });
+
+    if (!note) {
+      return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
+    }
+
+    await note.update({ isPinned: false });
+
+    const updatedNote = await Note.findByPk(note.id, {
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
+    });
+
+    // Emit real-time updates to both user and admin
+    emitToUser(note.user.id, 'note:unpinned', {
+      noteId: note.id,
+      note: updatedNote,
+      isPinned: false
+    });
+    emitToAllAdmins('admin_note_unpinned', {
+      noteId: note.id,
+      note: updatedNote,
+      isPinned: false
+    });
+
+    res.json({
+      message: 'Bỏ ghim ghi chú thành công',
+      note: updatedNote,
+    });
   });
 
 }

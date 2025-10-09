@@ -213,6 +213,13 @@ class ModelManager {
       },
       onDelete: 'SET NULL',
     });
+
+    // Pin support for prioritizing important notes
+    await this.ensureColumnExists('Notes', 'isPinned', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
   }
 
   async createNoteFoldersTable() {

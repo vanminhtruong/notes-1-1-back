@@ -71,6 +71,11 @@ export default (sequelize, DataTypes) => {
         key: 'id',
       },
     },
+    isPinned: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   });
 
   Note.associate = function(models) {
