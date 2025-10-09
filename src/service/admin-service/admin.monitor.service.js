@@ -1,4 +1,4 @@
-import { User, Message, Group, GroupMember, Friendship, GroupMessage, MessageRead, GroupMessageRead } from '../../models/index.js';
+import { User, Message, Group, GroupMember, Friendship, GroupMessage, MessageRead, GroupMessageRead, MessageReaction } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 
@@ -51,7 +51,8 @@ class AdminMonitorChild {
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
         { model: User, as: 'receiver', attributes: ['id', 'name', 'avatar'] },
         { model: Message, as: 'replyToMessage', attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'], include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }] },
-        { model: MessageRead, as: 'MessageReads', attributes: ['userId', 'readAt'] }
+        { model: MessageRead, as: 'MessageReads', attributes: ['userId', 'readAt'] },
+        { model: MessageReaction, as: 'Reactions', attributes: ['userId', 'type', 'count'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }] }
       ],
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit, 10),
@@ -80,7 +81,8 @@ class AdminMonitorChild {
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
         { model: GroupMessage, as: 'replyToMessage', attributes: ['id', 'content', 'messageType', 'senderId', 'createdAt'], include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }] },
-        { model: GroupMessageRead, as: 'GroupMessageReads', attributes: ['userId', 'readAt'] }
+        { model: GroupMessageRead, as: 'GroupMessageReads', attributes: ['userId', 'readAt'] },
+        { model: MessageReaction, as: 'Reactions', attributes: ['userId', 'type', 'count'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }] }
       ],
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit, 10),
