@@ -65,6 +65,11 @@ class AdminPermissionsController {
     'manage_notes.folders.notes.edit',   // Sửa note trong folder
     'manage_notes.folders.notes.delete', // Xóa note trong folder
     'manage_notes.folders.notes.remove', // Di chuyển note ra khỏi folder
+    'manage_notes.categories',    // Quản lý categories ghi chú (parent)
+    'manage_notes.categories.view', // Xem danh sách categories của users
+    'manage_notes.categories.create', // Tạo category cho user
+    'manage_notes.categories.edit', // Sửa category
+    'manage_notes.categories.delete', // Xóa category
     'manage_admins',          // Quản lý admin khác (chỉ super admin)
     'manage_admins.create',   // Tạo admin
     'manage_admins.edit',     // Sửa quyền admin

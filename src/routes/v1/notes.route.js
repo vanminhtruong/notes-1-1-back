@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as notesController from '../../controllers/notes.controller.js';
 import authMiddleware from '../../middlewares/auth.js';
-import { validateCreateNote, validateUpdateNote, validateShareNote, validateShareNoteToGroup, validateCreateFolder, validateUpdateFolder, validateMoveNoteToFolder } from '../../validators/notes.validator.js';
+import { validateCreateNote, validateUpdateNote, validateShareNote, validateShareNoteToGroup, validateCreateFolder, validateUpdateFolder, validateMoveNoteToFolder, validateCreateCategory, validateUpdateCategory } from '../../validators/notes.validator.js';
 
 const router = Router();
 
@@ -22,6 +22,13 @@ router.post('/folders', validateCreateFolder, notesController.createFolder);
 router.get('/folders/:id', notesController.getFolderById);
 router.put('/folders/:id', validateUpdateFolder, notesController.updateFolder);
 router.delete('/folders/:id', notesController.deleteFolder);
+
+// Category routes - Must be before /:id to avoid conflict
+router.get('/categories', notesController.getCategories);
+router.post('/categories', validateCreateCategory, notesController.createCategory);
+router.get('/categories/:id', notesController.getCategoryById);
+router.put('/categories/:id', validateUpdateCategory, notesController.updateCategory);
+router.delete('/categories/:id', notesController.deleteCategory);
 
 // Sharing routes - Must be before /:id to avoid conflict
 router.get('/shared/with-me', notesController.getSharedWithMe);

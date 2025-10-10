@@ -37,6 +37,19 @@ class SocketNotesChild {
     socket.on('note_moved_to_folder', (data) => {
       socket.to(`user_${userId}`).emit('note_moved_to_folder', data);
     });
+
+    // Category events
+    socket.on('category_created', (data) => {
+      socket.to(`user_${userId}`).emit('category_created', data);
+    });
+
+    socket.on('category_updated', (data) => {
+      socket.to(`user_${userId}`).emit('category_updated', data);
+    });
+
+    socket.on('category_deleted', (data) => {
+      socket.to(`user_${userId}`).emit('category_deleted', data);
+    });
   };
 }
 

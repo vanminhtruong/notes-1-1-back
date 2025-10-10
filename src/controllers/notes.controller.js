@@ -2,6 +2,7 @@ import NotesBasicChild from '../service/notes-service/notes.basic.service.js';
 import NotesSharingChild from '../service/notes-service/notes.sharing.service.js';
 import NotesStatsChild from '../service/notes-service/notes.stats.service.js';
 import NotesFoldersChild from '../service/notes-service/notes.folders.service.js';
+import NotesCategoriesChild from '../service/notes-service/notes.categories.service.js';
 
 class NotesController {
   constructor() {
@@ -10,6 +11,7 @@ class NotesController {
     this.sharingChild = new NotesSharingChild(this);
     this.statsChild = new NotesStatsChild(this);
     this.foldersChild = new NotesFoldersChild(this);
+    this.categoriesChild = new NotesCategoriesChild(this);
   }
 
   // Basic CRUD operations - delegate to basicChild
@@ -45,6 +47,13 @@ class NotesController {
   deleteFolder = (...args) => this.foldersChild.deleteFolder(...args);
   searchFolders = (...args) => this.foldersChild.searchFolders(...args);
   moveNoteToFolder = (...args) => this.foldersChild.moveNoteToFolder(...args);
+  
+  // Category operations - delegate to categoriesChild
+  getCategories = (...args) => this.categoriesChild.getCategories(...args);
+  getCategoryById = (...args) => this.categoriesChild.getCategoryById(...args);
+  createCategory = (...args) => this.categoriesChild.createCategory(...args);
+  updateCategory = (...args) => this.categoriesChild.updateCategory(...args);
+  deleteCategory = (...args) => this.categoriesChild.deleteCategory(...args);
 }
 
 const notesController = new NotesController();
@@ -77,3 +86,8 @@ export const searchFolders = notesController.searchFolders;
 export const moveNoteToFolder = notesController.moveNoteToFolder;
 export const pinNote = notesController.pinNote;
 export const unpinNote = notesController.unpinNote;
+export const getCategories = notesController.getCategories;
+export const getCategoryById = notesController.getCategoryById;
+export const createCategory = notesController.createCategory;
+export const updateCategory = notesController.updateCategory;
+export const deleteCategory = notesController.deleteCategory;

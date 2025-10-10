@@ -21,6 +21,7 @@ import defineNotification from './notification.model.js';
 import defineSharedNote from './sharedNote.model.js';
 import defineGroupSharedNote from './groupSharedNote.model.js';
 import defineUserSession from './userSession.model.js';
+import defineNoteCategory from './noteCategory.model.js';
 
 const User = defineUser(sequelize, DataTypes);
 const Note = defineNote(sequelize, DataTypes);
@@ -43,6 +44,7 @@ const Notification = defineNotification(sequelize, DataTypes);
 const SharedNote = defineSharedNote(sequelize, DataTypes);
 const GroupSharedNote = defineGroupSharedNote(sequelize, DataTypes);
 const UserSession = defineUserSession(sequelize, DataTypes);
+const NoteCategory = defineNoteCategory(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
@@ -53,6 +55,12 @@ User.hasMany(NoteFolder, { foreignKey: 'userId', as: 'noteFolders' });
 NoteFolder.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 NoteFolder.hasMany(Note, { foreignKey: 'folderId', as: 'notes' });
 Note.belongsTo(NoteFolder, { foreignKey: 'folderId', as: 'folder' });
+
+// NoteCategory associations
+User.hasMany(NoteCategory, { foreignKey: 'userId', as: 'noteCategories' });
+NoteCategory.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+NoteCategory.hasMany(Note, { foreignKey: 'categoryId', as: 'notes' });
+Note.belongsTo(NoteCategory, { foreignKey: 'categoryId', as: 'category' });
 
 // UserSession associations
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
@@ -310,6 +318,7 @@ export {
   User,
   Note,
   NoteFolder,
+  NoteCategory,
   Friendship,
   Message,
   PasswordReset,

@@ -1,4 +1,4 @@
-import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote, NoteFolder } from '../../models/index.js';
+import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote, NoteFolder, NoteCategory } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
@@ -255,7 +255,10 @@ class AdminNotesChild {
 
     const { count, rows: notes } = await Note.findAndCountAll({
       where: whereClause,
-      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'], required: false }
+      ],
       order: [
         ['isPinned', 'DESC'], // Ghim notes lên đầu
         [sortBy, sortOrder]    // Sau đó sắp xếp theo tiêu chí đã chọn
@@ -285,7 +288,7 @@ class AdminNotesChild {
 
   // Create note for user (admin)
   createNoteForUser = asyncHandler(async (req, res) => {
-    const { userId, title, content, imageUrl, videoUrl, youtubeUrl, category, priority, reminderAt, folderId } = req.body;
+    const { userId, title, content, imageUrl, videoUrl, youtubeUrl, category, categoryId, priority, reminderAt, folderId } = req.body;
 
     const targetUser = await User.findByPk(userId);
     if (!targetUser) {
@@ -299,6 +302,7 @@ class AdminNotesChild {
       videoUrl: videoUrl || null,
       youtubeUrl: youtubeUrl || null,
       category,
+      categoryId: categoryId || null,
       priority,
       reminderAt: reminderAt ? new Date(reminderAt) : null,
       reminderSent: false,
@@ -307,7 +311,10 @@ class AdminNotesChild {
     });
 
     const noteWithUser = await Note.findByPk(note.id, {
-      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'], required: false }
+      ],
     });
 
     emitToUser(userId, 'admin_note_created', noteWithUser);
@@ -322,7 +329,7 @@ class AdminNotesChild {
   // Update user's note (admin)
   updateUserNote = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, isArchived, reminderAt, folderId } = req.body;
+    const { title, content, imageUrl, videoUrl, youtubeUrl, category, categoryId, priority, isArchived, reminderAt, folderId } = req.body;
 
     const note = await Note.findByPk(id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
@@ -361,14 +368,15 @@ class AdminNotesChild {
     await note.update({
       title: title !== undefined ? title : note.title,
       content: content !== undefined ? content : note.content,
-      imageUrl: newImageUrl,
-      videoUrl: newVideoUrl,
-      youtubeUrl: youtubeUrl !== undefined ? (youtubeUrl || null) : note.youtubeUrl,
+      imageUrl: imageUrl !== undefined ? imageUrl : note.imageUrl,
+      videoUrl: videoUrl !== undefined ? videoUrl : note.videoUrl,
+      youtubeUrl: youtubeUrl !== undefined ? youtubeUrl : note.youtubeUrl,
       category: category !== undefined ? category : note.category,
+      categoryId: categoryId !== undefined ? categoryId : note.categoryId,
       priority: priority !== undefined ? priority : note.priority,
       isArchived: isArchived !== undefined ? isArchived : note.isArchived,
-      folderId: folderId !== undefined ? (folderId || null) : note.folderId,
-      reminderAt: nextReminderAt,
+      reminderAt: reminderAt !== undefined ? (reminderAt ? new Date(reminderAt) : null) : note.reminderAt,
+      folderId: folderId !== undefined ? folderId : note.folderId,
       reminderSent: reminderChanged ? false : note.reminderSent,
       reminderAcknowledged: reminderChanged ? false : note.reminderAcknowledged,
     });
@@ -382,7 +390,10 @@ class AdminNotesChild {
     }
 
     const updatedNote = await Note.findByPk(note.id, {
-      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'], required: false }
+      ],
     });
 
     emitToUser(note.user.id, 'admin_note_updated', updatedNote);
@@ -779,7 +790,14 @@ class AdminNotesChild {
 
       sharedNote = await SharedNote.findByPk(sid, {
         include: [
-          { model: Note, as: 'note', include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }] },
+          { 
+            model: Note, 
+            as: 'note', 
+            include: [
+              { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+              { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+            ] 
+          },
           { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
           { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] },
         ],

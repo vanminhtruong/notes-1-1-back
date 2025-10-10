@@ -1,4 +1,4 @@
-import { Note, User, SharedNote, Group, GroupSharedNote, GroupMember } from '../../models/index.js';
+import { Note, User, SharedNote, Group, GroupSharedNote, GroupMember, NoteCategory } from '../../models/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
@@ -50,7 +50,10 @@ class NotesSharingChild {
           { 
             model: Note, 
             as: 'note',
-            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
+            include: [
+              { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+              { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+            ]
           },
           { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
           { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
@@ -108,7 +111,10 @@ class NotesSharingChild {
             model: Note, 
             as: 'note', 
             where: search ? noteWhere : undefined,
-            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
+            include: [
+              { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+              { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+            ]
           },
           { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
         ],
@@ -167,7 +173,10 @@ class NotesSharingChild {
             model: Note, 
             as: 'note', 
             where: search ? noteWhere : undefined,
-            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
+            include: [
+              { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+              { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+            ]
           },
           { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] }
         ],

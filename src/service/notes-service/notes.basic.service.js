@@ -1,4 +1,4 @@
-import { Note, User, SharedNote, GroupSharedNote, Notification } from '../../models/index.js';
+import { Note, User, SharedNote, GroupSharedNote, Notification, NoteCategory } from '../../models/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
@@ -10,7 +10,7 @@ class NotesBasicChild {
 
   createNote = async (req, res) => {
     try {
-      const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, reminderAt, sharedFromUserId, folderId } = req.body;
+      const { title, content, imageUrl, videoUrl, youtubeUrl, categoryId, priority, reminderAt, sharedFromUserId, folderId } = req.body;
       const userId = req.user.id;
 
       // If creating via canCreate permission, verify permission
@@ -34,7 +34,7 @@ class NotesBasicChild {
         imageUrl: imageUrl || null,
         videoUrl: videoUrl || null,
         youtubeUrl: youtubeUrl || null,
-        category,
+        categoryId: categoryId || null,
         priority,
         reminderAt: reminderAt ? new Date(reminderAt) : null,
         reminderSent: false,
@@ -42,12 +42,35 @@ class NotesBasicChild {
         userId,
       });
 
+      // Tăng selectionCount nếu có categoryId
+      if (categoryId) {
+        await NoteCategory.increment('selectionCount', {
+          where: { id: categoryId, userId }
+        });
+        
+        // Emit event để cập nhật danh sách categories real-time
+        const updatedCategory = await NoteCategory.findByPk(categoryId);
+        if (updatedCategory) {
+          emitToUser(userId, 'category_selection_updated', {
+            categoryId,
+            selectionCount: updatedCategory.selectionCount
+          });
+        }
+      }
+
       const noteWithUser = await Note.findByPk(note.id, {
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['id', 'name', 'email'],
-        }],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email'],
+          },
+          {
+            model: NoteCategory,
+            as: 'category',
+            attributes: ['id', 'name', 'color', 'icon'],
+          }
+        ],
       });
 
       // Emit WebSocket event
@@ -114,7 +137,7 @@ class NotesBasicChild {
 
       // Add filters
       if (category) {
-        whereClause.category = category;
+        whereClause.categoryId = parseInt(category, 10);
       }
       if (priority) {
         whereClause.priority = priority;
@@ -128,11 +151,18 @@ class NotesBasicChild {
 
       const { count, rows: notes } = await Note.findAndCountAll({
         where: whereClause,
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['id', 'name', 'email'],
-        }],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email'],
+          },
+          {
+            model: NoteCategory,
+            as: 'category',
+            attributes: ['id', 'name', 'color', 'icon'],
+          }
+        ],
         order: [
           ['isPinned', 'DESC'], // Ghim notes lên đầu
           [sortBy, sortOrder]    // Sau đó sắp xếp theo tiêu chí đã chọn
@@ -176,7 +206,7 @@ class NotesBasicChild {
           folderId: null, // Only search notes not in folders
           title: { [Op.like]: `%${searchTerm}%` }
         },
-        attributes: ['id', 'title', 'content', 'category', 'priority', 'createdAt'],
+        attributes: ['id', 'title', 'content', 'categoryId', 'priority', 'createdAt'],
         order: [['updatedAt', 'DESC']],
         limit: limit,
       });
@@ -193,7 +223,7 @@ class NotesBasicChild {
             id: { [Op.notIn]: titleIds.length > 0 ? titleIds : [-1] },
             content: { [Op.like]: `%${searchTerm}%` }
           },
-          attributes: ['id', 'title', 'content', 'category', 'priority', 'createdAt'],
+          attributes: ['id', 'title', 'content', 'categoryId', 'priority', 'createdAt'],
           order: [['updatedAt', 'DESC']],
           limit: limit - titleMatches.length,
         });
@@ -248,11 +278,18 @@ class NotesBasicChild {
 
       // Load note by id first
       const note = await Note.findByPk(id, {
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['id', 'name', 'email'],
-        }],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email'],
+          },
+          {
+            model: NoteCategory,
+            as: 'category',
+            attributes: ['id', 'name', 'color', 'icon'],
+          }
+        ],
       });
 
       if (!note) {
@@ -279,7 +316,7 @@ class NotesBasicChild {
   updateNote = async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, content, imageUrl, videoUrl, youtubeUrl, category, priority, isArchived, reminderAt } = req.body;
+      const { title, content, imageUrl, videoUrl, youtubeUrl, categoryId, priority, isArchived, reminderAt } = req.body;
       const userId = req.user.id;
 
       // Load note by id first
@@ -334,13 +371,17 @@ class NotesBasicChild {
         shouldDeleteOldVideo = true;
       }
 
+      // Lưu categoryId cũ để xử lý selectionCount
+      const oldCategoryId = note.categoryId;
+      const newCategoryId = categoryId !== undefined ? categoryId : note.categoryId;
+
       await note.update({
         title: title !== undefined ? title : note.title,
         content: content !== undefined ? content : note.content,
         imageUrl: newImageUrl,
         videoUrl: newVideoUrl,
         youtubeUrl: youtubeUrl !== undefined ? (youtubeUrl || null) : note.youtubeUrl,
-        category: category !== undefined ? category : note.category,
+        categoryId: categoryId !== undefined ? categoryId : note.categoryId,
         priority: priority !== undefined ? priority : note.priority,
         isArchived: isArchived !== undefined ? isArchived : note.isArchived,
         reminderAt: nextReminderAt,
@@ -356,6 +397,40 @@ class NotesBasicChild {
       }
       if (shouldDeleteOldVideo) {
         deleteOldFileOnUpdate(oldVideoUrl, newVideoUrl);
+      }
+
+      // Cập nhật selectionCount nếu categoryId thay đổi
+      if (categoryId !== undefined && oldCategoryId !== newCategoryId) {
+        // Giảm count của category cũ
+        if (oldCategoryId) {
+          await NoteCategory.decrement('selectionCount', {
+            where: { id: oldCategoryId, userId: note.userId }
+          });
+          
+          // Emit event cho category cũ
+          const oldCategory = await NoteCategory.findByPk(oldCategoryId);
+          if (oldCategory) {
+            emitToUser(note.userId, 'category_selection_updated', {
+              categoryId: oldCategoryId,
+              selectionCount: oldCategory.selectionCount
+            });
+          }
+        }
+        // Tăng count của category mới
+        if (newCategoryId) {
+          await NoteCategory.increment('selectionCount', {
+            where: { id: newCategoryId, userId: note.userId }
+          });
+          
+          // Emit event cho category mới
+          const newCategory = await NoteCategory.findByPk(newCategoryId);
+          if (newCategory) {
+            emitToUser(note.userId, 'category_selection_updated', {
+              categoryId: newCategoryId,
+              selectionCount: newCategory.selectionCount
+            });
+          }
+        }
       }
 
       const updatedNote = await Note.findByPk(note.id, {
@@ -435,10 +510,27 @@ class NotesBasicChild {
         deleteMultipleFiles(filesToDelete);
       }
 
-      // Store folderId before destroying
+      // Store folderId and categoryId before destroying
       const folderId = note.folderId;
+      const categoryId = note.categoryId;
 
       await note.destroy();
+
+      // Giảm selectionCount nếu note có categoryId
+      if (categoryId) {
+        await NoteCategory.decrement('selectionCount', {
+          where: { id: categoryId, userId }
+        });
+        
+        // Emit event để cập nhật danh sách categories real-time
+        const updatedCategory = await NoteCategory.findByPk(categoryId);
+        if (updatedCategory) {
+          emitToUser(userId, 'category_selection_updated', {
+            categoryId,
+            selectionCount: updatedCategory.selectionCount
+          });
+        }
+      }
 
       // Emit WebSocket event to owner's devices with folderId
       emitToUser(userId, 'note_deleted', { id: Number(id), folderId });

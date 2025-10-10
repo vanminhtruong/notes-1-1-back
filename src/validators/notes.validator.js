@@ -11,7 +11,10 @@ const validateCreateNote = (req, res, next) => {
     imageUrl: Joi.string().uri().allow(null, '').optional(),
     videoUrl: Joi.string().uri().allow(null, '').optional(),
     youtubeUrl: Joi.string().uri().allow(null, '').optional(),
-    category: Joi.string().max(50).optional().default('general'),
+    categoryId: Joi.number().integer().positive().allow(null).optional().messages({
+      'number.base': 'ID danh mục phải là số',
+      'number.positive': 'ID danh mục phải là số dương',
+    }),
     priority: Joi.string().valid('low', 'medium', 'high').optional().default('medium').messages({
       'any.only': 'Mức độ ưu tiên phải là low, medium hoặc high',
     }),
@@ -49,7 +52,10 @@ const validateUpdateNote = (req, res, next) => {
     imageUrl: Joi.string().uri().allow(null, '').optional(),
     videoUrl: Joi.string().uri().allow(null, '').optional(),
     youtubeUrl: Joi.string().uri().allow(null, '').optional(),
-    category: Joi.string().max(50).optional(),
+    categoryId: Joi.number().integer().positive().allow(null).optional().messages({
+      'number.base': 'ID danh mục phải là số',
+      'number.positive': 'ID danh mục phải là số dương',
+    }),
     priority: Joi.string().valid('low', 'medium', 'high').optional().messages({
       'any.only': 'Mức độ ưu tiên phải là low, medium hoặc high',
     }),
@@ -184,6 +190,47 @@ const validateMoveNoteToFolder = (req, res, next) => {
   next();
 };
 
+const validateCreateCategory = (req, res, next) => {
+  const schema = Joi.object({
+    name: Joi.string().min(1).max(100).required().messages({
+      'string.min': 'Tên danh mục không được để trống',
+      'string.max': 'Tên danh mục không được quá 100 ký tự',
+      'any.required': 'Tên danh mục là bắt buộc',
+    }),
+    color: Joi.string().max(20).optional().default('#3B82F6'),
+    icon: Joi.string().max(50).optional().default('Tag'),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
+const validateUpdateCategory = (req, res, next) => {
+  const schema = Joi.object({
+    name: Joi.string().min(1).max(100).optional().messages({
+      'string.min': 'Tên danh mục không được để trống',
+      'string.max': 'Tên danh mục không được quá 100 ký tự',
+    }),
+    color: Joi.string().max(20).optional(),
+    icon: Joi.string().max(50).optional(),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
 export {
   validateCreateNote,
   validateUpdateNote,
@@ -192,4 +239,6 @@ export {
   validateCreateFolder,
   validateUpdateFolder,
   validateMoveNoteToFolder,
+  validateCreateCategory,
+  validateUpdateCategory,
 };

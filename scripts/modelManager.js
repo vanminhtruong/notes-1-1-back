@@ -220,6 +220,94 @@ class ModelManager {
       allowNull: false,
       defaultValue: false,
     });
+
+    // Category support using foreign key instead of string
+    await this.ensureColumnExists('Notes', 'categoryId', {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'NoteCategories',
+        key: 'id',
+      },
+      onDelete: 'SET NULL',
+    });
+
+    // Try to remove old category column if it exists (string type)
+    try {
+      const columns = await this.qi.describeTable('Notes');
+      if (columns.category && columns.category.type.toLowerCase().includes('varchar')) {
+        console.log('Removing old category column from Notes...');
+        await this.qi.removeColumn('Notes', 'category');
+        console.log('✓ Removed old category column');
+      }
+    } catch (error) {
+      console.warn('Warning: Could not remove old category column:', error.message);
+    }
+  }
+
+  async createNoteCategoriesTable() {
+    console.log('Creating NoteCategories table if missing...');
+    await this.ensureTableExists('NoteCategories', {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+      },
+      color: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        defaultValue: '#3B82F6',
+      },
+      icon: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: 'Tag',
+      },
+      isDefault: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Users', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      selectionCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    }, [
+      { fields: ['userId'], name: 'notecategories_userid_idx' },
+      { fields: ['name'], name: 'notecategories_name_idx' },
+    ]);
+  }
+
+  async updateNoteCategoriesTable() {
+    console.log('Updating NoteCategories table...');
+    
+    // Ensure selectionCount column exists
+    await this.ensureColumnExists('NoteCategories', 'selectionCount', {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    });
   }
 
   async createNoteFoldersTable() {
@@ -757,6 +845,9 @@ class ModelManager {
       await this.updateGroupMessageTable();
       await this.updateUsersTable();
       await this.updateGroupsTable();
+      
+      // Note Categories migrations - must be before updateNotesTable
+      await this.createNoteCategoriesTable();
       
       // Note Folders migrations - must be before updateNotesTable
       await this.createNoteFoldersTable();

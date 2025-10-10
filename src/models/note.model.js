@@ -28,10 +28,13 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    category: {
-      type: DataTypes.STRING,
+    categoryId: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      defaultValue: 'general',
+      references: {
+        model: 'NoteCategories',
+        key: 'id',
+      },
     },
     priority: {
       type: DataTypes.ENUM('low', 'medium', 'high'),
@@ -86,6 +89,10 @@ export default (sequelize, DataTypes) => {
     Note.belongsTo(models.NoteFolder, {
       foreignKey: 'folderId',
       as: 'folder',
+    });
+    Note.belongsTo(models.NoteCategory, {
+      foreignKey: 'categoryId',
+      as: 'category',
     });
   };
 

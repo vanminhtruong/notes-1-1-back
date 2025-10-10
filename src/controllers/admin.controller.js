@@ -9,6 +9,7 @@ import AdminMonitorChild from '../service/admin-service/admin.monitor.service.js
 import AdminUsersChild from '../service/admin-service/admin.users.service.js';
 import AdminAuthChild from '../service/admin-service/admin.auth.service.js';
 import AdminProfileChild from '../service/admin-service/admin.profile.service.js';
+import AdminCategoriesChild from '../service/admin-service/admin.categories.service.js';
 
 // class này đã quá dài hãy tạo ra class con kế thừa để xử lý
 class AdminController {
@@ -20,6 +21,7 @@ class AdminController {
     this.usersChild = new AdminUsersChild(this);
     this.authChild = new AdminAuthChild(this);
     this.profileChild = new AdminProfileChild(this);
+    this.categoriesChild = new AdminCategoriesChild(this);
   }
 
   // Admin login (delegated)
@@ -67,6 +69,14 @@ class AdminController {
   updateAdminProfile = (...args) => this.profileChild.updateAdminProfile(...args);
   pinUserNote = (...args) => this.notesChild.pinUserNote(...args);
   unpinUserNote = (...args) => this.notesChild.unpinUserNote(...args);
+  
+  // Categories management
+  getAllCategories = (...args) => this.categoriesChild.getAllCategories(...args);
+  getCategoryDetail = (...args) => this.categoriesChild.getCategoryDetail(...args);
+  createCategoryForUser = (...args) => this.categoriesChild.createCategoryForUser(...args);
+  updateCategory = (...args) => this.categoriesChild.updateCategory(...args);
+  deleteCategory = (...args) => this.categoriesChild.deleteCategory(...args);
+  getCategoriesStats = (...args) => this.categoriesChild.getCategoriesStats(...args);
 }
 
 const adminController = new AdminController();
