@@ -48,14 +48,14 @@ class NotesBasicChild {
           where: { id: categoryId, userId }
         });
         
-        // Emit event để cập nhật danh sách categories real-time
-        const updatedCategory = await NoteCategory.findByPk(categoryId);
-        if (updatedCategory) {
-          emitToUser(userId, 'category_selection_updated', {
-            categoryId,
-            selectionCount: updatedCategory.selectionCount
-          });
+        // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
+        const category = await NoteCategory.findByPk(categoryId);
+        if (category && category.selectionCount > category.maxSelectionCount) {
+          await category.update({ maxSelectionCount: category.selectionCount });
         }
+        
+        // Emit event để Frontend fetch lại danh sách categories
+        emitToUser(userId, 'categories_reorder_needed', { action: 'create' });
       }
 
       const noteWithUser = await Note.findByPk(note.id, {
@@ -207,6 +207,14 @@ class NotesBasicChild {
           title: { [Op.like]: `%${searchTerm}%` }
         },
         attributes: ['id', 'title', 'content', 'categoryId', 'priority', 'createdAt'],
+        include: [
+          {
+            model: NoteCategory,
+            as: 'category',
+            attributes: ['id', 'name', 'color', 'icon'],
+            required: false,
+          },
+        ],
         order: [['updatedAt', 'DESC']],
         limit: limit,
       });
@@ -224,6 +232,14 @@ class NotesBasicChild {
             content: { [Op.like]: `%${searchTerm}%` }
           },
           attributes: ['id', 'title', 'content', 'categoryId', 'priority', 'createdAt'],
+          include: [
+            {
+              model: NoteCategory,
+              as: 'category',
+              attributes: ['id', 'name', 'color', 'icon'],
+              required: false,
+            },
+          ],
           order: [['updatedAt', 'DESC']],
           limit: limit - titleMatches.length,
         });
@@ -254,7 +270,12 @@ class NotesBasicChild {
           id: note.id,
           title: note.title || 'Untitled',
           snippet: snippet,
-          category: note.category,
+          category: note.category ? {
+            id: note.category.id,
+            name: note.category.name,
+            color: note.category.color,
+            icon: note.category.icon,
+          } : null,
           priority: note.priority,
           matchType: titleMatch ? 'title' : 'content',
           createdAt: note.createdAt
@@ -401,36 +422,23 @@ class NotesBasicChild {
 
       // Cập nhật selectionCount nếu categoryId thay đổi
       if (categoryId !== undefined && oldCategoryId !== newCategoryId) {
-        // Giảm count của category cũ
-        if (oldCategoryId) {
-          await NoteCategory.decrement('selectionCount', {
-            where: { id: oldCategoryId, userId: note.userId }
-          });
-          
-          // Emit event cho category cũ
-          const oldCategory = await NoteCategory.findByPk(oldCategoryId);
-          if (oldCategory) {
-            emitToUser(note.userId, 'category_selection_updated', {
-              categoryId: oldCategoryId,
-              selectionCount: oldCategory.selectionCount
-            });
-          }
-        }
-        // Tăng count của category mới
+        // KHÔNG giảm count của category cũ - logic "once hot, always hot"
+        
+        // Chỉ tăng count của category mới
         if (newCategoryId) {
           await NoteCategory.increment('selectionCount', {
             where: { id: newCategoryId, userId: note.userId }
           });
           
-          // Emit event cho category mới
-          const newCategory = await NoteCategory.findByPk(newCategoryId);
-          if (newCategory) {
-            emitToUser(note.userId, 'category_selection_updated', {
-              categoryId: newCategoryId,
-              selectionCount: newCategory.selectionCount
-            });
+          // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
+          const category = await NoteCategory.findByPk(newCategoryId);
+          if (category && category.selectionCount > category.maxSelectionCount) {
+            await category.update({ maxSelectionCount: category.selectionCount });
           }
         }
+        
+        // Emit event để Frontend fetch lại danh sách categories
+        emitToUser(note.userId, 'categories_reorder_needed', { action: 'update' });
       }
 
       const updatedNote = await Note.findByPk(note.id, {
@@ -510,27 +518,13 @@ class NotesBasicChild {
         deleteMultipleFiles(filesToDelete);
       }
 
-      // Store folderId and categoryId before destroying
+      // Store folderId before destroying
       const folderId = note.folderId;
-      const categoryId = note.categoryId;
 
       await note.destroy();
 
-      // Giảm selectionCount nếu note có categoryId
-      if (categoryId) {
-        await NoteCategory.decrement('selectionCount', {
-          where: { id: categoryId, userId }
-        });
-        
-        // Emit event để cập nhật danh sách categories real-time
-        const updatedCategory = await NoteCategory.findByPk(categoryId);
-        if (updatedCategory) {
-          emitToUser(userId, 'category_selection_updated', {
-            categoryId,
-            selectionCount: updatedCategory.selectionCount
-          });
-        }
-      }
+      // KHÔNG giảm selectionCount khi xóa note
+      // Logic "once hot, always hot" - category đã hot phải giữ nguyên vị trí
 
       // Emit WebSocket event to owner's devices with folderId
       emitToUser(userId, 'note_deleted', { id: Number(id), folderId });

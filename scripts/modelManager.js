@@ -283,6 +283,11 @@ class ModelManager {
         allowNull: false,
         defaultValue: 0,
       },
+      maxSelectionCount: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
       createdAt: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -304,6 +309,13 @@ class ModelManager {
     
     // Ensure selectionCount column exists
     await this.ensureColumnExists('NoteCategories', 'selectionCount', {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    });
+
+    // Ensure maxSelectionCount column exists
+    await this.ensureColumnExists('NoteCategories', 'maxSelectionCount', {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,

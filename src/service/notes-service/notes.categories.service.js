@@ -23,7 +23,8 @@ class NotesCategoriesChild {
       const categories = await NoteCategory.findAll({
         where: whereClause,
         order: [
-          ['selectionCount', 'DESC'], // Sắp xếp theo số lần chọn giảm dần
+          ['maxSelectionCount', 'DESC'], // Sắp xếp theo số lần chọn tối đa (giữ nguyên vị trí khi đã hot)
+          ['selectionCount', 'DESC'], // Sau đó theo số lần chọn hiện tại
           [sortBy, sortOrder]
         ],
         include: [

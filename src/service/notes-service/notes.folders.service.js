@@ -1,4 +1,4 @@
-import { NoteFolder, Note, User } from '../../models/index.js';
+import { NoteFolder, Note, User, NoteCategory } from '../../models/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
@@ -76,11 +76,18 @@ class NotesFoldersChild {
           userId,
           isArchived: false
         },
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['id', 'name', 'email', 'avatar'],
-        }],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email', 'avatar'],
+          },
+          {
+            model: NoteCategory,
+            as: 'category',
+            attributes: ['id', 'name', 'color', 'icon'],
+          }
+        ],
         order: [
           ['isPinned', 'DESC'], // Ghim notes lên đầu
           ['createdAt', 'DESC']  // Sau đó sắp xếp theo ngày tạo
@@ -263,6 +270,11 @@ class NotesFoldersChild {
             model: NoteFolder,
             as: 'folder',
             attributes: ['id', 'name', 'color', 'icon']
+          },
+          {
+            model: NoteCategory,
+            as: 'category',
+            attributes: ['id', 'name', 'color', 'icon'],
           }
         ],
         order: [['updatedAt', 'DESC']],
@@ -309,11 +321,18 @@ class NotesFoldersChild {
       await note.update({ folderId: folderId || null });
 
       const noteWithUser = await Note.findByPk(note.id, {
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['id', 'name', 'email', 'avatar'],
-        }],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email', 'avatar'],
+          },
+          {
+            model: NoteCategory,
+            as: 'category',
+            attributes: ['id', 'name', 'color', 'icon'],
+          }
+        ],
       });
 
       // Emit socket event for real-time update

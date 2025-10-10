@@ -40,6 +40,11 @@ export default (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0,
     },
+    maxSelectionCount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   });
 
   NoteCategory.associate = function(models) {

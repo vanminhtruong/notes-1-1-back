@@ -2,6 +2,8 @@ import { User } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { emitToAllAdmins, isUserOnline } from '../../socket/socketHandler.js';
 import { deleteUploadedFile, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
+import { Op } from 'sequelize';
+import bcrypt from 'bcryptjs';
 
 class AdminUsersChild {
   constructor(parent) {
@@ -27,9 +29,9 @@ class AdminUsersChild {
     const whereClause = {};
 
     if (search) {
-      whereClause[require('sequelize').Op.or] = [
-        { name: { [require('sequelize').Op.like]: `%${search}%` } },
-        { email: { [require('sequelize').Op.like]: `%${search}%` } }
+      whereClause[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } }
       ];
     }
     // Only show users with role 'user', not admin users (ignore role filter)
@@ -169,7 +171,6 @@ class AdminUsersChild {
     }
 
     // Hash password
-    const bcrypt = require('bcryptjs');
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -260,7 +261,7 @@ class AdminUsersChild {
       const existingUser = await User.findOne({ 
         where: { 
           email,
-          id: { [require('sequelize').Op.ne]: id }
+          id: { [Op.ne]: id }
         } 
       });
       if (existingUser) {

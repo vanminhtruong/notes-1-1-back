@@ -244,7 +244,6 @@ class AdminNotesChild {
       whereClause.folderId = null;
     }
     
-    if (category) whereClause.category = category;
     if (priority) whereClause.priority = priority;
     if (search) {
       whereClause[Op.or] = [
@@ -253,11 +252,26 @@ class AdminNotesChild {
       ];
     }
 
+    // Include NoteCategory với điều kiện filter theo tên nếu có
+    const categoryInclude = {
+      model: NoteCategory,
+      as: 'category',
+      attributes: ['id', 'name', 'color', 'icon'],
+      required: false
+    };
+
+    if (category) {
+      categoryInclude.where = {
+        name: { [Op.like]: `%${category}%` }
+      };
+      categoryInclude.required = true; // Chỉ lấy notes có category match
+    }
+
     const { count, rows: notes } = await Note.findAndCountAll({
       where: whereClause,
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
-        { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'], required: false }
+        categoryInclude
       ],
       order: [
         ['isPinned', 'DESC'], // Ghim notes lên đầu
@@ -310,6 +324,22 @@ class AdminNotesChild {
       userId,
     });
 
+    // Tăng selectionCount nếu có categoryId
+    if (categoryId) {
+      await NoteCategory.increment('selectionCount', {
+        where: { id: categoryId, userId }
+      });
+      
+      // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
+      const category = await NoteCategory.findByPk(categoryId);
+      if (category && category.selectionCount > category.maxSelectionCount) {
+        await category.update({ maxSelectionCount: category.selectionCount });
+      }
+      
+      // Emit event để Frontend fetch lại danh sách categories
+      emitToUser(userId, 'categories_reorder_needed', { action: 'create' });
+    }
+
     const noteWithUser = await Note.findByPk(note.id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
@@ -342,6 +372,8 @@ class AdminNotesChild {
     // Lưu giá trị cũ TRƯỚC khi update
     const oldImageUrl = note.imageUrl;
     const oldVideoUrl = note.videoUrl;
+    const oldCategoryId = note.categoryId;
+    const newCategoryId = categoryId !== undefined ? categoryId : note.categoryId;
     let shouldDeleteOldImage = false;
     let shouldDeleteOldVideo = false;
 
@@ -389,6 +421,27 @@ class AdminNotesChild {
       deleteOldFileOnUpdate(oldVideoUrl, newVideoUrl);
     }
 
+    // Cập nhật selectionCount nếu categoryId thay đổi
+    if (categoryId !== undefined && oldCategoryId !== newCategoryId) {
+      // KHÔNG giảm count của category cũ - logic "once hot, always hot"
+      
+      // Chỉ tăng count của category mới
+      if (newCategoryId) {
+        await NoteCategory.increment('selectionCount', {
+          where: { id: newCategoryId, userId: note.userId }
+        });
+        
+        // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
+        const category = await NoteCategory.findByPk(newCategoryId);
+        if (category && category.selectionCount > category.maxSelectionCount) {
+          await category.update({ maxSelectionCount: category.selectionCount });
+        }
+      }
+      
+      // Emit event để Frontend fetch lại danh sách categories
+      emitToUser(note.userId, 'categories_reorder_needed', { action: 'update' });
+    }
+
     const updatedNote = await Note.findByPk(note.id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
@@ -428,6 +481,9 @@ class AdminNotesChild {
     }
     
     await note.destroy();
+
+    // KHÔNG giảm selectionCount khi xóa note
+    // Logic "once hot, always hot" - category đã hot phải giữ nguyên vị trí
 
     emitToUser(userId, 'admin_note_deleted', { id: note.id });
     emitToAllAdmins('note_deleted_by_admin', { id: note.id, userId });

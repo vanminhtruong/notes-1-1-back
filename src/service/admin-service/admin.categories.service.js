@@ -36,6 +36,15 @@ class AdminCategoriesChild {
       whereClause.name = { [Op.like]: `%${search}%` };
     }
 
+    // Nếu filter theo userId, sort theo maxSelectionCount để giống users
+    const orderClause = userId 
+      ? [
+          ['maxSelectionCount', 'DESC'],
+          ['selectionCount', 'DESC'],
+          [sortBy, sortOrder]
+        ]
+      : [[sortBy, sortOrder]];
+
     const { count, rows: categories } = await NoteCategory.findAndCountAll({
       where: whereClause,
       include: [
@@ -45,7 +54,7 @@ class AdminCategoriesChild {
           attributes: ['id', 'name', 'email', 'avatar']
         }
       ],
-      order: [[sortBy, sortOrder]],
+      order: orderClause,
       limit: limitNum,
       offset,
     });
