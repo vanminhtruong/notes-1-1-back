@@ -899,29 +899,71 @@ class AdminNotesChild {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ' });
     }
 
-    // For group share, only message can be updated currently
+    // For group share, update permissions and message
     const gFields = {};
+    if (typeof canCreate !== 'undefined') gFields.canCreate = !!canCreate;
+    if (typeof canEdit !== 'undefined') gFields.canEdit = !!canEdit;
+    if (typeof canDelete !== 'undefined') gFields.canDelete = !!canDelete;
     if (typeof message !== 'undefined') gFields.message = message;
+    
+    console.log('📝 Admin updating GroupSharedNote permissions:', { id: sid, fields: gFields });
+    
     if (Object.keys(gFields).length > 0) {
       await groupShared.update(gFields);
+      console.log('✅ GroupSharedNote updated successfully');
     }
 
     groupShared = await GroupSharedNote.findByPk(sid, {
       include: [
-        { model: Note, as: 'note', include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }] },
-        { model: Group, as: 'group', attributes: ['id', 'name', 'avatar'] },
+        { 
+          model: Note, 
+          as: 'note', 
+          include: [
+            { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+            { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+          ] 
+        },
+        { 
+          model: Group, 
+          as: 'group', 
+          attributes: ['id', 'name', 'avatar'],
+          include: [{
+            model: GroupMember,
+            as: 'members',
+            attributes: ['userId']
+          }]
+        },
         { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] },
       ],
     });
 
+    // Emit to all group members with full permissions data
+    const permissionsPayload = { 
+      id: sid,
+      canEdit: groupShared.canEdit,
+      canDelete: groupShared.canDelete,
+      canCreate: groupShared.canCreate
+    };
+    
     try {
       if (global.io) {
-        global.io.to(`group_${groupShared.group.id}`).emit('group_shared_note_updated_by_admin', { id: sid });
-        // Emit a generic event that user/group clients may already handle
-        global.io.to(`group_${groupShared.group.id}`).emit('group_shared_note_updated', { id: sid });
+        global.io.to(`group_${groupShared.group.id}`).emit('group_shared_note_updated_by_admin', permissionsPayload);
+        global.io.to(`group_${groupShared.group.id}`).emit('group_note_permissions_updated', permissionsPayload);
       }
-    } catch {}
-    try { emitToUser(groupShared.sharedByUser.id, 'shared_note_updated_by_admin', { id: sid, isGroupShare: true }); } catch {}
+      
+      // Also emit to individual group members
+      for (const member of groupShared.group.members) {
+        emitToUser(member.userId, 'group_shared_note_updated_by_admin', permissionsPayload);
+        emitToUser(member.userId, 'group_note_permissions_updated', permissionsPayload);
+      }
+      
+      // Emit to owner/sharer
+      emitToUser(groupShared.sharedByUser.id, 'shared_note_updated_by_admin', { id: sid, isGroupShare: true });
+      emitToUser(groupShared.sharedByUser.id, 'group_note_permissions_updated', permissionsPayload);
+    } catch (e) {
+      console.error('Error emitting group shared note update:', e);
+    }
+    
     try { emitToAllAdmins('admin_shared_note_updated', { id: sid, shareType: 'group' }); } catch {}
 
     return res.json({ message: 'Cập nhật chia sẻ nhóm thành công', sharedNote: { ...groupShared.toJSON(), shareType: 'group' } });

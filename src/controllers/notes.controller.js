@@ -38,6 +38,10 @@ class NotesController {
   getSharedNotePermissions = (...args) => this.sharingChild.getSharedNotePermissions(...args);
   getCreatePermissions = (...args) => this.sharingChild.getCreatePermissions(...args);
   shareNoteToGroup = (...args) => this.sharingChild.shareNoteToGroup(...args);
+  getGroupSharedNotes = (...args) => this.sharingChild.getGroupSharedNotes(...args);
+  updateSharedNotePermissions = (...args) => this.sharingChild.updateSharedNotePermissions(...args);
+  updateGroupSharedNotePermissions = (...args) => this.sharingChild.updateGroupSharedNotePermissions(...args);
+  removeGroupSharedNote = (...args) => this.sharingChild.removeGroupSharedNote(...args);
   
   // Folder operations - delegate to foldersChild
   getFolders = (...args) => this.foldersChild.getFolders(...args);
@@ -77,6 +81,10 @@ export const getUsers = notesController.getUsers;
 export const getSharedNotePermissions = notesController.getSharedNotePermissions;
 export const getCreatePermissions = notesController.getCreatePermissions;
 export const shareNoteToGroup = notesController.shareNoteToGroup;
+export const getGroupSharedNotes = notesController.getGroupSharedNotes;
+export const updateSharedNotePermissions = notesController.updateSharedNotePermissions;
+export const updateGroupSharedNotePermissions = notesController.updateGroupSharedNotePermissions;
+export const removeGroupSharedNote = notesController.removeGroupSharedNote;
 export const getFolders = notesController.getFolders;
 export const getFolderById = notesController.getFolderById;
 export const createFolder = notesController.createFolder;

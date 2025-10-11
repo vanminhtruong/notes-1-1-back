@@ -335,12 +335,45 @@ class NotesSharingChild {
       });
 
       if (!sharedNote) {
-        console.log(`❌ No active shared note found for note ${noteId}, user ${userId}`);
-        // Return no permissions instead of 404
+        console.log(`❌ No active 1-1 shared note found for note ${noteId}, user ${userId}`);
+        
+        // Check group shared note permissions
+        const groupSharedNote = await GroupSharedNote.findOne({
+          where: {
+            noteId: noteId,
+            isActive: true
+          },
+          include: [{
+            model: Group,
+            as: 'group',
+            include: [{
+              model: GroupMember,
+              as: 'members',
+              where: { userId },
+              attributes: ['id']
+            }]
+          }],
+          attributes: ['id', 'canEdit', 'canDelete', 'canCreate']
+        });
+
+        if (!groupSharedNote) {
+          console.log(`❌ No active group shared note found for note ${noteId}, user ${userId}`);
+          return res.json({
+            canEdit: false,
+            canDelete: false,
+            canCreate: false,
+            isShared: false
+          });
+        }
+
+        console.log(`✅ Found group shared note permissions: canEdit=${groupSharedNote.canEdit}, canDelete=${groupSharedNote.canDelete}, canCreate=${groupSharedNote.canCreate}`);
         return res.json({
-          canEdit: false,
-          canDelete: false,
-          isShared: false
+          canEdit: groupSharedNote.canEdit,
+          canDelete: groupSharedNote.canDelete,
+          canCreate: groupSharedNote.canCreate,
+          isShared: true,
+          isGroupShared: true,
+          groupSharedNoteId: groupSharedNote.id
         });
       }
 
@@ -393,37 +426,133 @@ class NotesSharingChild {
     }
   };
 
+  // Get group shared notes (notes shared in groups I'm a member of)
+  getGroupSharedNotes = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { 
+        page = 1, 
+        limit = 10, 
+        search,
+        sortBy = 'sharedAt',
+        sortOrder = 'DESC'
+      } = req.query;
+
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      // Find all groups where user is a member
+      const userGroups = await GroupMember.findAll({
+        where: { userId },
+        attributes: ['groupId']
+      });
+
+      const groupIds = userGroups.map(gm => gm.groupId);
+
+      if (groupIds.length === 0) {
+        return res.json({
+          groupSharedNotes: [],
+          pagination: {
+            total: 0,
+            page: pageNum,
+            limit: limitNum,
+            totalPages: 0,
+          },
+        });
+      }
+
+      const whereClause = { 
+        groupId: { [Op.in]: groupIds },
+        isActive: true 
+      };
+
+      // Search in note title or content
+      let noteWhere = {};
+      if (search) {
+        noteWhere = {
+          [Op.or]: [
+            { title: { [Op.like]: `%${search}%` } },
+            { content: { [Op.like]: `%${search}%` } },
+          ]
+        };
+      }
+
+      const { count, rows: groupSharedNotes } = await GroupSharedNote.findAndCountAll({
+        where: whereClause,
+        include: [
+          { 
+            model: Note, 
+            as: 'note',
+            where: search ? noteWhere : undefined,
+            include: [
+              { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+              { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+            ]
+          },
+          { model: Group, as: 'group', attributes: ['id', 'name', 'avatar'] },
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
+        ],
+        order: [[sortBy, sortOrder]],
+        limit: limitNum,
+        offset,
+      });
+
+      res.json({
+        groupSharedNotes,
+        pagination: {
+          total: count,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(count / limitNum),
+        },
+      });
+    } catch (error) {
+      console.error('Error getting group shared notes:', error);
+      res.status(400).json({ message: error.message });
+    }
+  };
+
   // Share a note with a group
   shareNoteToGroup = async (req, res) => {
     try {
       const { id } = req.params; // note id
-      const { groupId, message, groupMessageId } = req.body;
+      const { groupId, message, groupMessageId, canEdit = false, canDelete = false, canCreate = false } = req.body;
       const sharedByUserId = req.user.id;
 
       // Check if note exists and belongs to the user
       const note = await Note.findOne({ 
         where: { id, userId: sharedByUserId },
-        include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }]
+        include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
       });
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú hoặc bạn không có quyền chia sẻ ghi chú này' });
       }
 
-      // Check if target group exists and user is a member
+      // Check if target group exists and user is a member, and get all members
       const group = await Group.findByPk(groupId, {
         attributes: ['id', 'name', 'avatar'],
         include: [{
           model: GroupMember,
           as: 'members',
-          where: { userId: sharedByUserId },
-          required: true,
-          attributes: []
+          attributes: ['userId', 'role'],
+          include: [{
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email', 'avatar']
+          }]
         }]
       });
 
       if (!group) {
-        return res.status(404).json({ message: 'Không tìm thấy nhóm hoặc bạn không phải thành viên của nhóm này' });
+        return res.status(404).json({ message: 'Không tìm thấy nhóm' });
+      }
+
+      // Check if user is a member
+      const isMember = group.members.some(m => m.userId === sharedByUserId);
+      if (!isMember) {
+        return res.status(403).json({ message: 'Bạn không phải thành viên của nhóm này' });
       }
 
       // Check if already shared to this group
@@ -435,11 +564,14 @@ class NotesSharingChild {
         return res.status(400).json({ message: 'Ghi chú đã được chia sẻ trong nhóm này' });
       }
 
-      // Create group shared note
+      // Create group shared note with permissions
       const groupSharedNote = await GroupSharedNote.create({
         noteId: id,
         groupId,
         sharedByUserId,
+        canEdit,
+        canDelete,
+        canCreate,
         message,
         groupMessageId, // Store the group message ID for deletion tracking
         isActive: true
@@ -451,14 +583,23 @@ class NotesSharingChild {
           { 
             model: Note, 
             as: 'note',
-            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }]
+            include: [
+              { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+              { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+            ]
           },
           { model: Group, as: 'group', attributes: ['id', 'name', 'avatar'] },
-          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
         ]
       });
 
-      // Emit real-time events
+      // Emit real-time events to all group members
+      console.log(`🔔 Emitting group_note_shared event to ${group.members.length} group members`);
+      for (const member of group.members) {
+        emitToUser(member.userId, 'group_note_shared', completeGroupSharedNote);
+      }
+
+      // Emit to admins for monitoring
       emitToAllAdmins('user_group_shared_note_created', completeGroupSharedNote);
 
       res.status(201).json({
@@ -467,6 +608,188 @@ class NotesSharingChild {
       });
     } catch (error) {
       console.error('Error sharing note to group:', error);
+      res.status(400).json({ message: error.message });
+    }
+  };
+
+  // Update group shared note permissions
+  updateGroupSharedNotePermissions = async (req, res) => {
+    try {
+      const { id } = req.params; // groupSharedNoteId
+      const { canEdit, canDelete, canCreate } = req.body;
+      const userId = req.user.id;
+
+      const groupSharedNote = await GroupSharedNote.findByPk(id, {
+        include: [
+          { model: Group, as: 'group', 
+            include: [{
+              model: GroupMember,
+              as: 'members',
+              attributes: ['userId', 'role'],
+              include: [{
+                model: User,
+                as: 'user',
+                attributes: ['id', 'name', 'email', 'avatar']
+              }]
+            }]
+          },
+          { 
+            model: Note, 
+            as: 'note',
+            include: [
+              { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+              { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+            ]
+          },
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
+        ]
+      });
+
+      if (!groupSharedNote) {
+        return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ nhóm' });
+      }
+
+      // Only the person who shared can update permissions
+      if (groupSharedNote.sharedByUserId !== userId) {
+        return res.status(403).json({ message: 'Chỉ người chia sẻ mới có quyền cập nhật permissions' });
+      }
+
+      // Update permissions
+      await groupSharedNote.update({
+        canEdit: canEdit !== undefined ? canEdit : groupSharedNote.canEdit,
+        canDelete: canDelete !== undefined ? canDelete : groupSharedNote.canDelete,
+        canCreate: canCreate !== undefined ? canCreate : groupSharedNote.canCreate,
+      });
+
+      // Reload with full data
+      await groupSharedNote.reload();
+
+      // Emit real-time events to all group members
+      console.log(`🔔 Emitting group_note_permissions_updated event to ${groupSharedNote.group.members.length} group members`);
+      for (const member of groupSharedNote.group.members) {
+        emitToUser(member.userId, 'group_note_permissions_updated', groupSharedNote);
+      }
+
+      // Emit to admins for monitoring
+      emitToAllAdmins('user_group_shared_note_permissions_updated', groupSharedNote);
+
+      res.json({
+        message: 'Cập nhật permissions thành công',
+        groupSharedNote
+      });
+    } catch (error) {
+      console.error('Error updating group shared note permissions:', error);
+      res.status(400).json({ message: error.message });
+    }
+  };
+
+  // Update individual shared note permissions
+  updateSharedNotePermissions = async (req, res) => {
+    try {
+      const { id } = req.params; // sharedNoteId
+      const { canEdit, canDelete, canCreate } = req.body;
+      const userId = req.user.id;
+
+      const sharedNote = await SharedNote.findByPk(id, {
+        include: [
+          { 
+            model: Note, 
+            as: 'note',
+            include: [
+              { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
+              { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'] }
+            ]
+          },
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] },
+          { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] }
+        ]
+      });
+
+      if (!sharedNote) {
+        return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ' });
+      }
+
+      // Only the person who shared can update permissions
+      if (sharedNote.sharedByUserId !== userId) {
+        return res.status(403).json({ message: 'Chỉ người chia sẻ mới có quyền cập nhật permissions' });
+      }
+
+      // Update permissions
+      await sharedNote.update({
+        canEdit: canEdit !== undefined ? canEdit : sharedNote.canEdit,
+        canDelete: canDelete !== undefined ? canDelete : sharedNote.canDelete,
+        canCreate: canCreate !== undefined ? canCreate : sharedNote.canCreate,
+      });
+
+      // Reload with full data
+      await sharedNote.reload();
+
+      // Emit real-time events to both users
+      console.log(`🔔 Emitting shared_note_permissions_updated event to users`);
+      emitToUser(sharedNote.sharedByUserId, 'shared_note_permissions_updated', sharedNote);
+      emitToUser(sharedNote.sharedWithUserId, 'shared_note_permissions_updated', sharedNote);
+
+      // Emit to admins for monitoring
+      emitToAllAdmins('user_shared_note_permissions_updated', sharedNote);
+
+      res.json({
+        message: 'Cập nhật permissions thành công',
+        sharedNote
+      });
+    } catch (error) {
+      console.error('Error updating shared note permissions:', error);
+      res.status(400).json({ message: error.message });
+    }
+  };
+
+  // Remove/delete group shared note (only owner can delete)
+  removeGroupSharedNote = async (req, res) => {
+    try {
+      const { id } = req.params; // groupSharedNoteId
+      const userId = req.user.id;
+
+      const groupSharedNote = await GroupSharedNote.findByPk(id, {
+        include: [
+          { 
+            model: Group, 
+            as: 'group',
+            include: [{
+              model: GroupMember,
+              as: 'members',
+              attributes: ['userId'],
+            }]
+          },
+          { model: Note, as: 'note' },
+          { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
+        ]
+      });
+
+      if (!groupSharedNote) {
+        return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ nhóm' });
+      }
+
+      // Only the person who shared can delete
+      if (groupSharedNote.sharedByUserId !== userId) {
+        return res.status(403).json({ message: 'Chỉ người chia sẻ mới có quyền xóa' });
+      }
+
+      // Delete the group shared note
+      await groupSharedNote.destroy();
+
+      // Emit real-time events to all group members
+      console.log(`🔔 Emitting group_note_removed event to ${groupSharedNote.group.members.length} group members`);
+      for (const member of groupSharedNote.group.members) {
+        emitToUser(member.userId, 'group_note_removed', { id: groupSharedNote.id });
+      }
+
+      // Emit to admins for monitoring
+      emitToAllAdmins('user_group_shared_note_removed', { id: groupSharedNote.id });
+
+      res.json({
+        message: 'Đã xóa ghi chú chia sẻ nhóm thành công'
+      });
+    } catch (error) {
+      console.error('Error removing group shared note:', error);
       res.status(400).json({ message: error.message });
     }
   };

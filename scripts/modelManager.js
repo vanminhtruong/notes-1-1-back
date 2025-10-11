@@ -541,6 +541,27 @@ class ModelManager {
       },
       onDelete: 'SET NULL',
     });
+
+    // Ensure canEdit column exists (permissions for group members)
+    await this.ensureColumnExists('GroupSharedNotes', 'canEdit', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
+
+    // Ensure canDelete column exists (permissions for group members)
+    await this.ensureColumnExists('GroupSharedNotes', 'canDelete', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
+
+    // Ensure canCreate column exists (permissions for group members to create new notes)
+    await this.ensureColumnExists('GroupSharedNotes', 'canCreate', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    });
   }
 
   async updateUsersTable() {

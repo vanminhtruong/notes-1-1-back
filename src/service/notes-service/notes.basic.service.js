@@ -1,4 +1,4 @@
-import { Note, User, SharedNote, GroupSharedNote, Notification, NoteCategory } from '../../models/index.js';
+import { Note, User, SharedNote, NoteCategory, NoteFolder, GroupSharedNote, Group, GroupMember, GroupMessage, Message } from '../../models/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
@@ -13,8 +13,10 @@ class NotesBasicChild {
       const { title, content, imageUrl, videoUrl, youtubeUrl, categoryId, priority, reminderAt, sharedFromUserId, folderId } = req.body;
       const userId = req.user.id;
 
-      // If creating via canCreate permission, verify permission
+      // If creating via canCreate permission, verify permission from SharedNote or GroupSharedNote
       if (sharedFromUserId) {
+        // Check 1-1 shared note permission
+        let hasPermission = false;
         const permission = await SharedNote.findOne({
           where: { 
             sharedByUserId: sharedFromUserId,
@@ -23,7 +25,31 @@ class NotesBasicChild {
             isActive: true
           }
         });
-        if (!permission) {
+        if (permission) {
+          hasPermission = true;
+        } else {
+          // Check group shared note permission
+          const groupPermission = await GroupSharedNote.findOne({
+            where: { 
+              sharedByUserId: sharedFromUserId,
+              canCreate: true,
+              isActive: true
+            },
+            include: [{
+              model: Group,
+              as: 'group',
+              include: [{
+                model: GroupMember,
+                as: 'members',
+                where: { userId },
+                attributes: ['id']
+              }]
+            }]
+          });
+          hasPermission = !!groupPermission;
+        }
+        
+        if (!hasPermission) {
           return res.status(403).json({ message: 'Bạn không có quyền tạo ghi chú' });
         }
       }
@@ -317,14 +343,34 @@ class NotesBasicChild {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
       }
 
-      // Permission: owner OR shared recipient (read-only is fine)
+      // Permission: owner OR shared recipient OR group member
       if (note.userId !== userId) {
+        // Check 1-1 shared note
         const shared = await SharedNote.findOne({
           where: { noteId: id, sharedWithUserId: userId, isActive: true },
           attributes: ['id']
         });
+        
         if (!shared) {
-          return res.status(403).json({ message: 'Bạn không có quyền xem ghi chú này' });
+          // Check group shared note
+          const groupShared = await GroupSharedNote.findOne({
+            where: { noteId: id, isActive: true },
+            include: [{
+              model: Group,
+              as: 'group',
+              include: [{
+                model: GroupMember,
+                as: 'members',
+                where: { userId },
+                attributes: ['id']
+              }]
+            }],
+            attributes: ['id']
+          });
+          
+          if (!groupShared) {
+            return res.status(403).json({ message: 'Bạn không có quyền xem ghi chú này' });
+          }
         }
       }
 
@@ -347,16 +393,35 @@ class NotesBasicChild {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
       }
 
-      // Permission: owner OR shared recipient with canEdit
+      // Permission: owner OR shared recipient with canEdit OR group member with canEdit
       let canEditByUser = false;
       if (note.userId === userId) {
         canEditByUser = true;
       } else {
+        // Check 1-1 shared note permission
         const sharedPerm = await SharedNote.findOne({
           where: { noteId: id, sharedWithUserId: userId, isActive: true, canEdit: true },
           attributes: ['id']
         });
-        canEditByUser = !!sharedPerm;
+        if (sharedPerm) {
+          canEditByUser = true;
+        } else {
+          // Check group shared note permission
+          const groupSharedPerm = await GroupSharedNote.findOne({
+            where: { noteId: id, isActive: true, canEdit: true },
+            include: [{
+              model: Group,
+              as: 'group',
+              include: [{
+                model: GroupMember,
+                as: 'members',
+                where: { userId },
+                attributes: ['id']
+              }]
+            }]
+          });
+          canEditByUser = !!groupSharedPerm;
+        }
       }
 
       if (!canEditByUser) {
@@ -452,7 +517,7 @@ class NotesBasicChild {
       // Emit WebSocket event to owner
       emitToUser(note.userId, 'note_updated', updatedNote);
       
-      // Emit to all shared note receivers
+      // Emit to all shared note receivers (1-1)
       try {
         // Emit to shared users about the update
         const shares = await SharedNote.findAll({
@@ -468,6 +533,30 @@ class NotesBasicChild {
         }
       } catch (e) {
         console.error('Error emitting note_updated to shared users:', e);
+      }
+
+      // Emit to all group members
+      try {
+        const groupShares = await GroupSharedNote.findAll({
+          where: { noteId: note.id, isActive: true },
+          include: [{
+            model: Group,
+            as: 'group',
+            include: [{
+              model: GroupMember,
+              as: 'members',
+              attributes: ['userId']
+            }]
+          }]
+        });
+        for (const groupShare of groupShares) {
+          // Emit to all group members
+          for (const member of groupShare.group.members) {
+            emitToUser(member.userId, 'note_updated', updatedNote);
+          }
+        }
+      } catch (e) {
+        console.error('Error emitting note_updated to group members:', e);
       }
       
       // Emit to all admins for real-time admin panel updates
@@ -487,17 +576,63 @@ class NotesBasicChild {
       const { id } = req.params;
       const userId = req.user.id;
 
-      const note = await Note.findOne({ where: { id, userId } });
+      // Load note first
+      const note = await Note.findByPk(id);
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
       }
 
+      // Permission: owner OR shared recipient with canDelete OR group member with canDelete
+      let canDeleteByUser = false;
+      if (note.userId === userId) {
+        canDeleteByUser = true;
+      } else {
+        // Check 1-1 shared note permission
+        const sharedPerm = await SharedNote.findOne({
+          where: { noteId: id, sharedWithUserId: userId, isActive: true, canDelete: true },
+          attributes: ['id']
+        });
+        if (sharedPerm) {
+          canDeleteByUser = true;
+        } else {
+          // Check group shared note permission
+          const groupSharedPerm = await GroupSharedNote.findOne({
+            where: { noteId: id, isActive: true, canDelete: true },
+            include: [{
+              model: Group,
+              as: 'group',
+              include: [{
+                model: GroupMember,
+                as: 'members',
+                where: { userId },
+                attributes: ['id']
+              }]
+            }]
+          });
+          canDeleteByUser = !!groupSharedPerm;
+        }
+      }
+
+      if (!canDeleteByUser) {
+        return res.status(403).json({ message: 'Bạn không có quyền xóa ghi chú này' });
+      }
+
       // Before deleting note, collect all shares to notify receivers and remove share rows
-      const shares = await SharedNote.findAll({ where: { noteId: id } });
+      const shares = await SharedNote.findAll({ 
+        where: { noteId: id },
+        attributes: ['id', 'noteId', 'messageId', 'sharedWithUserId', 'sharedByUserId']
+      });
+      
+      const messageIdsToDelete = [];
       // Emit to each receiver to remove the shared message in realtime and cleanup share rows
       for (const share of shares) {
         try {
+          // Collect messageId for deletion
+          if (share.messageId) {
+            messageIdsToDelete.push(share.messageId);
+          }
+          
           // Emit to receiver and to owner as well for multi-device sync
           const payload = { id: share.id, noteId: id, messageId: share.messageId };
           emitToUser(share.sharedWithUserId, 'shared_note_removed', payload);
@@ -507,8 +642,54 @@ class NotesBasicChild {
           // ignore
         }
       }
+      
       // Hard delete share records
       await SharedNote.destroy({ where: { noteId: id } });
+      
+      // Delete Messages containing this note (1-1 chat)
+      if (messageIdsToDelete.length > 0) {
+        await Message.destroy({ where: { id: messageIdsToDelete } });
+      }
+
+      // Before deleting note, also notify group members and delete group messages
+      const groupShares = await GroupSharedNote.findAll({
+        where: { noteId: id },
+        include: [{
+          model: Group,
+          as: 'group',
+          include: [{
+            model: GroupMember,
+            as: 'members',
+            attributes: ['userId']
+          }]
+        }],
+        attributes: ['id', 'groupMessageId', 'noteId']
+      });
+      
+      const groupMessageIdsToDelete = [];
+      for (const groupShare of groupShares) {
+        try {
+          // Collect groupMessageId for deletion
+          if (groupShare.groupMessageId) {
+            groupMessageIdsToDelete.push(groupShare.groupMessageId);
+          }
+          
+          // Emit to all group members
+          for (const member of groupShare.group.members) {
+            emitToUser(member.userId, 'group_note_removed', { id: groupShare.id });
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      
+      // Hard delete group share records
+      await GroupSharedNote.destroy({ where: { noteId: id } });
+      
+      // Delete GroupMessages containing this note
+      if (groupMessageIdsToDelete.length > 0) {
+        await GroupMessage.destroy({ where: { id: groupMessageIdsToDelete } });
+      }
 
       // Xóa các file liên quan đến note
       const filesToDelete = [];
@@ -527,10 +708,15 @@ class NotesBasicChild {
       // Logic "once hot, always hot" - category đã hot phải giữ nguyên vị trí
 
       // Emit WebSocket event to owner's devices with folderId
-      emitToUser(userId, 'note_deleted', { id: Number(id), folderId });
+      emitToUser(note.userId, 'note_deleted', { id: Number(id), folderId });
+      
+      // If deleter is not owner, also emit to deleter
+      if (userId !== note.userId) {
+        emitToUser(userId, 'note_deleted', { id: Number(id), folderId });
+      }
       
       // Emit to all admins for real-time admin panel updates
-      emitToAllAdmins('user_note_deleted', { id: note.id, userId, folderId });
+      emitToAllAdmins('user_note_deleted', { id: note.id, userId: note.userId, folderId });
 
       res.json({ message: 'Xóa ghi chú thành công' });
     } catch (error) {

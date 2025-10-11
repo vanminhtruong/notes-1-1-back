@@ -33,9 +33,13 @@ router.delete('/categories/:id', notesController.deleteCategory);
 // Sharing routes - Must be before /:id to avoid conflict
 router.get('/shared/with-me', notesController.getSharedWithMe);
 router.get('/shared/by-me', notesController.getSharedByMe);
+router.get('/shared/groups', notesController.getGroupSharedNotes);
 router.get('/shared/permissions/:noteId', notesController.getSharedNotePermissions);
 router.get('/shared/create-permissions', notesController.getCreatePermissions);
 router.delete('/shared/:id', notesController.removeSharedNote);
+router.delete('/shared/groups/:id', notesController.removeGroupSharedNote);
+router.put('/shared/:id/permissions', notesController.updateSharedNotePermissions);
+router.put('/shared/groups/:id/permissions', notesController.updateGroupSharedNotePermissions);
 
 // Note by ID and operations - Must be after specific routes
 router.get('/:id', notesController.getNoteById);

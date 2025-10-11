@@ -119,6 +119,9 @@ const validateShareNoteToGroup = (req, res, next) => {
       'number.base': 'Group Message ID phải là số',
       'number.positive': 'Group Message ID phải là số dương',
     }),
+    canEdit: Joi.boolean().optional().default(false),
+    canDelete: Joi.boolean().optional().default(false),
+    canCreate: Joi.boolean().optional().default(false),
   });
 
   const { error } = schema.validate(req.body);

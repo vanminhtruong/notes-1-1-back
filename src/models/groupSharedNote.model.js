@@ -29,6 +29,18 @@ export default (sequelize, DataTypes) => {
         key: 'id',
       },
     },
+    canEdit: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    canDelete: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    canCreate: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     message: {
       type: DataTypes.TEXT,
       allowNull: true,
