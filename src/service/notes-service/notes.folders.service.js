@@ -318,7 +318,14 @@ class NotesFoldersChild {
         }
       }
 
-      await note.update({ folderId: folderId || null });
+      // When moving to a folder, automatically unarchive the note
+      // When removing from folder (folderId = null), keep the current archived state
+      const updateData = { folderId: folderId || null };
+      if (folderId) {
+        updateData.isArchived = false;
+      }
+
+      await note.update(updateData);
 
       const noteWithUser = await Note.findByPk(note.id, {
         include: [
