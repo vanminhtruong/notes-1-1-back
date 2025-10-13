@@ -87,7 +87,7 @@ export default (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'light',
       validate: {
-        isIn: [['light', 'dark']],
+        isIn: [['light', 'dark', 'dark-black']],
       },
     },
     language: {

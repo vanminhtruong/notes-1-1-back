@@ -6,7 +6,7 @@ class SettingsAppearanceChild {
   // GET /api/v1/settings/theme
   getTheme = async (req, res) => {
     const user = req.user;
-    const mode = user.theme === 'dark' ? 'dark' : 'light';
+    const mode = user.theme || 'light';
     try {
       res.cookie('theme', mode, {
         httpOnly: false,
@@ -19,12 +19,12 @@ class SettingsAppearanceChild {
     return res.json({ mode });
   };
 
-  // PUT /api/v1/settings/theme { mode: 'light' | 'dark' }
+  // PUT /api/v1/settings/theme { mode: 'light' | 'dark' | 'dark-black' }
   updateTheme = async (req, res) => {
     const user = req.user;
     const { mode } = req.body || {};
-    if (mode !== 'light' && mode !== 'dark') {
-      return res.status(400).json({ message: "Invalid payload: mode must be 'light' or 'dark'" });
+    if (mode !== 'light' && mode !== 'dark' && mode !== 'dark-black') {
+      return res.status(400).json({ message: "Invalid payload: mode must be 'light', 'dark', or 'dark-black'" });
     }
     user.theme = mode;
     await user.save();
