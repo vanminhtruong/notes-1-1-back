@@ -246,26 +246,32 @@ class ChatMessagesChild {
       ]
     });
 
-    // Persist a notification ONLY for the receiver so bell feed shows incoming messages for them
-    try {
-      const notif = await Notification.create({
-        userId: receiverId,
-        type: 'message',
-        fromUserId: senderId,
-        metadata: { messageId: message.id, otherUserId: senderId },
-        isRead: false,
-      });
-      // Cleanup legacy sender-side 'message' notifications created by previous versions
+    // Response immediately for best UX
+    res.status(201).json({ success: true, data: messageWithData });
+
+    // Perform all socket and notification operations asynchronously (fire and forget)
+    setImmediate(async () => {
       try {
-        await Notification.destroy({ where: { userId: senderId, type: 'message', fromUserId: senderId } });
-      } catch {}
-      // Emit admin realtime to refresh notification tab in admin user activity
-      try {
-        emitToAllAdmins && emitToAllAdmins('admin_notification_created', { userId: receiverId, type: notif.type });
-      } catch {}
-    } catch (e) {
-      // non-blocking
-    }
+        // Persist a notification ONLY for the receiver so bell feed shows incoming messages for them
+        const notif = await Notification.create({
+          userId: receiverId,
+          type: 'message',
+          fromUserId: senderId,
+          metadata: { messageId: message.id, otherUserId: senderId },
+          isRead: false,
+        });
+        // Cleanup legacy sender-side 'message' notifications created by previous versions
+        try {
+          await Notification.destroy({ where: { userId: senderId, type: 'message', fromUserId: senderId } });
+        } catch {}
+        // Emit admin realtime to refresh notification tab in admin user activity
+        try {
+          emitToAllAdmins && emitToAllAdmins('admin_notification_created', { userId: receiverId, type: notif.type });
+        } catch {}
+      } catch (e) {
+        console.error('Error creating notification:', e);
+      }
+    });
 
     const io = req.app.get('io');
     if (io) {
@@ -304,14 +310,22 @@ class ChatMessagesChild {
       const isReceiverOnline = isUserOnline(receiverId);
       const deliveryStatus = isReceiverOnline ? 'delivered' : 'sent';
       
-      if (isReceiverOnline) {
-        await Message.update({ status: 'delivered' }, { where: { id: message.id } });
-      }
-      
+      // Emit socket events immediately for real-time chat
       io.to(`user_${receiverId}`).emit('new_message', {
         ...messageData,
         status: deliveryStatus
       });
+
+      // Update delivery status asynchronously
+      if (isReceiverOnline) {
+        setImmediate(async () => {
+          try {
+            await Message.update({ status: 'delivered' }, { where: { id: message.id } });
+          } catch (e) {
+            console.error('Error updating message status:', e);
+          }
+        });
+      }
 
       io.to(`user_${senderId}`).emit('new_message', {
         ...messageData,
@@ -331,28 +345,24 @@ class ChatMessagesChild {
       }
     }
 
-    // Emit to all admins for monitoring UI
-    try {
-      const adminPayload = {
-        id: messageWithData.id,
-        senderId,
-        receiverId,
-        content: messageWithData.content,
-        messageType: messageWithData.messageType,
-        createdAt: messageWithData.createdAt,
-        senderName: messageWithData.sender?.name,
-        receiverName: messageWithData.receiver?.name,
-        replyToMessageId: messageWithData.replyToMessageId || null,
-      };
-      emitToAllAdmins && emitToAllAdmins('admin_dm_created', adminPayload);
-    } catch (e) {
-      // no-op for admin emit errors
-    }
-
-    res.status(201).json({
-      success: true,
-      message: 'Message sent successfully',
-      data: messageWithData
+    // Emit to all admins for monitoring UI (async)
+    setImmediate(async () => {
+      try {
+        const adminPayload = {
+          id: messageWithData.id,
+          senderId,
+          receiverId,
+          content: messageWithData.content,
+          messageType: messageWithData.messageType,
+          createdAt: messageWithData.createdAt,
+          senderName: messageWithData.sender?.name,
+          receiverName: messageWithData.receiver?.name,
+          replyToMessageId: messageWithData.replyToMessageId || null,
+        };
+        emitToAllAdmins && emitToAllAdmins('admin_dm_created', adminPayload);
+      } catch (e) {
+        // no-op for admin emit errors
+      }
     });
   });
 

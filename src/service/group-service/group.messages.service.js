@@ -237,51 +237,64 @@ class GroupMessagesChild {
         replyToMessage: replyPayload,
       };
       
-      // Check which members are online to update status
-      let hasOnlineMembers = false;
-      
+      // Emit to all members immediately for real-time chat
       for (const uid of members) {
         if (uid !== senderId) {
           io.to(`user_${uid}`).emit('group_message', payload);
-          if (isUserOnline(uid)) {
-            hasOnlineMembers = true;
-          }
         }
       }
 
       // Also emit to sender to ensure real-time append on their client
       io.to(`user_${senderId}`).emit('group_message', payload);
       
-      // Update message status to delivered if any member is online
-      if (hasOnlineMembers) {
-        await GroupMessage.update({ status: 'delivered' }, { where: { id: msg.id } });
-        io.to(`user_${senderId}`).emit('group_message_delivered', {
-          messageId: msg.id,
-          groupId: Number(groupId),
-          status: 'delivered'
-        });
-      }
+      // Check online status and update asynchronously
+      setImmediate(async () => {
+        try {
+          let hasOnlineMembers = false;
+          for (const uid of members) {
+            if (uid !== senderId && isUserOnline(uid)) {
+              hasOnlineMembers = true;
+              break;
+            }
+          }
+          
+          // Update message status to delivered if any member is online
+          if (hasOnlineMembers) {
+            await GroupMessage.update({ status: 'delivered' }, { where: { id: msg.id } });
+            io.to(`user_${senderId}`).emit('group_message_delivered', {
+              messageId: msg.id,
+              groupId: Number(groupId),
+              status: 'delivered'
+            });
+          }
+        } catch (e) {
+          console.error('Error updating group message status:', e);
+        }
+      });
     }
 
-    // Emit to all admins for monitoring UI
-    try {
-      const adminPayload = {
-        id: messageWithData.id,
-        groupId: Number(groupId),
-        senderId,
-        content: messageWithData.content,
-        messageType: messageWithData.messageType,
-        createdAt: messageWithData.createdAt,
-        senderName: messageWithData.sender?.name,
-        senderAvatar: messageWithData.sender?.avatar,
-        replyToMessageId: messageWithData.replyToMessageId || null,
-      };
-      emitToAllAdmins && emitToAllAdmins('admin_group_message_created', adminPayload);
-    } catch (e) {
-      // no-op for admin emit errors
-    }
-
+    // Response immediately for best UX
     res.status(201).json({ success: true, data: messageWithData });
+
+    // Emit to all admins for monitoring UI (async)
+    setImmediate(async () => {
+      try {
+        const adminPayload = {
+          id: messageWithData.id,
+          groupId: Number(groupId),
+          senderId,
+          content: messageWithData.content,
+          messageType: messageWithData.messageType,
+          createdAt: messageWithData.createdAt,
+          senderName: messageWithData.sender?.name,
+          senderAvatar: messageWithData.sender?.avatar,
+          replyToMessageId: messageWithData.replyToMessageId || null,
+        };
+        emitToAllAdmins && emitToAllAdmins('admin_group_message_created', adminPayload);
+      } catch (e) {
+        // no-op for admin emit errors
+      }
+    });
   });
 
   reactGroupMessage = asyncHandler(async (req, res) => {

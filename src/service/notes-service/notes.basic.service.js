@@ -54,6 +54,7 @@ class NotesBasicChild {
         }
       }
 
+      // Create note with includes to avoid additional query
       const note = await Note.create({
         title,
         content,
@@ -66,24 +67,22 @@ class NotesBasicChild {
         reminderSent: false,
         folderId: folderId || null,
         userId,
+      }, {
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email'],
+          },
+          {
+            model: NoteCategory,
+            as: 'category',
+            attributes: ['id', 'name', 'color', 'icon'],
+          }
+        ],
       });
 
-      // Tăng selectionCount nếu có categoryId
-      if (categoryId) {
-        await NoteCategory.increment('selectionCount', {
-          where: { id: categoryId, userId }
-        });
-        
-        // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
-        const category = await NoteCategory.findByPk(categoryId);
-        if (category && category.selectionCount > category.maxSelectionCount) {
-          await category.update({ maxSelectionCount: category.selectionCount });
-        }
-        
-        // Emit event để Frontend fetch lại danh sách categories
-        emitToUser(userId, 'categories_reorder_needed', { action: 'create' });
-      }
-
+      // Get the created note with associations
       const noteWithUser = await Note.findByPk(note.id, {
         include: [
           {
@@ -99,16 +98,39 @@ class NotesBasicChild {
         ],
       });
 
-      // Emit WebSocket event
+      // Emit WebSocket events immediately for real-time UI updates (critical)
       emitToUser(userId, 'note_created', noteWithUser);
-      
-      // Emit to all admins for real-time admin panel updates
       emitToAllAdmins('user_note_created', noteWithUser);
 
+      // Send response immediately for best UX
       res.status(201).json({
         message: 'Tạo ghi chú thành công',
         note: noteWithUser,
       });
+
+      // Perform non-critical category operations asynchronously (fire and forget)
+      if (categoryId) {
+        setImmediate(async () => {
+          try {
+            // Tăng selectionCount
+            await NoteCategory.increment('selectionCount', {
+              where: { id: categoryId, userId }
+            });
+            
+            // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
+            const category = await NoteCategory.findByPk(categoryId);
+            if (category && category.selectionCount > category.maxSelectionCount) {
+              await category.update({ maxSelectionCount: category.selectionCount });
+            }
+            
+            // Emit event để Frontend fetch lại danh sách categories
+            emitToUser(userId, 'categories_reorder_needed', { action: 'create' });
+          } catch (error) {
+            console.error('Error updating category count:', error);
+          }
+        });
+      }
+
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
@@ -477,94 +499,96 @@ class NotesBasicChild {
         reminderAcknowledged: reminderChanged ? false : note.reminderAcknowledged,
       });
 
-      // Xóa file cũ SAU khi update thành công
-      if (shouldDeleteOldImage) {
-        deleteOldFileOnUpdate(oldImageUrl, newImageUrl);
-      }
-      if (shouldDeleteOldVideo) {
-        deleteOldFileOnUpdate(oldVideoUrl, newVideoUrl);
-      }
-
-      // Cập nhật selectionCount nếu categoryId thay đổi
-      if (categoryId !== undefined && oldCategoryId !== newCategoryId) {
-        // KHÔNG giảm count của category cũ - logic "once hot, always hot"
-        
-        // Chỉ tăng count của category mới
-        if (newCategoryId) {
-          await NoteCategory.increment('selectionCount', {
-            where: { id: newCategoryId, userId: note.userId }
-          });
-          
-          // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
-          const category = await NoteCategory.findByPk(newCategoryId);
-          if (category && category.selectionCount > category.maxSelectionCount) {
-            await category.update({ maxSelectionCount: category.selectionCount });
-          }
-        }
-        
-        // Emit event để Frontend fetch lại danh sách categories
-        emitToUser(note.userId, 'categories_reorder_needed', { action: 'update' });
-      }
-
+      // Fetch updated note với relations
       const updatedNote = await Note.findByPk(note.id, {
         include: [{
           model: User,
           as: 'user',
           attributes: ['id', 'name', 'email'],
+        }, {
+          model: NoteCategory,
+          as: 'category',
+          attributes: ['id', 'name', 'color', 'icon'],
         }],
       });
 
-      // Emit WebSocket event to owner
+      // Emit WebSocket events immediately for real-time UI updates (critical)
       emitToUser(note.userId, 'note_updated', updatedNote);
-      
-      // Emit to all shared note receivers (1-1)
-      try {
-        // Emit to shared users about the update
-        const shares = await SharedNote.findAll({
-          where: { noteId: note.id, isActive: true },
-          attributes: ['sharedWithUserId', 'sharedByUserId']
-        });
-        for (const share of shares) {
-          emitToUser(share.sharedWithUserId, 'note_updated', updatedNote);
-          // If current user is not the owner, also emit to owner (sharedByUserId)
-          if (userId !== note.userId) {
-            emitToUser(share.sharedByUserId, 'note_updated', updatedNote);
-          }
-        }
-      } catch (e) {
-        console.error('Error emitting note_updated to shared users:', e);
-      }
-
-      // Emit to all group members
-      try {
-        const groupShares = await GroupSharedNote.findAll({
-          where: { noteId: note.id, isActive: true },
-          include: [{
-            model: Group,
-            as: 'group',
-            include: [{
-              model: GroupMember,
-              as: 'members',
-              attributes: ['userId']
-            }]
-          }]
-        });
-        for (const groupShare of groupShares) {
-          // Emit to all group members
-          for (const member of groupShare.group.members) {
-            emitToUser(member.userId, 'note_updated', updatedNote);
-          }
-        }
-      } catch (e) {
-        console.error('Error emitting note_updated to group members:', e);
-      }
-      
-      // Emit to all admins for real-time admin panel updates
       emitToAllAdmins('user_note_updated', updatedNote);
 
+      // Response immediately for best UX
       res.json({
         message: 'Cập nhật ghi chú thành công',
         note: updatedNote,
+      });
+
+      // Perform non-critical operations asynchronously (fire and forget)
+      setImmediate(async () => {
+        try {
+          // Xóa file cũ
+          if (shouldDeleteOldImage) {
+            deleteOldFileOnUpdate(oldImageUrl, newImageUrl);
+          }
+          if (shouldDeleteOldVideo) {
+            deleteOldFileOnUpdate(oldVideoUrl, newVideoUrl);
+          }
+
+          // Cập nhật selectionCount nếu categoryId thay đổi
+          if (categoryId !== undefined && oldCategoryId !== newCategoryId) {
+            // KHÔNG giảm count của category cũ - logic "once hot, always hot"
+            
+            // Chỉ tăng count của category mới
+            if (newCategoryId) {
+              await NoteCategory.increment('selectionCount', {
+                where: { id: newCategoryId, userId: note.userId }
+              });
+              
+              // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
+              const category = await NoteCategory.findByPk(newCategoryId);
+              if (category && category.selectionCount > category.maxSelectionCount) {
+                await category.update({ maxSelectionCount: category.selectionCount });
+              }
+            }
+            
+            // Emit event để Frontend fetch lại danh sách categories
+            emitToUser(note.userId, 'categories_reorder_needed', { action: 'update' });
+          }
+
+          // Emit to all shared note receivers (1-1)
+          const shares = await SharedNote.findAll({
+            where: { noteId: note.id, isActive: true },
+            attributes: ['sharedWithUserId', 'sharedByUserId']
+          });
+          for (const share of shares) {
+            emitToUser(share.sharedWithUserId, 'note_updated', updatedNote);
+            // If current user is not the owner, also emit to owner (sharedByUserId)
+            if (userId !== note.userId) {
+              emitToUser(share.sharedByUserId, 'note_updated', updatedNote);
+            }
+          }
+
+          // Emit to all group members
+          const groupShares = await GroupSharedNote.findAll({
+            where: { noteId: note.id, isActive: true },
+            include: [{
+              model: Group,
+              as: 'group',
+              include: [{
+                model: GroupMember,
+                as: 'members',
+                attributes: ['userId']
+              }]
+            }]
+          });
+          for (const groupShare of groupShares) {
+            // Emit to all group members
+            for (const member of groupShare.group.members) {
+              emitToUser(member.userId, 'note_updated', updatedNote);
+            }
+          }
+        } catch (error) {
+          console.error('Error in async update operations:', error);
+        }
       });
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -618,107 +642,108 @@ class NotesBasicChild {
         return res.status(403).json({ message: 'Bạn không có quyền xóa ghi chú này' });
       }
 
-      // Before deleting note, collect all shares to notify receivers and remove share rows
-      const shares = await SharedNote.findAll({ 
-        where: { noteId: id },
-        attributes: ['id', 'noteId', 'messageId', 'sharedWithUserId', 'sharedByUserId']
-      });
-      
-      const messageIdsToDelete = [];
-      // Emit to each receiver to remove the shared message in realtime and cleanup share rows
-      for (const share of shares) {
-        try {
-          // Collect messageId for deletion
-          if (share.messageId) {
-            messageIdsToDelete.push(share.messageId);
-          }
-          
-          // Emit to receiver and to owner as well for multi-device sync
-          const payload = { id: share.id, noteId: id, messageId: share.messageId };
-          emitToUser(share.sharedWithUserId, 'shared_note_removed', payload);
-          // Emit to owner too so their own message disappears realtime
-          emitToUser(userId, 'shared_note_removed', payload);
-        } catch (e) {
-          // ignore
-        }
-      }
-      
-      // Hard delete share records
-      await SharedNote.destroy({ where: { noteId: id } });
-      
-      // Delete Messages containing this note (1-1 chat)
-      if (messageIdsToDelete.length > 0) {
-        await Message.destroy({ where: { id: messageIdsToDelete } });
-      }
-
-      // Before deleting note, also notify group members and delete group messages
-      const groupShares = await GroupSharedNote.findAll({
-        where: { noteId: id },
-        include: [{
-          model: Group,
-          as: 'group',
-          include: [{
-            model: GroupMember,
-            as: 'members',
-            attributes: ['userId']
-          }]
-        }],
-        attributes: ['id', 'groupMessageId', 'noteId']
-      });
-      
-      const groupMessageIdsToDelete = [];
-      for (const groupShare of groupShares) {
-        try {
-          // Collect groupMessageId for deletion
-          if (groupShare.groupMessageId) {
-            groupMessageIdsToDelete.push(groupShare.groupMessageId);
-          }
-          
-          // Emit to all group members
-          for (const member of groupShare.group.members) {
-            emitToUser(member.userId, 'group_note_removed', { id: groupShare.id });
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-      
-      // Hard delete group share records
-      await GroupSharedNote.destroy({ where: { noteId: id } });
-      
-      // Delete GroupMessages containing this note
-      if (groupMessageIdsToDelete.length > 0) {
-        await GroupMessage.destroy({ where: { id: groupMessageIdsToDelete } });
-      }
-
-      // Xóa các file liên quan đến note
-      const filesToDelete = [];
-      if (note.imageUrl) filesToDelete.push(note.imageUrl);
-      if (note.videoUrl) filesToDelete.push(note.videoUrl);
-      if (filesToDelete.length > 0) {
-        deleteMultipleFiles(filesToDelete);
-      }
-
-      // Store folderId before destroying
+      // Store necessary data before deleting
       const folderId = note.folderId;
+      const noteUserId = note.userId;
+      const noteId = note.id;
+      const imageUrl = note.imageUrl;
+      const videoUrl = note.videoUrl;
 
+      // Delete note immediately (critical operation)
       await note.destroy();
 
-      // KHÔNG giảm selectionCount khi xóa note
-      // Logic "once hot, always hot" - category đã hot phải giữ nguyên vị trí
-
-      // Emit WebSocket event to owner's devices with folderId
-      emitToUser(note.userId, 'note_deleted', { id: Number(id), folderId });
+      // Emit WebSocket events immediately for real-time UI updates (critical)
+      emitToUser(noteUserId, 'note_deleted', { id: Number(id), folderId });
       
       // If deleter is not owner, also emit to deleter
-      if (userId !== note.userId) {
+      if (userId !== noteUserId) {
         emitToUser(userId, 'note_deleted', { id: Number(id), folderId });
       }
       
       // Emit to all admins for real-time admin panel updates
-      emitToAllAdmins('user_note_deleted', { id: note.id, userId: note.userId, folderId });
+      emitToAllAdmins('user_note_deleted', { id: noteId, userId: noteUserId, folderId });
 
+      // Response immediately for best UX
       res.json({ message: 'Xóa ghi chú thành công' });
+
+      // Perform cleanup operations asynchronously (fire and forget)
+      setImmediate(async () => {
+        try {
+          // Collect and cleanup all shares
+          const shares = await SharedNote.findAll({ 
+            where: { noteId: id },
+            attributes: ['id', 'noteId', 'messageId', 'sharedWithUserId', 'sharedByUserId']
+          });
+          
+          const messageIdsToDelete = [];
+          // Emit to each receiver to remove the shared message in realtime
+          for (const share of shares) {
+            try {
+              if (share.messageId) {
+                messageIdsToDelete.push(share.messageId);
+              }
+              
+              const payload = { id: share.id, noteId: id, messageId: share.messageId };
+              emitToUser(share.sharedWithUserId, 'shared_note_removed', payload);
+              emitToUser(userId, 'shared_note_removed', payload);
+            } catch (e) {
+              // ignore
+            }
+          }
+          
+          // Delete share records and messages
+          await SharedNote.destroy({ where: { noteId: id } });
+          if (messageIdsToDelete.length > 0) {
+            await Message.destroy({ where: { id: messageIdsToDelete } });
+          }
+
+          // Cleanup group shares
+          const groupShares = await GroupSharedNote.findAll({
+            where: { noteId: id },
+            include: [{
+              model: Group,
+              as: 'group',
+              include: [{
+                model: GroupMember,
+                as: 'members',
+                attributes: ['userId']
+              }]
+            }],
+            attributes: ['id', 'groupMessageId', 'noteId']
+          });
+          
+          const groupMessageIdsToDelete = [];
+          for (const groupShare of groupShares) {
+            try {
+              if (groupShare.groupMessageId) {
+                groupMessageIdsToDelete.push(groupShare.groupMessageId);
+              }
+              
+              for (const member of groupShare.group.members) {
+                emitToUser(member.userId, 'group_note_removed', { id: groupShare.id });
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+          
+          // Delete group share records and messages
+          await GroupSharedNote.destroy({ where: { noteId: id } });
+          if (groupMessageIdsToDelete.length > 0) {
+            await GroupMessage.destroy({ where: { id: groupMessageIdsToDelete } });
+          }
+
+          // Delete files
+          const filesToDelete = [];
+          if (imageUrl) filesToDelete.push(imageUrl);
+          if (videoUrl) filesToDelete.push(videoUrl);
+          if (filesToDelete.length > 0) {
+            deleteMultipleFiles(filesToDelete);
+          }
+        } catch (error) {
+          console.error('Error in async delete cleanup:', error);
+        }
+      });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
