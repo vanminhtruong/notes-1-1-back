@@ -104,9 +104,17 @@ class GroupManagementChild {
 
   listMyGroups = asyncHandler(async (req, res) => {
     const userId = req.user.id;
+    const { search } = req.query;
     const memberships = await GroupMember.findAll({ where: { userId }, attributes: ['groupId'] });
     const groupIds = memberships.map(m => m.groupId);
-    const groups = await Group.findAll({ where: { id: { [Op.in]: groupIds } }, order: [['updatedAt', 'DESC']] });
+    
+    // Build where clause with optional search filter
+    const whereClause = { id: { [Op.in]: groupIds } };
+    if (search && search.trim()) {
+      whereClause.name = { [Op.like]: `%${search.trim()}%` };
+    }
+    
+    const groups = await Group.findAll({ where: whereClause, order: [['updatedAt', 'DESC']] });
 
     // Get pinned groups for current user
     const pinnedGroups = await PinnedChat.findAll({
