@@ -3,7 +3,7 @@ import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { deleteMultipleFiles, hasUploadedFile } from '../../utils/fileHelper.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
-import { getBlockedUserIdSetFor } from '../../utils/block.js';
+import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
 
 class GroupMembersChild {
   constructor(parent) {
