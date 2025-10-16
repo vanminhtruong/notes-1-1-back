@@ -22,6 +22,7 @@ class NotesFoldersChild {
         };
       }
 
+      // Order: Mới nhất trước (createdAt DESC - mới nhất lên đầu)
       const folders = await NoteFolder.findAll({
         where: whereClause,
         include: [{
@@ -31,7 +32,7 @@ class NotesFoldersChild {
           where: { isArchived: false },
           required: false
         }],
-        order: [[sortBy, sortOrder]],
+        order: [[sortBy, sortOrder]], // Mặc định: createdAt DESC - mới nhất lên đầu
       });
 
       // Add note count to each folder

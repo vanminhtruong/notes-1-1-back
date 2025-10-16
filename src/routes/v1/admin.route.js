@@ -73,6 +73,7 @@ router.delete('/admins/:adminId', superAdminOnly, permissionsController.deleteAd
 router.get('/users', requirePermission('manage_users'), adminController.getAllUsers);
 router.post('/users', requirePermission('manage_users.create'), adminController.createUser);
 router.put('/users/:id', requirePermission('manage_users.edit'), adminController.editUser);
+router.put('/users/:id/chat-settings', requirePermission('manage_users.chat_settings.edit'), adminController.editUser);
 router.get('/users/:userId/activity', requirePermission('manage_users.view'), adminController.getUserActivity);
 router.get('/users/:userId/notifications', requirePermission('manage_users.activity.notifications'), adminController.adminGetUserNotifications);
 router.delete('/users/:userId/notifications/:notificationId', requirePermission('manage_users.activity.notifications.delete'), adminController.adminDeleteUserNotification);

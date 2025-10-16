@@ -42,6 +42,10 @@ class AdminPermissionsController {
     'manage_users.sessions.view',     // Xem danh sách thiết bị đăng nhập
     'manage_users.sessions.logout',   // Đăng xuất thiết bị cụ thể
     'manage_users.sessions.logout_all', // Đăng xuất tất cả thiết bị
+    // Chat Settings sub-permissions (User-level chat settings: E2EE, Read Status, Privacy)
+    'manage_users.chat_settings',           // Quản lý cài đặt chat của users (parent)
+    'manage_users.chat_settings.view',      // Xem tất cả cài đặt chat (E2EE, Read Status, Privacy)
+    'manage_users.chat_settings.edit',      // Chỉnh sửa cài đặt chat của users
     'manage_notes',           // Quản lý ghi chú (parent)
     'manage_notes.create',    // Tạo ghi chú
     'manage_notes.edit',      // Sửa ghi chú

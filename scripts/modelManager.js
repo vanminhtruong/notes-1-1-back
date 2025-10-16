@@ -320,6 +320,36 @@ class ModelManager {
       allowNull: false,
       defaultValue: 0,
     });
+
+    // Tối ưu: Đảm bảo indexes tồn tại cho performance
+    try {
+      const indexes = await this.qi.showIndex('NoteCategories');
+      const indexNames = indexes.map(idx => idx.name);
+
+      if (!indexNames.includes('notecategories_userid_idx')) {
+        await this.qi.addIndex('NoteCategories', ['userId'], {
+          name: 'notecategories_userid_idx',
+        });
+        console.log('✓ Added userId index to NoteCategories');
+      }
+
+      if (!indexNames.includes('notecategories_name_idx')) {
+        await this.qi.addIndex('NoteCategories', ['name'], {
+          name: 'notecategories_name_idx',
+        });
+        console.log('✓ Added name index to NoteCategories');
+      }
+
+      // Thêm composite index cho query tìm trùng lặp nhanh hơn
+      if (!indexNames.includes('notecategories_userid_name_idx')) {
+        await this.qi.addIndex('NoteCategories', ['userId', 'name'], {
+          name: 'notecategories_userid_name_idx',
+        });
+        console.log('✓ Added composite userId+name index to NoteCategories');
+      }
+    } catch (error) {
+      console.warn('Warning: Could not add indexes to NoteCategories:', error.message);
+    }
   }
 
   async createNoteFoldersTable() {
@@ -881,6 +911,7 @@ class ModelManager {
       
       // Note Categories migrations - must be before updateNotesTable
       await this.createNoteCategoriesTable();
+      await this.updateNoteCategoriesTable();
       
       // Note Folders migrations - must be before updateNotesTable
       await this.createNoteFoldersTable();

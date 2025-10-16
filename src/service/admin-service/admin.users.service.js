@@ -18,6 +18,8 @@ class AdminUsersChild {
       search,
       role,
       isActive,
+      e2eeEnabled,
+      readStatusEnabled,
       sortBy = 'createdAt',
       sortOrder = 'DESC'
     } = req.query;
@@ -58,6 +60,16 @@ class AdminUsersChild {
       } catch {}
     }
 
+    // Filter by E2EE status
+    if (e2eeEnabled !== undefined) {
+      whereClause.e2eeEnabled = e2eeEnabled === 'true' || e2eeEnabled === true;
+    }
+
+    // Filter by Read Status
+    if (readStatusEnabled !== undefined) {
+      whereClause.readStatusEnabled = readStatusEnabled === 'true' || readStatusEnabled === true;
+    }
+
     const users = await User.findAndCountAll({
       where: whereClause,
       attributes: [
@@ -69,7 +81,7 @@ class AdminUsersChild {
         // Account & role
         'role', 'isActive',
         // Settings
-        'theme', 'language', 'e2eeEnabled', 'readStatusEnabled',
+        'theme', 'language', 'e2eeEnabled', 'e2eePinHash', 'readStatusEnabled',
         // Privacy
         'hidePhone', 'hideBirthDate', 'allowMessagesFromNonFriends',
         // Timestamps
@@ -210,7 +222,12 @@ class AdminUsersChild {
   // Edit user account
   editUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { name, email, phone, birthDate, gender, avatar, password } = req.body;
+    const { 
+      name, email, phone, birthDate, gender, avatar, password,
+      // Chat settings
+      e2eeEnabled, readStatusEnabled, allowMessagesFromNonFriends,
+      hidePhone, hideBirthDate
+    } = req.body;
 
     const user = await User.findByPk(id);
     if (!user) {
@@ -241,15 +258,15 @@ class AdminUsersChild {
       }
     } catch {}
 
-    // Validate input
-    if (!name) {
+    // Validate input only if name/email are provided
+    if (name !== undefined && (!name || name.trim() === '')) {
       return res.status(400).json({ 
         success: false,
         message: 'Tên người dùng là bắt buộc' 
       });
     }
 
-    if (!email) {
+    if (email !== undefined && (!email || email.trim() === '')) {
       return res.status(400).json({ 
         success: false,
         message: 'Email là bắt buộc' 
@@ -257,7 +274,7 @@ class AdminUsersChild {
     }
 
     // Check if email already exists (kept as safety, but will not reach if email changed)
-    if (email !== user.email) {
+    if (email !== undefined && email !== user.email) {
       const existingUser = await User.findOne({ 
         where: { 
           email,
@@ -276,13 +293,22 @@ class AdminUsersChild {
     const oldAvatar = user.avatar;
 
     // Prepare update data - handle empty strings as null
-    const updateData = {
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone && phone.trim() !== '' ? phone.trim() : null,
-      birthDate: birthDate && birthDate.trim() !== '' ? birthDate : null, 
-      gender: gender || 'unspecified'
-    };
+    const updateData = {};
+    
+    // Basic info (only if provided)
+    if (name !== undefined) updateData.name = name.trim();
+    if (email !== undefined) updateData.email = email.trim().toLowerCase();
+    if (phone !== undefined) updateData.phone = phone && phone.trim() !== '' ? phone.trim() : null;
+    if (birthDate !== undefined) updateData.birthDate = birthDate && birthDate.trim() !== '' ? birthDate : null;
+    if (gender !== undefined) updateData.gender = gender || 'unspecified';
+
+    // Chat settings (only if provided)
+    if (e2eeEnabled !== undefined) updateData.e2eeEnabled = Boolean(e2eeEnabled);
+    if (readStatusEnabled !== undefined) updateData.readStatusEnabled = Boolean(readStatusEnabled);
+    if (allowMessagesFromNonFriends !== undefined) updateData.allowMessagesFromNonFriends = Boolean(allowMessagesFromNonFriends);
+    if (hidePhone !== undefined) updateData.hidePhone = Boolean(hidePhone);
+    if (hideBirthDate !== undefined) updateData.hideBirthDate = Boolean(hideBirthDate);
+
     // Optional: update password if provided (hashing handled by model hooks)
     if (typeof password === 'string') {
       const newPw = password.trim();
@@ -335,6 +361,13 @@ class AdminUsersChild {
       gender: user.gender,
       role: user.role,
       isActive: user.isActive,
+      // Chat settings
+      e2eeEnabled: user.e2eeEnabled,
+      e2eePinHash: user.e2eePinHash,
+      readStatusEnabled: user.readStatusEnabled,
+      allowMessagesFromNonFriends: user.allowMessagesFromNonFriends,
+      hidePhone: user.hidePhone,
+      hideBirthDate: user.hideBirthDate,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };
@@ -345,6 +378,27 @@ class AdminUsersChild {
       updatedBy: req.user.id,
       timestamp: new Date().toISOString()
     });
+
+    // Also emit to user if chat settings were changed
+    const chatSettingsChanged = 
+      e2eeEnabled !== undefined || 
+      readStatusEnabled !== undefined || 
+      allowMessagesFromNonFriends !== undefined ||
+      hidePhone !== undefined ||
+      hideBirthDate !== undefined;
+
+    if (chatSettingsChanged && global.io) {
+      global.io.to(`user_${user.id}`).emit('user_settings_updated', {
+        e2eeEnabled: user.e2eeEnabled,
+        readStatusEnabled: user.readStatusEnabled,
+        allowMessagesFromNonFriends: user.allowMessagesFromNonFriends,
+        hidePhone: user.hidePhone,
+        hideBirthDate: user.hideBirthDate,
+        updatedBy: 'admin',
+        message: 'Cài đặt chat của bạn đã được cập nhật bởi quản trị viên',
+        timestamp: new Date().toISOString()
+      });
+    }
 
     res.json({
       success: true,

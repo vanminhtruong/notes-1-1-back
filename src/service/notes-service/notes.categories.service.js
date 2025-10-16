@@ -20,31 +20,25 @@ class NotesCategoriesChild {
         whereClause.name = { [Op.like]: `%${search}%` };
       }
 
+      // Tối ưu: Sử dụng subquery để tính notesCount thay vì GROUP BY
+      // Order: Mới nhất trước (createdAt DESC), sau đó theo usage
       const categories = await NoteCategory.findAll({
         where: whereClause,
         order: [
-          ['maxSelectionCount', 'DESC'], // Sắp xếp theo số lần chọn tối đa (giữ nguyên vị trí khi đã hot)
-          ['selectionCount', 'DESC'], // Sau đó theo số lần chọn hiện tại
-          [sortBy, sortOrder]
-        ],
-        include: [
-          {
-            model: Note,
-            as: 'notes',
-            attributes: [],
-            required: false,
-          },
+          [sortBy, sortOrder], // Mặc định: createdAt DESC - mới nhất lên đầu
+          ['maxSelectionCount', 'DESC'],
+          ['selectionCount', 'DESC']
         ],
         attributes: {
           include: [
             [
-              Note.sequelize.fn('COUNT', Note.sequelize.col('notes.id')),
+              Note.sequelize.literal(
+                `(SELECT COUNT(*) FROM Notes WHERE Notes.categoryId = NoteCategory.id)`
+              ),
               'notesCount'
             ]
           ]
         },
-        group: ['NoteCategory.id'],
-        subQuery: false,
       });
 
       const total = categories.length;
@@ -75,23 +69,16 @@ class NotesCategoriesChild {
           id,
           userId 
         },
-        include: [
-          {
-            model: Note,
-            as: 'notes',
-            attributes: [],
-            required: false,
-          },
-        ],
         attributes: {
           include: [
             [
-              Note.sequelize.fn('COUNT', Note.sequelize.col('notes.id')),
+              Note.sequelize.literal(
+                `(SELECT COUNT(*) FROM Notes WHERE Notes.categoryId = NoteCategory.id)`
+              ),
               'notesCount'
             ]
           ]
         },
-        group: ['NoteCategory.id'],
       });
 
       if (!category) {
@@ -116,12 +103,17 @@ class NotesCategoriesChild {
       const userId = req.user.id;
       const { name, color, icon } = req.body;
 
-      // Check if category with same name exists for user
+      // Tối ưu: Check trùng lặp nhanh với composite index
+      const trimmedName = name.trim().toLowerCase();
       const existingCategory = await NoteCategory.findOne({
         where: { 
           userId,
-          name: { [Op.like]: name }
-        }
+          name: Note.sequelize.where(
+            Note.sequelize.fn('LOWER', Note.sequelize.col('name')),
+            trimmedName
+          )
+        },
+        attributes: ['id'] // Chỉ lấy id để nhanh hơn
       });
 
       if (existingCategory) {
@@ -131,19 +123,25 @@ class NotesCategoriesChild {
       }
 
       const category = await NoteCategory.create({
-        name,
+        name: name.trim(),
         color: color || '#3B82F6',
         icon: icon || 'Tag',
         userId,
       });
 
+      // Tối ưu: Trả về category với notesCount = 0 ngay (vì mới tạo)
+      const categoryData = {
+        ...category.toJSON(),
+        notesCount: 0
+      };
+
       // Emit socket event for real-time update
-      emitToUser(userId, 'category_created', category.toJSON());
-      emitToAllAdmins('user_category_created', { ...category.toJSON(), userId });
+      emitToUser(userId, 'category_created', categoryData);
+      emitToAllAdmins('user_category_created', { ...categoryData, userId });
 
       res.status(201).json({
         message: 'Category created successfully',
-        category,
+        category: categoryData,
       });
     } catch (error) {
       console.error('Create category error:', error);
@@ -174,14 +172,19 @@ class NotesCategoriesChild {
         return res.status(404).json({ message: 'Category not found' });
       }
 
-      // Check if new name conflicts with another category
-      if (name && name !== category.name) {
+      // Tối ưu: Chỉ check trùng tên khi tên thay đổi
+      if (name && name.trim().toLowerCase() !== category.name.toLowerCase()) {
+        const trimmedName = name.trim().toLowerCase();
         const existingCategory = await NoteCategory.findOne({
           where: { 
             userId,
-            name: { [Op.like]: name },
+            name: Note.sequelize.where(
+              Note.sequelize.fn('LOWER', Note.sequelize.col('name')),
+              trimmedName
+            ),
             id: { [Op.ne]: id }
-          }
+          },
+          attributes: ['id'] // Chỉ lấy id để nhanh hơn
         });
 
         if (existingCategory) {
@@ -192,19 +195,31 @@ class NotesCategoriesChild {
       }
 
       // Update fields
-      if (name !== undefined) category.name = name;
+      if (name !== undefined) category.name = name.trim();
       if (color !== undefined) category.color = color;
       if (icon !== undefined) category.icon = icon;
 
       await category.save();
 
+      // Tối ưu: Lấy notesCount hiện tại với hint index
+      const notesCount = await Note.count({
+        where: { categoryId: id },
+        benchmark: true,
+        logging: false
+      });
+
+      const categoryData = {
+        ...category.toJSON(),
+        notesCount
+      };
+
       // Emit socket event for real-time update
-      emitToUser(userId, 'category_updated', category.toJSON());
-      emitToAllAdmins('user_category_updated', { ...category.toJSON(), userId });
+      emitToUser(userId, 'category_updated', categoryData);
+      emitToAllAdmins('user_category_updated', { ...categoryData, userId });
 
       res.status(200).json({
         message: 'Category updated successfully',
-        category,
+        category: categoryData,
       });
     } catch (error) {
       console.error('Update category error:', error);
@@ -243,8 +258,10 @@ class NotesCategoriesChild {
       await category.destroy();
 
       // Emit socket event for real-time update
-      emitToUser(userId, 'category_deleted', { id });
-      emitToAllAdmins('user_category_deleted', { id, userId });
+      console.log(`🔴 Emitting category_deleted event to user ${userId}, category id: ${id}`);
+      emitToUser(userId, 'category_deleted', { id: parseInt(id) });
+      emitToAllAdmins('user_category_deleted', { id: parseInt(id), userId });
+      console.log(`✅ Socket events emitted successfully`);
 
       res.status(200).json({
         message: 'Category deleted successfully',

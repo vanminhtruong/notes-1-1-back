@@ -54,21 +54,33 @@ const requirePermission = (permission) => {
       return next();
     }
     
-    // Kiểm tra nested permissions: nếu có parent permission thì có quyền
+    // Kiểm tra parent permission: nếu có parent permission thì có quyền child
+    // Ví dụ: yêu cầu 'manage_users.chat_settings.edit', user có 'manage_users.chat_settings' -> OK
+    const hasParentPermission = permissions.some(userPerm => {
+      // Check if userPerm is a parent of permission
+      // e.g., 'manage_users.chat_settings' is parent of 'manage_users.chat_settings.edit'
+      return permission.startsWith(userPerm + '.');
+    });
+    
+    if (hasParentPermission) {
+      return next();
+    }
+    
+    // Kiểm tra nested permissions: nếu có child permission thì có quyền parent
     // Ví dụ: yêu cầu 'manage_users', user có 'manage_users.view' -> OK
-    const hasNestedPermission = permissions.some(userPerm => 
+    const hasChildPermission = permissions.some(userPerm => 
       userPerm.startsWith(permission + '.')
     );
     
-    if (!hasNestedPermission) {
-      return res.status(403).json({ 
-        message: 'Không có quyền thực hiện hành động này',
-        requiredPermission: permission,
-        userPermissions: permissions
-      });
+    if (hasChildPermission) {
+      return next();
     }
 
-    next();
+    return res.status(403).json({ 
+      message: 'Không có quyền thực hiện hành động này',
+      requiredPermission: permission,
+      userPermissions: permissions
+    });
   };
 };
 
