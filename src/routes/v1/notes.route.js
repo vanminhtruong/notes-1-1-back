@@ -21,6 +21,8 @@ router.get('/folders/search/all', notesController.searchFolders);
 router.post('/folders', validateCreateFolder, notesController.createFolder);
 router.get('/folders/:id', notesController.getFolderById);
 router.put('/folders/:id', validateUpdateFolder, notesController.updateFolder);
+router.patch('/folders/:id/pin', notesController.pinFolder);
+router.patch('/folders/:id/unpin', notesController.unpinFolder);
 router.delete('/folders/:id', notesController.deleteFolder);
 
 // Category routes - Must be before /:id to avoid conflict

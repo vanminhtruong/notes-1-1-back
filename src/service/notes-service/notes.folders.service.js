@@ -22,7 +22,7 @@ class NotesFoldersChild {
         };
       }
 
-      // Order: Mới nhất trước (createdAt DESC - mới nhất lên đầu)
+      // Order: Ghim folders lên đầu, sau đó sắp xếp theo sortBy
       const folders = await NoteFolder.findAll({
         where: whereClause,
         include: [{
@@ -32,7 +32,7 @@ class NotesFoldersChild {
           where: { isArchived: false },
           required: false
         }],
-        order: [[sortBy, sortOrder]], // Mặc định: createdAt DESC - mới nhất lên đầu
+        order: [['isPinned', 'DESC'], [sortBy, sortOrder]], // Ghim folders lên đầu
       });
 
       // Add note count to each folder
@@ -239,7 +239,7 @@ class NotesFoldersChild {
           where: { isArchived: false },
           required: false
         }],
-        order: [[sortBy, sortOrder]],
+        order: [['isPinned', 'DESC'], [sortBy, sortOrder]],
       });
 
       // Add note count to each folder
@@ -354,6 +354,72 @@ class NotesFoldersChild {
     } catch (error) {
       console.error('Move note to folder error:', error);
       return res.status(500).json({ message: 'Lỗi khi chuyển ghi chú' });
+    }
+  };
+
+  // Pin folder
+  pinFolder = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const folder = await NoteFolder.findOne({
+        where: { id, userId }
+      });
+
+      if (!folder) {
+        return res.status(404).json({ message: 'Không tìm thấy thư mục' });
+      }
+
+      await folder.update({ isPinned: true });
+
+      // Lấy lại folder data sau khi update
+      const updatedFolder = await NoteFolder.findByPk(id);
+
+      // Emit socket event for real-time update
+      emitToUser(userId, 'folder_pinned', updatedFolder.toJSON());
+      emitToAllAdmins('user_folder_pinned', { ...updatedFolder.toJSON(), userId });
+
+      return res.status(200).json({
+        message: 'Ghim thư mục thành công',
+        folder: updatedFolder.toJSON()
+      });
+    } catch (error) {
+      console.error('Pin folder error:', error);
+      return res.status(500).json({ message: 'Lỗi khi ghim thư mục' });
+    }
+  };
+
+  // Unpin folder
+  unpinFolder = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const folder = await NoteFolder.findOne({
+        where: { id, userId }
+      });
+
+      if (!folder) {
+        return res.status(404).json({ message: 'Không tìm thấy thư mục' });
+      }
+
+      await folder.update({ isPinned: false });
+
+      // Lấy lại folder data sau khi update
+      const updatedFolder = await NoteFolder.findByPk(id);
+
+      // Emit socket event for real-time update
+      emitToUser(userId, 'folder_unpinned', updatedFolder.toJSON());
+      emitToAllAdmins('user_folder_unpinned', { ...updatedFolder.toJSON(), userId });
+
+      return res.status(200).json({
+        message: 'Bỏ ghim thư mục thành công',
+        folder: updatedFolder.toJSON()
+      });
+    } catch (error) {
+      console.error('Unpin folder error:', error);
+      return res.status(500).json({ message: 'Lỗi khi bỏ ghim thư mục' });
     }
   };
 }

@@ -51,6 +51,8 @@ class NotesController {
   deleteFolder = (...args) => this.foldersChild.deleteFolder(...args);
   searchFolders = (...args) => this.foldersChild.searchFolders(...args);
   moveNoteToFolder = (...args) => this.foldersChild.moveNoteToFolder(...args);
+  pinFolder = (...args) => this.foldersChild.pinFolder(...args);
+  unpinFolder = (...args) => this.foldersChild.unpinFolder(...args);
   
   // Category operations - delegate to categoriesChild
   getCategories = (...args) => this.categoriesChild.getCategories(...args);
@@ -92,6 +94,8 @@ export const updateFolder = notesController.updateFolder;
 export const deleteFolder = notesController.deleteFolder;
 export const searchFolders = notesController.searchFolders;
 export const moveNoteToFolder = notesController.moveNoteToFolder;
+export const pinFolder = notesController.pinFolder;
+export const unpinFolder = notesController.unpinFolder;
 export const pinNote = notesController.pinNote;
 export const unpinNote = notesController.unpinNote;
 export const getCategories = notesController.getCategories;
