@@ -32,6 +32,9 @@ class SocketConnectionChild {
   handleConnection = async (socket) => {
     const userId = socket.userId;
     
+    // Check if user was already connected (prevent duplicate logs)
+    const wasConnected = this.parent.connectedUsers.has(userId);
+    
     // Store connected user
     this.parent.connectedUsers.set(userId, {
       socketId: socket.id,
@@ -58,7 +61,12 @@ class SocketConnectionChild {
       }
     });
 
-    console.log(`User ${socket.user.name} connected (ID: ${userId})`);
+    // Only log for new connections, not reconnections
+    if (!wasConnected) {
+      console.log(`User ${socket.user.name} connected (ID: ${userId})`);
+    } else {
+      console.log(`User ${socket.user.name} reconnected (ID: ${userId})`);
+    }
 
     // Join user to their personal room
     socket.join(`user_${userId}`);

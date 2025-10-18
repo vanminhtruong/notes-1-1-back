@@ -22,6 +22,8 @@ import defineSharedNote from './sharedNote.model.js';
 import defineGroupSharedNote from './groupSharedNote.model.js';
 import defineUserSession from './userSession.model.js';
 import defineNoteCategory from './noteCategory.model.js';
+import defineNoteTag from './noteTag.model.js';
+import defineNoteTagMapping from './noteTagMapping.model.js';
 
 const User = defineUser(sequelize, DataTypes);
 const Note = defineNote(sequelize, DataTypes);
@@ -45,6 +47,8 @@ const SharedNote = defineSharedNote(sequelize, DataTypes);
 const GroupSharedNote = defineGroupSharedNote(sequelize, DataTypes);
 const UserSession = defineUserSession(sequelize, DataTypes);
 const NoteCategory = defineNoteCategory(sequelize, DataTypes);
+const NoteTag = defineNoteTag(sequelize, DataTypes);
+const NoteTagMapping = defineNoteTagMapping(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
@@ -61,6 +65,14 @@ User.hasMany(NoteCategory, { foreignKey: 'userId', as: 'noteCategories' });
 NoteCategory.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 NoteCategory.hasMany(Note, { foreignKey: 'categoryId', as: 'notes' });
 Note.belongsTo(NoteCategory, { foreignKey: 'categoryId', as: 'category' });
+
+// NoteTag associations
+User.hasMany(NoteTag, { foreignKey: 'userId', as: 'noteTags' });
+NoteTag.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Note.belongsToMany(NoteTag, { through: NoteTagMapping, foreignKey: 'noteId', otherKey: 'tagId', as: 'tags' });
+NoteTag.belongsToMany(Note, { through: NoteTagMapping, foreignKey: 'tagId', otherKey: 'noteId', as: 'notes' });
+NoteTagMapping.belongsTo(Note, { foreignKey: 'noteId', as: 'note' });
+NoteTagMapping.belongsTo(NoteTag, { foreignKey: 'tagId', as: 'tag' });
 
 // UserSession associations
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
@@ -319,6 +331,8 @@ export {
   Note,
   NoteFolder,
   NoteCategory,
+  NoteTag,
+  NoteTagMapping,
   Friendship,
   Message,
   PasswordReset,

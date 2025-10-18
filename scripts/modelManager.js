@@ -396,6 +396,82 @@ class ModelManager {
     ]);
   }
 
+  async createNoteTagsTable() {
+    console.log('Creating NoteTags table if missing...');
+    await this.ensureTableExists('NoteTags', {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      name: {
+        type: DataTypes.STRING(50),
+        allowNull: false,
+      },
+      color: {
+        type: DataTypes.STRING(7),
+        allowNull: false,
+        defaultValue: '#3B82F6',
+      },
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Users', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    }, [
+      { fields: ['userId'], name: 'notetags_userid_idx' },
+      { fields: ['userId', 'name'], unique: true, name: 'notetags_userid_name_unique' },
+    ]);
+  }
+
+  async createNoteTagMappingsTable() {
+    console.log('Creating NoteTagMappings table if missing...');
+    await this.ensureTableExists('NoteTagMappings', {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+      },
+      noteId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'Notes', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      tagId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: { model: 'NoteTags', key: 'id' },
+        onDelete: 'CASCADE',
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    }, [
+      { fields: ['noteId'], name: 'notetagmappings_noteid_idx' },
+      { fields: ['tagId'], name: 'notetagmappings_tagid_idx' },
+      { fields: ['noteId', 'tagId'], unique: true, name: 'notetagmappings_note_tag_unique' },
+    ]);
+  }
+
   async createSharedNotesTable() {
     console.log('Creating SharedNotes table if missing...');
     await this.ensureTableExists('SharedNotes', {
@@ -915,6 +991,11 @@ class ModelManager {
       
       // Note Folders migrations - must be before updateNotesTable
       await this.createNoteFoldersTable();
+      
+      // Note Tags migrations - must be before NoteTagMappings
+      await this.createNoteTagsTable();
+      await this.createNoteTagMappingsTable();
+      
       await this.updateNotesTable();
       
       await this.createReadTables();

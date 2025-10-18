@@ -1,4 +1,4 @@
-import { NoteFolder, Note, User, NoteCategory } from '../../models/index.js';
+import { NoteFolder, Note, User, NoteCategory, NoteTag } from '../../models/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
@@ -87,6 +87,12 @@ class NotesFoldersChild {
             model: NoteCategory,
             as: 'category',
             attributes: ['id', 'name', 'color', 'icon'],
+          },
+          {
+            model: NoteTag,
+            as: 'tags',
+            attributes: ['id', 'name', 'color'],
+            through: { attributes: [] },
           }
         ],
         order: [
@@ -276,6 +282,12 @@ class NotesFoldersChild {
             model: NoteCategory,
             as: 'category',
             attributes: ['id', 'name', 'color', 'icon'],
+          },
+          {
+            model: NoteTag,
+            as: 'tags',
+            attributes: ['id', 'name', 'color'],
+            through: { attributes: [] },
           }
         ],
         order: [['updatedAt', 'DESC']],

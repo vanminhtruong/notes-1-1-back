@@ -50,6 +50,27 @@ class SocketNotesChild {
     socket.on('category_deleted', (data) => {
       socket.to(`user_${userId}`).emit('category_deleted', data);
     });
+
+    // Tag events
+    socket.on('tag_created', (data) => {
+      socket.to(`user_${userId}`).emit('tag_created', data);
+    });
+
+    socket.on('tag_updated', (data) => {
+      socket.to(`user_${userId}`).emit('tag_updated', data);
+    });
+
+    socket.on('tag_deleted', (data) => {
+      socket.to(`user_${userId}`).emit('tag_deleted', data);
+    });
+
+    socket.on('note_tag_added', (data) => {
+      socket.to(`user_${userId}`).emit('note_tag_added', data);
+    });
+
+    socket.on('note_tag_removed', (data) => {
+      socket.to(`user_${userId}`).emit('note_tag_removed', data);
+    });
   };
 }
 

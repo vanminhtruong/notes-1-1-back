@@ -128,4 +128,14 @@ router.post('/categories', requirePermission('manage_notes.categories.create'), 
 router.put('/categories/:id', requirePermission('manage_notes.categories.edit'), adminController.updateCategory);
 router.delete('/categories/:id', requirePermission('manage_notes.categories.delete'), adminController.deleteCategory);
 
+// Tags management (require specific tags permissions)
+router.get('/tags', requirePermission('manage_notes.tags.view'), adminController.getAllTags);
+router.get('/tags/stats', requirePermission('manage_notes.tags.view'), adminController.getTagsStats);
+router.get('/tags/:id', requirePermission('manage_notes.tags.view_detail'), adminController.getTagDetail);
+router.post('/tags', requirePermission('manage_notes.tags.create'), adminController.createTagForUser);
+router.put('/tags/:id', requirePermission('manage_notes.tags.edit'), adminController.updateTag);
+router.delete('/tags/:id', requirePermission('manage_notes.tags.delete'), adminController.deleteTag);
+router.post('/tags/assign', requirePermission('manage_notes.tags.assign'), adminController.assignTagToNote);
+router.delete('/tags/:noteId/:tagId', requirePermission('manage_notes.tags.assign'), adminController.removeTagFromNote);
+
 export default router;

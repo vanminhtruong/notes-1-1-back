@@ -1,4 +1,4 @@
-import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote, NoteFolder, NoteCategory } from '../../models/index.js';
+import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote, NoteFolder, NoteCategory, NoteTag } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
@@ -271,7 +271,13 @@ class AdminNotesChild {
       where: whereClause,
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
-        categoryInclude
+        categoryInclude,
+        {
+          model: NoteTag,
+          as: 'tags',
+          attributes: ['id', 'name', 'color'],
+          through: { attributes: [] },
+        }
       ],
       order: [
         ['isPinned', 'DESC'], // Ghim notes lên đầu

@@ -74,6 +74,13 @@ class AdminPermissionsController {
     'manage_notes.categories.create', // Tạo category cho user
     'manage_notes.categories.edit', // Sửa category
     'manage_notes.categories.delete', // Xóa category
+    'manage_notes.tags',      // Quản lý tags ghi chú (parent)
+    'manage_notes.tags.view', // Xem danh sách tags của users
+    'manage_notes.tags.view_detail', // Xem chi tiết tag và notes có tag
+    'manage_notes.tags.create', // Tạo tag cho user
+    'manage_notes.tags.edit', // Sửa tag
+    'manage_notes.tags.delete', // Xóa tag
+    'manage_notes.tags.assign', // Gắn/bỏ tag cho notes
     'manage_admins',          // Quản lý admin khác (chỉ super admin)
     'manage_admins.create',   // Tạo admin
     'manage_admins.edit',     // Sửa quyền admin

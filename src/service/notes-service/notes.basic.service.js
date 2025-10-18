@@ -1,7 +1,27 @@
-import { Note, User, SharedNote, NoteCategory, NoteFolder, GroupSharedNote, Group, GroupMember, GroupMessage, Message } from '../../models/index.js';
+import { Note, User, SharedNote, NoteCategory, NoteTag, NoteFolder, GroupSharedNote, Group, GroupMember, GroupMessage, Message } from '../../models/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
+
+// Helper constants for common includes
+const NOTE_INCLUDES = [
+  {
+    model: User,
+    as: 'user',
+    attributes: ['id', 'name', 'email', 'avatar'],
+  },
+  {
+    model: NoteCategory,
+    as: 'category',
+    attributes: ['id', 'name', 'color', 'icon'],
+  },
+  {
+    model: NoteTag,
+    as: 'tags',
+    attributes: ['id', 'name', 'color'],
+    through: { attributes: [] },
+  },
+];
 
 class NotesBasicChild {
   constructor(parent) {
@@ -84,18 +104,7 @@ class NotesBasicChild {
 
       // Get the created note with associations
       const noteWithUser = await Note.findByPk(note.id, {
-        include: [
-          {
-            model: User,
-            as: 'user',
-            attributes: ['id', 'name', 'email'],
-          },
-          {
-            model: NoteCategory,
-            as: 'category',
-            attributes: ['id', 'name', 'color', 'icon'],
-          }
-        ],
+        include: NOTE_INCLUDES,
       });
 
       // Emit WebSocket events immediately for real-time UI updates (critical)
@@ -199,18 +208,7 @@ class NotesBasicChild {
 
       const { count, rows: notes } = await Note.findAndCountAll({
         where: whereClause,
-        include: [
-          {
-            model: User,
-            as: 'user',
-            attributes: ['id', 'name', 'email'],
-          },
-          {
-            model: NoteCategory,
-            as: 'category',
-            attributes: ['id', 'name', 'color', 'icon'],
-          }
-        ],
+        include: NOTE_INCLUDES,
         order: [
           ['isPinned', 'DESC'], // Ghim notes lên đầu
           [sortBy, sortOrder]    // Sau đó sắp xếp theo tiêu chí đã chọn
@@ -347,18 +345,7 @@ class NotesBasicChild {
 
       // Load note by id first
       const note = await Note.findByPk(id, {
-        include: [
-          {
-            model: User,
-            as: 'user',
-            attributes: ['id', 'name', 'email'],
-          },
-          {
-            model: NoteCategory,
-            as: 'category',
-            attributes: ['id', 'name', 'color', 'icon'],
-          }
-        ],
+        include: NOTE_INCLUDES,
       });
 
       if (!note) {
@@ -501,15 +488,7 @@ class NotesBasicChild {
 
       // Fetch updated note với relations
       const updatedNote = await Note.findByPk(note.id, {
-        include: [{
-          model: User,
-          as: 'user',
-          attributes: ['id', 'name', 'email'],
-        }, {
-          model: NoteCategory,
-          as: 'category',
-          attributes: ['id', 'name', 'color', 'icon'],
-        }],
+        include: NOTE_INCLUDES,
       });
 
       // Emit WebSocket events immediately for real-time UI updates (critical)

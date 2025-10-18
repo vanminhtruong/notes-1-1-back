@@ -10,6 +10,7 @@ import AdminUsersChild from '../service/admin-service/admin.users.service.js';
 import AdminAuthChild from '../service/admin-service/admin.auth.service.js';
 import AdminProfileChild from '../service/admin-service/admin.profile.service.js';
 import AdminCategoriesChild from '../service/admin-service/admin.categories.service.js';
+import AdminTagsService from '../service/admin-service/admin.tags.service.js';
 
 // class này đã quá dài hãy tạo ra class con kế thừa để xử lý
 class AdminController {
@@ -22,6 +23,7 @@ class AdminController {
     this.authChild = new AdminAuthChild(this);
     this.profileChild = new AdminProfileChild(this);
     this.categoriesChild = new AdminCategoriesChild(this);
+    this.tagsService = AdminTagsService;
   }
 
   // Admin login (delegated)
@@ -77,6 +79,16 @@ class AdminController {
   updateCategory = (...args) => this.categoriesChild.updateCategory(...args);
   deleteCategory = (...args) => this.categoriesChild.deleteCategory(...args);
   getCategoriesStats = (...args) => this.categoriesChild.getCategoriesStats(...args);
+  
+  // Tags management
+  getAllTags = (...args) => this.tagsService.getAllTags(...args);
+  getTagsStats = (...args) => this.tagsService.getTagsStats(...args);
+  getTagDetail = (...args) => this.tagsService.getTagDetail(...args);
+  createTagForUser = (...args) => this.tagsService.createTagForUser(...args);
+  updateTag = (...args) => this.tagsService.updateTag(...args);
+  deleteTag = (...args) => this.tagsService.deleteTag(...args);
+  assignTagToNote = (...args) => this.tagsService.assignTagToNote(...args);
+  removeTagFromNote = (...args) => this.tagsService.removeTagFromNote(...args);
 }
 
 const adminController = new AdminController();

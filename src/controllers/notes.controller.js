@@ -3,6 +3,7 @@ import NotesSharingChild from '../service/notes-service/notes.sharing.service.js
 import NotesStatsChild from '../service/notes-service/notes.stats.service.js';
 import NotesFoldersChild from '../service/notes-service/notes.folders.service.js';
 import NotesCategoriesChild from '../service/notes-service/notes.categories.service.js';
+import NotesTagsChild from '../service/notes-service/notes.tags.service.js';
 
 class NotesController {
   constructor() {
@@ -12,6 +13,7 @@ class NotesController {
     this.statsChild = new NotesStatsChild(this);
     this.foldersChild = new NotesFoldersChild(this);
     this.categoriesChild = new NotesCategoriesChild(this);
+    this.tagsChild = new NotesTagsChild(this);
   }
 
   // Basic CRUD operations - delegate to basicChild
@@ -60,6 +62,16 @@ class NotesController {
   createCategory = (...args) => this.categoriesChild.createCategory(...args);
   updateCategory = (...args) => this.categoriesChild.updateCategory(...args);
   deleteCategory = (...args) => this.categoriesChild.deleteCategory(...args);
+  
+  // Tag operations - delegate to tagsChild
+  getTags = (...args) => this.tagsChild.getTags(...args);
+  getTagById = (...args) => this.tagsChild.getTagById(...args);
+  createTag = (...args) => this.tagsChild.createTag(...args);
+  updateTag = (...args) => this.tagsChild.updateTag(...args);
+  deleteTag = (...args) => this.tagsChild.deleteTag(...args);
+  addTagToNote = (...args) => this.tagsChild.addTagToNote(...args);
+  removeTagFromNote = (...args) => this.tagsChild.removeTagFromNote(...args);
+  getNotesByTag = (...args) => this.tagsChild.getNotesByTag(...args);
 }
 
 const notesController = new NotesController();
@@ -103,3 +115,11 @@ export const getCategoryById = notesController.getCategoryById;
 export const createCategory = notesController.createCategory;
 export const updateCategory = notesController.updateCategory;
 export const deleteCategory = notesController.deleteCategory;
+export const getTags = notesController.getTags;
+export const getTagById = notesController.getTagById;
+export const createTag = notesController.createTag;
+export const updateTag = notesController.updateTag;
+export const deleteTag = notesController.deleteTag;
+export const addTagToNote = notesController.addTagToNote;
+export const removeTagFromNote = notesController.removeTagFromNote;
+export const getNotesByTag = notesController.getNotesByTag;

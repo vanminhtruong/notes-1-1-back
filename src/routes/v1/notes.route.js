@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as notesController from '../../controllers/notes.controller.js';
 import authMiddleware from '../../middlewares/auth.js';
-import { validateCreateNote, validateUpdateNote, validateShareNote, validateShareNoteToGroup, validateCreateFolder, validateUpdateFolder, validateMoveNoteToFolder, validateCreateCategory, validateUpdateCategory } from '../../validators/notes.validator.js';
+import { validateCreateNote, validateUpdateNote, validateShareNote, validateShareNoteToGroup, validateCreateFolder, validateUpdateFolder, validateMoveNoteToFolder, validateCreateCategory, validateUpdateCategory, validateCreateTag, validateUpdateTag, validateAddTagToNote } from '../../validators/notes.validator.js';
 
 const router = Router();
 
@@ -31,6 +31,16 @@ router.post('/categories', validateCreateCategory, notesController.createCategor
 router.get('/categories/:id', notesController.getCategoryById);
 router.put('/categories/:id', validateUpdateCategory, notesController.updateCategory);
 router.delete('/categories/:id', notesController.deleteCategory);
+
+// Tag routes - Must be before /:id to avoid conflict
+router.get('/tags', notesController.getTags);
+router.post('/tags', validateCreateTag, notesController.createTag);
+router.get('/tags/:id', notesController.getTagById);
+router.put('/tags/:id', validateUpdateTag, notesController.updateTag);
+router.delete('/tags/:id', notesController.deleteTag);
+router.get('/tags/:tagId/notes', notesController.getNotesByTag);
+router.post('/:noteId/tags', validateAddTagToNote, notesController.addTagToNote);
+router.delete('/:noteId/tags/:tagId', notesController.removeTagFromNote);
 
 // Sharing routes - Must be before /:id to avoid conflict
 router.get('/shared/with-me', notesController.getSharedWithMe);

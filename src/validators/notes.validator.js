@@ -234,6 +234,68 @@ const validateUpdateCategory = (req, res, next) => {
   next();
 };
 
+const validateCreateTag = (req, res, next) => {
+  const schema = Joi.object({
+    name: Joi.string().min(1).max(50).required().messages({
+      'string.min': 'Tên tag không được để trống',
+      'string.max': 'Tên tag không được quá 50 ký tự',
+      'any.required': 'Tên tag là bắt buộc',
+    }),
+    color: Joi.string().pattern(/^#[0-9A-F]{6}$/i).optional().default('#3B82F6').messages({
+      'string.pattern.base': 'Màu sắc phải là mã hex hợp lệ (ví dụ: #3B82F6)',
+    }),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
+const validateUpdateTag = (req, res, next) => {
+  const schema = Joi.object({
+    name: Joi.string().min(1).max(50).optional().messages({
+      'string.min': 'Tên tag không được để trống',
+      'string.max': 'Tên tag không được quá 50 ký tự',
+    }),
+    color: Joi.string().pattern(/^#[0-9A-F]{6}$/i).optional().messages({
+      'string.pattern.base': 'Màu sắc phải là mã hex hợp lệ (ví dụ: #3B82F6)',
+    }),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
+const validateAddTagToNote = (req, res, next) => {
+  const schema = Joi.object({
+    tagId: Joi.number().integer().positive().required().messages({
+      'number.base': 'ID tag phải là số',
+      'number.positive': 'ID tag phải là số dương',
+      'any.required': 'ID tag là bắt buộc',
+    }),
+  });
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ',
+      errors: error.details.map(detail => detail.message),
+    });
+  }
+  next();
+};
+
 export {
   validateCreateNote,
   validateUpdateNote,
@@ -244,4 +306,7 @@ export {
   validateMoveNoteToFolder,
   validateCreateCategory,
   validateUpdateCategory,
+  validateCreateTag,
+  validateUpdateTag,
+  validateAddTagToNote,
 };

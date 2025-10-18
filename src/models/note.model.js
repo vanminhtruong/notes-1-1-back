@@ -94,6 +94,12 @@ export default (sequelize, DataTypes) => {
       foreignKey: 'categoryId',
       as: 'category',
     });
+    Note.belongsToMany(models.NoteTag, {
+      through: 'NoteTagMappings',
+      foreignKey: 'noteId',
+      otherKey: 'tagId',
+      as: 'tags',
+    });
   };
 
   return Note;
