@@ -309,6 +309,12 @@ class NotesTagsChild {
         return res.status(400).json({ message: 'Tag đã được gắn vào ghi chú này' });
       }
 
+      // Enforce max 3 tags per note
+      const currentTagCount = await NoteTagMapping.count({ where: { noteId } });
+      if (currentTagCount >= 3) {
+        return res.status(400).json({ message: 'Mỗi ghi chú chỉ được gắn tối đa 3 tag' });
+      }
+
       await NoteTagMapping.create({ noteId, tagId });
 
       // Emit real-time event
