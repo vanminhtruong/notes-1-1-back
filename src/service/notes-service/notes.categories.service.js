@@ -16,8 +16,17 @@ class NotesCategoriesChild {
       const { search, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
 
       const whereClause = { userId };
-      if (search) {
-        whereClause.name = { [Op.like]: `%${search}%` };
+      
+      // Case-insensitive search
+      if (search && search.trim()) {
+        const searchTerm = search.trim();
+        whereClause[Op.and] = whereClause[Op.and] || [];
+        whereClause[Op.and].push(
+          Note.sequelize.where(
+            Note.sequelize.fn('LOWER', Note.sequelize.col('NoteCategory.name')),
+            { [Op.like]: `%${searchTerm.toLowerCase()}%` }
+          )
+        );
       }
 
       // Tối ưu: Sử dụng subquery để tính notesCount thay vì GROUP BY
@@ -52,6 +61,83 @@ class NotesCategoriesChild {
       res.status(500).json({ 
         message: 'Error retrieving categories', 
         error: error.message 
+      });
+    }
+  };
+
+  /**
+   * Search categories for autocomplete/dropdown (optimized for UI)
+   */
+  searchCategories = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { q, limit = 4 } = req.query;
+
+      // Validate search query
+      if (!q || !q.trim()) {
+        return res.status(400).json({ 
+          message: 'Search query is required',
+          categories: [],
+          total: 0
+        });
+      }
+
+      const searchTerm = q.trim();
+      
+      // Sanitize input to prevent SQL injection
+      if (searchTerm.length > 100) {
+        return res.status(400).json({ 
+          message: 'Search query too long',
+          categories: [],
+          total: 0
+        });
+      }
+
+      // Case-insensitive search với LOWER
+      const whereClause = {
+        userId,
+        [Op.and]: [
+          Note.sequelize.where(
+            Note.sequelize.fn('LOWER', Note.sequelize.col('NoteCategory.name')),
+            { [Op.like]: `%${searchTerm.toLowerCase()}%` }
+          )
+        ]
+      };
+
+      // Tìm kiếm với limit và sắp xếp theo usage
+      const categories = await NoteCategory.findAll({
+        where: whereClause,
+        limit: parseInt(limit),
+        order: [
+          ['maxSelectionCount', 'DESC'],
+          ['selectionCount', 'DESC'],
+          ['createdAt', 'DESC']
+        ],
+        attributes: {
+          include: [
+            [
+              Note.sequelize.literal(
+                `(SELECT COUNT(*) FROM Notes WHERE Notes.categoryId = NoteCategory.id)`
+              ),
+              'notesCount'
+            ]
+          ]
+        },
+      });
+
+      res.status(200).json({
+        categories,
+        total: categories.length,
+        query: searchTerm,
+        limit: parseInt(limit)
+      });
+    } catch (error) {
+      console.error('Search categories error:', error);
+      res.status(500).json({ 
+        message: 'Error searching categories', 
+        error: error.message,
+        categories: [],
+        total: 0
       });
     }
   };

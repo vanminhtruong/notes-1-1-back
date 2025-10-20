@@ -121,8 +121,9 @@ router.put('/folders/:id', requirePermission('manage_notes.folders.edit'), admin
 router.delete('/folders/:id', requirePermission('manage_notes.folders.delete'), adminController.deleteUserFolder);
 
 // Categories management (require specific categories permissions)
-router.get('/categories', requirePermission('manage_notes.categories.view'), adminController.getAllCategories);
+router.get('/categories/search', requirePermission('manage_notes.categories.view'), adminController.searchCategories);
 router.get('/categories/stats', requirePermission('manage_notes.categories.view'), adminController.getCategoriesStats);
+router.get('/categories', requirePermission('manage_notes.categories.view'), adminController.getAllCategories);
 router.get('/categories/:id', requirePermission('manage_notes.categories.view'), adminController.getCategoryDetail);
 router.post('/categories', requirePermission('manage_notes.categories.create'), adminController.createCategoryForUser);
 router.put('/categories/:id', requirePermission('manage_notes.categories.edit'), adminController.updateCategory);

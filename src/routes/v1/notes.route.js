@@ -26,6 +26,7 @@ router.patch('/folders/:id/unpin', notesController.unpinFolder);
 router.delete('/folders/:id', notesController.deleteFolder);
 
 // Category routes - Must be before /:id to avoid conflict
+router.get('/categories/search', notesController.searchCategories); // Search endpoint
 router.get('/categories', notesController.getCategories);
 router.post('/categories', validateCreateCategory, notesController.createCategory);
 router.get('/categories/:id', notesController.getCategoryById);

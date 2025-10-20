@@ -31,9 +31,16 @@ class AdminCategoriesChild {
       whereClause.userId = userId;
     }
 
-    // Search by category name
-    if (search) {
-      whereClause.name = { [Op.like]: `%${search}%` };
+    // Search by category name - case-insensitive
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      whereClause[Op.and] = whereClause[Op.and] || [];
+      whereClause[Op.and].push(
+        Note.sequelize.where(
+          Note.sequelize.fn('LOWER', Note.sequelize.col('NoteCategory.name')),
+          { [Op.like]: `%${searchTerm.toLowerCase()}%` }
+        )
+      );
     }
 
     // Nếu filter theo userId, sort theo maxSelectionCount để giống users
@@ -80,6 +87,87 @@ class AdminCategoriesChild {
         limit: limitNum,
         totalPages: Math.ceil(count / limitNum),
       },
+    });
+  });
+
+  // Tìm kiếm categories cho dropdown (tối ưu cho UI)
+  searchCategories = asyncHandler(async (req, res) => {
+    const { q, userId, limit = 4 } = req.query;
+
+    // Validate required params
+    if (!userId) {
+      return res.status(400).json({ 
+        message: 'userId is required',
+        categories: [],
+        total: 0
+      });
+    }
+
+    if (!q || !q.trim()) {
+      return res.status(400).json({ 
+        message: 'Search query is required',
+        categories: [],
+        total: 0
+      });
+    }
+
+    const searchTerm = q.trim();
+    
+    // Sanitize input
+    if (searchTerm.length > 100) {
+      return res.status(400).json({ 
+        message: 'Search query too long',
+        categories: [],
+        total: 0
+      });
+    }
+
+    // Case-insensitive search
+    const whereClause = {
+      userId: parseInt(userId),
+      [Op.and]: [
+        Note.sequelize.where(
+          Note.sequelize.fn('LOWER', Note.sequelize.col('NoteCategory.name')),
+          { [Op.like]: `%${searchTerm.toLowerCase()}%` }
+        )
+      ]
+    };
+
+    const categories = await NoteCategory.findAll({
+      where: whereClause,
+      limit: parseInt(limit),
+      order: [
+        ['maxSelectionCount', 'DESC'],
+        ['selectionCount', 'DESC'],
+        ['createdAt', 'DESC']
+      ],
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email']
+        }
+      ]
+    });
+
+    // Get notes count for each category
+    const categoriesWithCount = await Promise.all(
+      categories.map(async (category) => {
+        const notesCount = await Note.count({
+          where: { categoryId: category.id }
+        });
+        return {
+          ...category.toJSON(),
+          notesCount
+        };
+      })
+    );
+
+    res.json({
+      categories: categoriesWithCount,
+      total: categoriesWithCount.length,
+      query: searchTerm,
+      limit: parseInt(limit)
     });
   });
 

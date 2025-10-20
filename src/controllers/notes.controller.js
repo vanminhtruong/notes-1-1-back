@@ -58,6 +58,7 @@ class NotesController {
   
   // Category operations - delegate to categoriesChild
   getCategories = (...args) => this.categoriesChild.getCategories(...args);
+  searchCategories = (...args) => this.categoriesChild.searchCategories(...args);
   getCategoryById = (...args) => this.categoriesChild.getCategoryById(...args);
   createCategory = (...args) => this.categoriesChild.createCategory(...args);
   updateCategory = (...args) => this.categoriesChild.updateCategory(...args);
@@ -111,6 +112,7 @@ export const unpinFolder = notesController.unpinFolder;
 export const pinNote = notesController.pinNote;
 export const unpinNote = notesController.unpinNote;
 export const getCategories = notesController.getCategories;
+export const searchCategories = notesController.searchCategories;
 export const getCategoryById = notesController.getCategoryById;
 export const createCategory = notesController.createCategory;
 export const updateCategory = notesController.updateCategory;

@@ -74,6 +74,7 @@ class AdminController {
   
   // Categories management
   getAllCategories = (...args) => this.categoriesChild.getAllCategories(...args);
+  searchCategories = (...args) => this.categoriesChild.searchCategories(...args);
   getCategoryDetail = (...args) => this.categoriesChild.getCategoryDetail(...args);
   createCategoryForUser = (...args) => this.categoriesChild.createCategoryForUser(...args);
   updateCategory = (...args) => this.categoriesChild.updateCategory(...args);
