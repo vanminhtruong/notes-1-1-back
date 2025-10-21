@@ -418,6 +418,7 @@ class ChatMessagesChild {
     }
 
     if (scope === 'self') {
+      // Thu hồi cho bản thân: chỉ thêm vào deletedForUserIds
       for (const m of msgs) {
         const list = m.get('deletedForUserIds') || [];
         if (!list.includes(userId)) {
@@ -426,13 +427,15 @@ class ChatMessagesChild {
           await m.save();
         }
       }
+      // Xóa pinned messages của user hiện tại
       try {
         await PinnedMessage.destroy({ where: { userId, messageId: { [Op.in]: messageIds } } });
       } catch (e) {
         console.log('Failed to cleanup user pins on recallMessages(self):', e?.name || e);
       }
     } else {
-      // Xóa files đính kèm khi recall for all
+      // Thu hồi cho mọi người: xóa hoàn toàn khỏi database
+      // Xóa files đính kèm trước
       const filesToDelete = [];
       for (const msg of msgs) {
         if (hasUploadedFile(msg)) {
@@ -443,9 +446,9 @@ class ChatMessagesChild {
         console.log('[RecallMessages] Deleting files:', filesToDelete);
         deleteMultipleFiles(filesToDelete);
       }
-      
-      await Message.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds } } });
-      await PinnedMessage.destroy({ where: { messageId: { [Op.in]: messageIds } } });
+
+      // Xóa tin nhắn khỏi database (CASCADE sẽ tự động xóa reactions, reads, pins)
+      await Message.destroy({ where: { id: { [Op.in]: messageIds } } });
     }
 
     const io = req.app.get('io') || global.io;
@@ -497,6 +500,7 @@ class ChatMessagesChild {
       });
     }
 
+    // Lấy tất cả tin nhắn giữa 2 người
     const messages = await Message.findAll({
       where: {
         [Op.or]: [
@@ -508,6 +512,7 @@ class ChatMessagesChild {
 
     let updatedCount = 0;
 
+    // Chỉ thêm currentUserId vào deletedForUserIds - chỉ bên xóa mất, bên kia vẫn thấy
     for (const message of messages) {
       const deletedForUserIds = message.get('deletedForUserIds') || [];
       if (!deletedForUserIds.includes(currentUserId)) {
@@ -518,6 +523,7 @@ class ChatMessagesChild {
       }
     }
 
+    // Xóa pinned messages của user hiện tại
     try {
       const messageIds = messages.map(m => m.id);
       if (messageIds.length > 0) {
@@ -536,7 +542,9 @@ class ChatMessagesChild {
         scope: 'self'
       };
       
+      // Chỉ emit cho người xóa
       io.to(`user_${currentUserId}`).emit('messages_deleted', payload);
+      
       // Emit to admin for real-time monitoring
       io.emit('admin_messages_deleted', {
         ...payload,

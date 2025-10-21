@@ -415,6 +415,7 @@ class GroupMessagesChild {
     }
 
     if (scope === 'self') {
+      // Thu hồi cho bản thân: chỉ thêm vào deletedForUserIds
       for (const m of msgs) {
         const list = m.get('deletedForUserIds') || [];
         if (!list.includes(userId)) {
@@ -423,14 +424,15 @@ class GroupMessagesChild {
           await m.save();
         }
       }
-      // Remove current user's pins for these group messages to prevent stale pinned entries in UI
+      // Xóa pinned messages của user hiện tại
       try {
         await PinnedMessage.destroy({ where: { userId, groupMessageId: { [Op.in]: messageIds } } });
       } catch (e) {
         console.log('Failed to cleanup user pins on recallGroupMessages(self):', e?.name || e);
       }
     } else {
-      // Xóa files đính kèm khi recall for all
+      // Thu hồi cho mọi người: xóa hoàn toàn khỏi database
+      // Xóa files đính kèm trước
       const filesToDelete = [];
       for (const msg of msgs) {
         if (hasUploadedFile(msg)) {
@@ -441,10 +443,9 @@ class GroupMessagesChild {
         console.log('[RecallGroupMessages] Deleting files:', filesToDelete);
         deleteMultipleFiles(filesToDelete);
       }
-      
-      await GroupMessage.update({ isDeletedForAll: true }, { where: { id: { [Op.in]: messageIds }, groupId } });
-      // Remove pins associated with these group messages
-      await PinnedMessage.destroy({ where: { groupMessageId: { [Op.in]: messageIds } } });
+
+      // Xóa tin nhắn khỏi database (CASCADE sẽ tự động xóa reactions, reads, pins)
+      await GroupMessage.destroy({ where: { id: { [Op.in]: messageIds }, groupId } });
     }
 
     // Emit socket update
