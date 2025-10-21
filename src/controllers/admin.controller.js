@@ -34,6 +34,9 @@ class AdminController {
   adminGetGroupMembers = (...args) => this.monitorChild.adminGetGroupMembers(...args);
   adminGetDMMessages = (...args) => this.monitorChild.adminGetDMMessages(...args);
   adminGetGroupMessages = (...args) => this.monitorChild.adminGetGroupMessages(...args);
+  adminGetDMPinnedMessages = (...args) => this.monitorChild.adminGetDMPinnedMessages(...args);
+  adminGetGroupPinnedMessages = (...args) => this.monitorChild.adminGetGroupPinnedMessages(...args);
+  adminGetUserBlockedList = (...args) => this.monitorChild.adminGetUserBlockedList(...args);
   adminRecallDMMessage = (...args) => this.messagesChild.adminRecallDMMessage(...args);
   adminDeleteDMMessage = (...args) => this.messagesChild.adminDeleteDMMessage(...args);
   adminEditDMMessage = (...args) => this.messagesChild.adminEditDMMessage(...args);

@@ -227,6 +227,10 @@ class ChatPreferencesChild {
       const payload = { messageId: msg.id, participants: [a, b], pinned: !!pinned };
       global.io && global.io.to(`user_${a}`).emit('message_pinned', payload);
       global.io && global.io.to(`user_${b}`).emit('message_pinned', payload);
+      
+      // Notify all admins for monitoring
+      const adminPayload = { messageId: msg.id, senderId: a, receiverId: b, pinned: !!pinned };
+      global.io && global.io.emit('admin_dm_message_pinned', adminPayload);
     } catch (e) {
       // ignore socket errors
     }

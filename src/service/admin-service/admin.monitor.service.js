@@ -1,4 +1,4 @@
-import { User, Message, Group, GroupMember, Friendship, GroupMessage, MessageRead, GroupMessageRead, MessageReaction } from '../../models/index.js';
+import { User, Message, Group, GroupMember, Friendship, GroupMessage, MessageRead, GroupMessageRead, MessageReaction, PinnedMessage, BlockedUser } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 
@@ -145,6 +145,118 @@ class AdminMonitorChild {
         friends: friendships.map(f => (f.requesterId === uid ? f.addressee : f.requester))
       }
     });
+  });
+
+  // Admin: Get pinned messages in DM conversation (pinned by EITHER user)
+  adminGetDMPinnedMessages = asyncHandler(async (req, res) => {
+    const { userId, otherUserId } = req.params;
+    const a = Number(userId); // monitored user
+    const b = Number(otherUserId);
+
+    const pinnedMessages = await PinnedMessage.findAll({
+      where: {
+        // Lấy tin ghim của CẢ HAI người trong cuộc trò chuyện
+        userId: { [Op.in]: [a, b] }
+      },
+      include: [
+        {
+          model: Message,
+          as: 'message',
+          where: {
+            [Op.or]: [
+              { senderId: a, receiverId: b },
+              { senderId: b, receiverId: a }
+            ],
+            isDeletedForAll: { [Op.not]: true }
+          },
+          include: [
+            { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
+            { model: User, as: 'receiver', attributes: ['id', 'name', 'avatar'] }
+          ]
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    const data = pinnedMessages.map(pm => ({
+      id: pm.id,
+      userId: pm.userId,
+      messageId: pm.messageId,
+      pinnedAt: pm.createdAt,
+      message: pm.message
+    }));
+
+    res.json({ success: true, data });
+  });
+
+  // Admin: Get pinned messages in Group conversation
+  adminGetGroupPinnedMessages = asyncHandler(async (req, res) => {
+    const { groupId } = req.params;
+    const gid = Number(groupId);
+
+    const pinnedMessages = await PinnedMessage.findAll({
+      where: {},
+      include: [
+        {
+          model: GroupMessage,
+          as: 'groupMessage',
+          where: {
+            groupId: gid,
+            isDeletedForAll: { [Op.not]: true }
+          },
+          include: [
+            { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }
+          ]
+        },
+        // Có thể giữ thông tin user đã ghim nếu cần hiển thị "pinnedBy"
+        { model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    const data = pinnedMessages.map(pm => ({
+      id: pm.id,
+      userId: pm.userId,
+      messageId: pm.messageId,
+      groupId: gid,
+      pinnedAt: pm.createdAt,
+      pinnedBy: pm.user,
+      message: pm.groupMessage
+    }));
+
+    res.json({ success: true, data });
+  });
+
+  // Admin: Get blocked users list of a specific user (both directions)
+  adminGetUserBlockedList = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const uid = Number(userId);
+
+    // Lấy CẢ HAI: user block ai + ai block user
+    const blockedUsers = await BlockedUser.findAll({
+      where: {
+        [Op.or]: [
+          { userId: uid },           // User này block ai
+          { blockedUserId: uid }     // Ai block user này
+        ]
+      },
+      include: [
+        { model: User, as: 'blocker', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'blocked', attributes: ['id', 'name', 'email', 'avatar'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    const data = blockedUsers.map(bu => ({
+      id: bu.id,
+      blockerId: bu.userId,
+      blockedUserId: bu.blockedUserId,
+      blockedAt: bu.createdAt,
+      blocker: bu.blocker,
+      blockedUser: bu.blocked
+    }));
+
+    res.json({ success: true, data });
   });
 }
 

@@ -1,6 +1,6 @@
-import { User } from '../../models/index.js';
+import { User, UserSession } from '../../models/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
-import { emitToAllAdmins, isUserOnline } from '../../socket/socketHandler.js';
+import { emitToAllAdmins, isUserOnline, emitToUser } from '../../socket/socketHandler.js';
 import { deleteUploadedFile, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 import { Op } from 'sequelize';
 import bcrypt from 'bcryptjs';

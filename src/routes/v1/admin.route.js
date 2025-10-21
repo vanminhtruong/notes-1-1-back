@@ -4,9 +4,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { adminAuth, requirePermission, superAdminOnly } from '../../middlewares/adminAuth.middleware.js';
 import adminController from '../../controllers/admin.controller.js';
-import * as permissionsController from '../../controllers/adminPermissions.controller.js';
-
-// Configure multer for admin uploads  
+import * as permissionsController from '../../controllers/adminPermissions.controller.js'; 
 const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -40,27 +38,20 @@ const upload = multer({
 
 const router = express.Router();
 
-// Admin login (no auth required)
 router.post('/login', adminController.adminLogin);
 
-// All other routes require admin authentication
 router.use(adminAuth);
 
-// Refresh token endpoint
 router.post('/refresh-token', adminController.refreshToken);
 
-// Admin profile
 router.get('/me', adminController.getMyProfile);
 router.put('/me', adminController.updateMyProfile);
 
-// Admin file upload
 router.post('/upload/image', upload.single('file'), adminController.uploadAvatar);
 
-// Admin profile management (Super Admin only)
 router.get('/admins/:adminId/profile', superAdminOnly, adminController.getAdminProfile);
 router.put('/admins/:adminId/profile', superAdminOnly, adminController.updateAdminProfile);
 
-// Admin permissions management (Super Admin only)
 router.get('/permissions/me', permissionsController.getMyPermissions);
 router.get('/admins', superAdminOnly, permissionsController.getAllAdmins);
 router.post('/admins', superAdminOnly, permissionsController.createSubAdmin);
@@ -79,7 +70,10 @@ router.get('/users/:userId/notifications', requirePermission('manage_users.activ
 router.delete('/users/:userId/notifications/:notificationId', requirePermission('manage_users.activity.notifications.delete'), adminController.adminDeleteUserNotification);
 router.delete('/users/:userId/notifications', requirePermission('manage_users.activity.notifications.clear_all'), adminController.adminDeleteAllUserNotifications);
 router.get('/users/:userId/dm/:otherUserId/messages', requirePermission('manage_users.activity.messages'), adminController.adminGetDMMessages);
+router.get('/users/:userId/dm/:otherUserId/pinned-messages', requirePermission('manage_users.activity.messages'), adminController.adminGetDMPinnedMessages);
+router.get('/users/:userId/blocked-users', requirePermission('manage_users.activity.messages'), adminController.adminGetUserBlockedList);
 router.get('/groups/:groupId/messages', requirePermission('manage_users.activity.groups'), adminController.adminGetGroupMessages);
+router.get('/groups/:groupId/pinned-messages', requirePermission('manage_users.activity.groups'), adminController.adminGetGroupPinnedMessages);
 router.get('/groups/:groupId/members', requirePermission('manage_users.activity.groups'), adminController.adminGetGroupMembers);
 
 // Message management (require message permissions)

@@ -96,6 +96,10 @@ class GroupPinsChild {
       for (const m of members) {
         global.io && global.io.to(`user_${m.userId}`).emit('group_message_pinned', payload);
       }
+      
+      // Notify all admins for monitoring
+      const adminPayload = { messageId: Number(messageId), groupId: Number(groupId), pinned: !!pinned };
+      global.io && global.io.emit('admin_group_message_pinned', adminPayload);
     } catch (e) {
       // ignore socket errors
     }

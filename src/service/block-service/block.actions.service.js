@@ -42,6 +42,11 @@ class BlockActionsChild {
         userId: currentUserId,
         targetId: Number(targetId),
       });
+      // Notify all admins for monitoring
+      io.emit('admin_user_blocked', {
+        blockerId: currentUserId,
+        blockedUserId: Number(targetId),
+      });
     }
 
     return res.status(created ? 201 : 200).json({ success: true, data: record });
@@ -69,6 +74,11 @@ class BlockActionsChild {
       io.to(`user_${targetId}`).emit('user_unblocked', {
         userId: currentUserId,
         targetId: Number(targetId),
+      });
+      // Notify all admins for monitoring
+      io.emit('admin_user_unblocked', {
+        blockerId: currentUserId,
+        blockedUserId: Number(targetId),
       });
     }
 
