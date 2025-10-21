@@ -194,7 +194,6 @@ class AdminNotesChild {
     }
 
     // Do not delete internal bell_dismiss rows
-    const { Op } = require('sequelize');
     const where = { userId: uid, type: { [Op.ne]: 'bell_dismiss' } };
     const deleted = await Notification.destroy({ where });
 
