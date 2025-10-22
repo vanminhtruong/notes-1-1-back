@@ -406,8 +406,10 @@ class ChatMessagesChild {
     }
 
     const msgs = await Message.findAll({ where: { id: { [Op.in]: messageIds } } });
-    if (msgs.length !== messageIds.length) {
-      return res.status(404).json({ success: false, message: 'Some messages not found' });
+    
+    // Nếu không tìm thấy tin nhắn nào, có thể đã bị xóa trước đó
+    if (msgs.length === 0) {
+      return res.json({ success: true, message: 'Messages already deleted', data: { scope, messageIds } });
     }
 
     if (scope === 'all') {
@@ -416,6 +418,9 @@ class ChatMessagesChild {
         return res.status(403).json({ success: false, message: 'Only the sender can recall for everyone' });
       }
     }
+
+    // Chỉ xử lý các tin nhắn còn tồn tại
+    const foundMessageIds = msgs.map(m => m.id);
 
     if (scope === 'self') {
       // Thu hồi cho bản thân: chỉ thêm vào deletedForUserIds
@@ -429,7 +434,7 @@ class ChatMessagesChild {
       }
       // Xóa pinned messages của user hiện tại
       try {
-        await PinnedMessage.destroy({ where: { userId, messageId: { [Op.in]: messageIds } } });
+        await PinnedMessage.destroy({ where: { userId, messageId: { [Op.in]: foundMessageIds } } });
       } catch (e) {
         console.log('Failed to cleanup user pins on recallMessages(self):', e?.name || e);
       }
@@ -448,7 +453,7 @@ class ChatMessagesChild {
       }
 
       // Xóa tin nhắn khỏi database (CASCADE sẽ tự động xóa reactions, reads, pins)
-      await Message.destroy({ where: { id: { [Op.in]: messageIds } } });
+      await Message.destroy({ where: { id: { [Op.in]: foundMessageIds } } });
     }
 
     const io = req.app.get('io') || global.io;
@@ -458,8 +463,8 @@ class ChatMessagesChild {
         participants.add(m.senderId);
         participants.add(m.receiverId);
       }
-      const payload = { scope, messageIds, userId };
-      console.log(`🔄 Backend: Emitting messages_recalled, scope=${scope}, messageIds=${messageIds}, participants:`, Array.from(participants));
+      const payload = { scope, messageIds: foundMessageIds, userId };
+      console.log(`🔄 Backend: Emitting messages_recalled, scope=${scope}, messageIds=${foundMessageIds}, participants:`, Array.from(participants));
       
       if (scope === 'self') {
         console.log(`🔄 Backend: Emitting to user_${userId} (self recall)`);
@@ -477,7 +482,7 @@ class ChatMessagesChild {
       }
     }
 
-    return res.json({ success: true, data: { scope, messageIds } });
+    return res.json({ success: true, data: { scope, messageIds: foundMessageIds } });
   });
 
   deleteAllMessages = asyncHandler(async (req, res) => {

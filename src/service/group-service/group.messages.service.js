@@ -402,8 +402,10 @@ class GroupMessagesChild {
 
     // Load messages ensure they belong to this group
     const msgs = await GroupMessage.findAll({ where: { id: { [Op.in]: messageIds }, groupId } });
-    if (msgs.length !== messageIds.length) {
-      return res.status(404).json({ success: false, message: 'Some messages not found' });
+    
+    // Nếu không tìm thấy tin nhắn nào, có thể đã bị xóa trước đó
+    if (msgs.length === 0) {
+      return res.json({ success: true, message: 'Messages already deleted', data: { groupId: Number(groupId), scope, messageIds } });
     }
 
     // For 'all', only the sender can recall their own messages
@@ -413,6 +415,9 @@ class GroupMessagesChild {
         return res.status(403).json({ success: false, message: 'Only the sender can recall for everyone' });
       }
     }
+    
+    // Chỉ xử lý các tin nhắn còn tồn tại
+    const foundMessageIds = msgs.map(m => m.id);
 
     if (scope === 'self') {
       // Thu hồi cho bản thân: chỉ thêm vào deletedForUserIds
@@ -426,7 +431,7 @@ class GroupMessagesChild {
       }
       // Xóa pinned messages của user hiện tại
       try {
-        await PinnedMessage.destroy({ where: { userId, groupMessageId: { [Op.in]: messageIds } } });
+        await PinnedMessage.destroy({ where: { userId, groupMessageId: { [Op.in]: foundMessageIds } } });
       } catch (e) {
         console.log('Failed to cleanup user pins on recallGroupMessages(self):', e?.name || e);
       }
@@ -445,13 +450,13 @@ class GroupMessagesChild {
       }
 
       // Xóa tin nhắn khỏi database (CASCADE sẽ tự động xóa reactions, reads, pins)
-      await GroupMessage.destroy({ where: { id: { [Op.in]: messageIds }, groupId } });
+      await GroupMessage.destroy({ where: { id: { [Op.in]: foundMessageIds }, groupId } });
     }
 
     // Emit socket update
     const io = req.app.get('io') || global.io;
     if (io) {
-      const payload = { groupId: Number(groupId), scope, messageIds };
+      const payload = { groupId: Number(groupId), scope, messageIds: foundMessageIds };
       if (scope === 'self') {
         // Only notify the recalling user (delete for me)
         io.to(`user_${userId}`).emit('group_messages_recalled', payload);
@@ -464,7 +469,7 @@ class GroupMessagesChild {
       }
     }
 
-    return res.json({ success: true, data: { groupId: Number(groupId), scope, messageIds } });
+    return res.json({ success: true, data: { groupId: Number(groupId), scope, messageIds: foundMessageIds } });
   });
 
   editGroupMessage = asyncHandler(async (req, res) => {
