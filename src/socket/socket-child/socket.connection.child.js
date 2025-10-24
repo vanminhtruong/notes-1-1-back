@@ -33,7 +33,8 @@ class SocketConnectionChild {
     const userId = socket.userId;
     
     // Check if user was already connected (prevent duplicate logs)
-    const wasConnected = this.parent.connectedUsers.has(userId);
+    const prevConn = this.parent.connectedUsers.get(userId);
+    const wasConnected = !!prevConn;
     
     // Store connected user
     this.parent.connectedUsers.set(userId, {
@@ -65,7 +66,12 @@ class SocketConnectionChild {
     if (!wasConnected) {
       console.log(`User ${socket.user.name} connected (ID: ${userId})`);
     } else {
-      console.log(`User ${socket.user.name} reconnected (ID: ${userId})`);
+      const nowTs = Date.now();
+      const prevAtTs = prevConn && prevConn.connectedAt ? new Date(prevConn.connectedAt).getTime() : 0;
+      const isDuplicateBurst = prevAtTs && (nowTs - prevAtTs < 2000);
+      if (!isDuplicateBurst) {
+        console.log(`User ${socket.user.name} reconnected (ID: ${userId})`);
+      }
     }
 
     // Join user to their personal room
