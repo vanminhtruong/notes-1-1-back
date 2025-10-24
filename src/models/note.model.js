@@ -79,6 +79,16 @@ export default (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false,
     },
+    backgroundColor: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: null,
+    },
+    backgroundImage: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
   });
 
   Note.associate = function(models) {

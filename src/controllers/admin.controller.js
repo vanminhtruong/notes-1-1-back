@@ -72,6 +72,7 @@ class AdminController {
   uploadAvatar = (...args) => this.profileChild.uploadAvatar(...args);
   getAdminProfile = (...args) => this.profileChild.getAdminProfile(...args);
   updateAdminProfile = (...args) => this.profileChild.updateAdminProfile(...args);
+  changeAdminPassword = (...args) => this.profileChild.changeAdminPassword(...args);
   pinUserNote = (...args) => this.notesChild.pinUserNote(...args);
   unpinUserNote = (...args) => this.notesChild.unpinUserNote(...args);
   

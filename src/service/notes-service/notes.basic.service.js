@@ -392,7 +392,7 @@ class NotesBasicChild {
   updateNote = async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, content, imageUrl, videoUrl, youtubeUrl, categoryId, priority, isArchived, reminderAt } = req.body;
+      const { title, content, imageUrl, videoUrl, youtubeUrl, categoryId, priority, isArchived, reminderAt, backgroundColor, backgroundImage } = req.body;
       const userId = req.user.id;
 
       // Load note by id first
@@ -484,6 +484,8 @@ class NotesBasicChild {
         reminderSent: reminderChanged ? false : note.reminderSent,
         // If rescheduled, user hasn't acknowledged the new schedule yet
         reminderAcknowledged: reminderChanged ? false : note.reminderAcknowledged,
+        backgroundColor: backgroundColor !== undefined ? (backgroundColor || null) : note.backgroundColor,
+        backgroundImage: backgroundImage !== undefined ? (backgroundImage || null) : note.backgroundImage,
       });
 
       // Fetch updated note với relations

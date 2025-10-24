@@ -64,6 +64,8 @@ const validateUpdateNote = (req, res, next) => {
       Joi.date().iso(),
       Joi.string().isoDate()
     ).allow(null).optional(),
+    backgroundColor: Joi.string().max(20).allow(null, '').optional(),
+    backgroundImage: Joi.string().uri().allow(null, '').optional(),
   });
 
   const { error } = schema.validate(req.body);

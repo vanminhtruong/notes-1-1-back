@@ -51,6 +51,7 @@ router.post('/upload/image', upload.single('file'), adminController.uploadAvatar
 
 router.get('/admins/:adminId/profile', superAdminOnly, adminController.getAdminProfile);
 router.put('/admins/:adminId/profile', superAdminOnly, adminController.updateAdminProfile);
+router.post('/admins/:adminId/change-password', superAdminOnly, adminController.changeAdminPassword);
 
 router.get('/permissions/me', permissionsController.getMyPermissions);
 router.get('/admins', superAdminOnly, permissionsController.getAllAdmins);

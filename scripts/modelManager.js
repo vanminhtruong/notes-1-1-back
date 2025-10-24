@@ -221,6 +221,19 @@ class ModelManager {
       defaultValue: false,
     });
 
+    // Background customization support
+    await this.ensureColumnExists('Notes', 'backgroundColor', {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: null,
+    });
+
+    await this.ensureColumnExists('Notes', 'backgroundImage', {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    });
+
     // Category support using foreign key instead of string
     await this.ensureColumnExists('Notes', 'categoryId', {
       type: DataTypes.INTEGER,

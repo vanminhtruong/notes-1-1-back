@@ -160,6 +160,53 @@ class AdminProfileChild {
     res.json({ success: true, admin });
   });
 
+  // Đổi mật khẩu admin (Super Admin only - cho admin khác)
+  changeAdminPassword = asyncHandler(async (req, res) => {
+    const { adminId } = req.params;
+    const { currentPassword, newPassword } = req.body;
+
+    // Chỉ super admin mới được đổi mật khẩu admin khác
+    if (req.user.adminLevel !== 'super_admin') {
+      return res.status(403).json({ message: 'Chỉ Super Admin mới có thể đổi mật khẩu admin khác' });
+    }
+
+    const admin = await User.findByPk(adminId);
+    if (!admin || admin.role !== 'admin') {
+      return res.status(404).json({ message: 'Admin không tồn tại' });
+    }
+
+    // Không cho phép đổi mật khẩu super admin khác
+    if (admin.adminLevel === 'super_admin') {
+      return res.status(403).json({ message: 'Không thể đổi mật khẩu Super Admin khác' });
+    }
+
+    // Validate
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp mật khẩu hiện tại và mật khẩu mới' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    // Verify current password
+    const isPasswordValid = await admin.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Mật khẩu hiện tại không đúng' });
+    }
+
+    // Check if new password is same as current
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ message: 'Mật khẩu mới phải khác mật khẩu hiện tại' });
+    }
+
+    // Update password
+    admin.password = newPassword;
+    await admin.save();
+
+    res.json({ success: true, message: 'Đổi mật khẩu thành công' });
+  });
+
   // Cập nhật hồ sơ admin khác (Super Admin only)
   updateAdminProfile = asyncHandler(async (req, res) => {
     const { adminId } = req.params;
