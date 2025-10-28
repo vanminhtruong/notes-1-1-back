@@ -1,6 +1,6 @@
 import express from 'express';
 import authenticate from '../../middlewares/auth.js';
-import { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage, getPrivacy, updatePrivacy } from '../../controllers/settings.controller.js';
+import { getE2EE, updateE2EE, getE2EEPin, updateE2EEPin, getReadStatus, updateReadStatus, getTheme, updateTheme, getLanguage, updateLanguage, getPrivacy, updatePrivacy, getAnimatedBackground, updateAnimatedBackground } from '../../controllers/settings.controller.js';
 
 const router = express.Router();
 
@@ -18,5 +18,7 @@ router.get('/language', getLanguage);
 router.put('/language', updateLanguage);
 router.get('/privacy', getPrivacy);
 router.put('/privacy', updatePrivacy);
+router.get('/animated-background', getAnimatedBackground);
+router.put('/animated-background', updateAnimatedBackground);
 
 export default router;

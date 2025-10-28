@@ -742,6 +742,13 @@ class ModelManager {
       defaultValue: 'vi',
     });
 
+    // Animated background settings for dark-black theme
+    await this.ensureColumnExists('Users', 'animatedBackground', {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null,
+    });
+
     // Remember-me preference persisted on backend
     await this.ensureColumnExists('Users', 'rememberLogin', {
       type: DataTypes.BOOLEAN,

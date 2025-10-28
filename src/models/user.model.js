@@ -95,6 +95,13 @@ export default (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'en',
     },
+    // Animated background settings for dark-black theme
+    animatedBackground: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null,
+      // Structure: { enabled: boolean, theme: 'christmas' | 'tet' | 'easter' | 'none' }
+    },
     // Persisted preference: remember-me on login
     rememberLogin: {
       type: DataTypes.BOOLEAN,

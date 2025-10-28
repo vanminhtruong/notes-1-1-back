@@ -2,6 +2,7 @@ import SettingsE2EEChild from '../service/settings-service/settings.e2ee.service
 import SettingsAppearanceChild from '../service/settings-service/settings.appearance.service.js';
 import SettingsPrivacyChild from '../service/settings-service/settings.privacy.service.js';
 import SettingsReadStatusChild from '../service/settings-service/settings.readstatus.service.js';
+import SettingsAnimatedBackgroundChild from '../service/settings-service/settings.animatedbackground.service.js';
 
 // OOP-style controller similar to GroupController
 class SettingsController {
@@ -11,6 +12,7 @@ class SettingsController {
     this.appearanceChild = new SettingsAppearanceChild(this);
     this.privacyChild = new SettingsPrivacyChild(this);
     this.readStatusChild = new SettingsReadStatusChild(this);
+    this.animatedBackgroundChild = new SettingsAnimatedBackgroundChild(this);
   }
 
   // Delegate methods to child services
@@ -26,6 +28,8 @@ class SettingsController {
   updateLanguage = (...args) => this.appearanceChild.updateLanguage(...args);
   getPrivacy = (...args) => this.privacyChild.getPrivacy(...args);
   updatePrivacy = (...args) => this.privacyChild.updatePrivacy(...args);
+  getAnimatedBackground = (...args) => this.animatedBackgroundChild.getAnimatedBackground(...args);
+  updateAnimatedBackground = (...args) => this.animatedBackgroundChild.updateAnimatedBackground(...args);
 }
 
 const settingsController = new SettingsController();
@@ -44,3 +48,5 @@ export const getLanguage = settingsController.getLanguage;
 export const updateLanguage = settingsController.updateLanguage;
 export const getPrivacy = settingsController.getPrivacy;
 export const updatePrivacy = settingsController.updatePrivacy;
+export const getAnimatedBackground = settingsController.getAnimatedBackground;
+export const updateAnimatedBackground = settingsController.updateAnimatedBackground;
