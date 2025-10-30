@@ -20,8 +20,8 @@ class SettingsAnimatedBackgroundChild {
       return res.status(400).json({ message: 'Invalid payload: enabled must be a boolean' });
     }
 
-    // Validate theme
-    const validThemes = ['christmas', 'tet', 'easter', 'none'];
+    // Validate theme (extend with 'halloween')
+    const validThemes = ['christmas', 'tet', 'easter', 'halloween', 'none'];
     if (!validThemes.includes(theme)) {
       return res.status(400).json({ 
         message: `Invalid payload: theme must be one of ${validThemes.join(', ')}` 
