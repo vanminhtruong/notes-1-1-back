@@ -3,6 +3,7 @@ import SettingsAppearanceChild from '../service/settings-service/settings.appear
 import SettingsPrivacyChild from '../service/settings-service/settings.privacy.service.js';
 import SettingsReadStatusChild from '../service/settings-service/settings.readstatus.service.js';
 import SettingsAnimatedBackgroundChild from '../service/settings-service/settings.animatedbackground.service.js';
+import SettingsBackgroundChild from '../service/settings-service/settings.background.service.js';
 
 // OOP-style controller similar to GroupController
 class SettingsController {
@@ -13,6 +14,7 @@ class SettingsController {
     this.privacyChild = new SettingsPrivacyChild(this);
     this.readStatusChild = new SettingsReadStatusChild(this);
     this.animatedBackgroundChild = new SettingsAnimatedBackgroundChild(this);
+    this.backgroundChild = new SettingsBackgroundChild(this);
   }
 
   // Delegate methods to child services
@@ -30,6 +32,8 @@ class SettingsController {
   updatePrivacy = (...args) => this.privacyChild.updatePrivacy(...args);
   getAnimatedBackground = (...args) => this.animatedBackgroundChild.getAnimatedBackground(...args);
   updateAnimatedBackground = (...args) => this.animatedBackgroundChild.updateAnimatedBackground(...args);
+  getBackgroundColors = (...args) => this.backgroundChild.getBackgroundColors(...args);
+  getBackgroundImages = (...args) => this.backgroundChild.getBackgroundImages(...args);
 }
 
 const settingsController = new SettingsController();
@@ -50,3 +54,5 @@ export const getPrivacy = settingsController.getPrivacy;
 export const updatePrivacy = settingsController.updatePrivacy;
 export const getAnimatedBackground = settingsController.getAnimatedBackground;
 export const updateAnimatedBackground = settingsController.updateAnimatedBackground;
+export const getBackgroundColors = settingsController.getBackgroundColors;
+export const getBackgroundImages = settingsController.getBackgroundImages;
