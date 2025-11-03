@@ -134,4 +134,8 @@ router.delete('/tags/:id', requirePermission('manage_notes.tags.delete'), adminC
 router.post('/tags/assign', requirePermission('manage_notes.tags.assign'), adminController.assignTagToNote);
 router.delete('/tags/:noteId/:tagId', requirePermission('manage_notes.tags.assign'), adminController.removeTagFromNote);
 
+// Backgrounds management (require specific backgrounds permissions)
+import adminBackgroundsRoute from './admin/admin.backgrounds.route.js';
+router.use('/backgrounds', adminBackgroundsRoute);
+
 export default router;

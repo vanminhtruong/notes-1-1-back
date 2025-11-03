@@ -81,6 +81,11 @@ class AdminPermissionsController {
     'manage_notes.tags.edit', // Sửa tag
     'manage_notes.tags.delete', // Xóa tag
     'manage_notes.tags.assign', // Gắn/bỏ tag cho notes
+    'manage_notes.backgrounds',    // Quản lý backgrounds ghi chú (parent)
+    'manage_notes.backgrounds.view', // Xem danh sách backgrounds (colors & images)
+    'manage_notes.backgrounds.create', // Tạo background mới
+    'manage_notes.backgrounds.edit', // Sửa background
+    'manage_notes.backgrounds.delete', // Xóa background
     'manage_admins',          // Quản lý admin khác (chỉ super admin)
     'manage_admins.create',   // Tạo admin
     'manage_admins.edit',     // Sửa quyền admin

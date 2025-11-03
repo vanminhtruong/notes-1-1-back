@@ -24,6 +24,7 @@ import defineUserSession from './userSession.model.js';
 import defineNoteCategory from './noteCategory.model.js';
 import defineNoteTag from './noteTag.model.js';
 import defineNoteTagMapping from './noteTagMapping.model.js';
+import defineBackground from './background.model.js';
 
 const User = defineUser(sequelize, DataTypes);
 const Note = defineNote(sequelize, DataTypes);
@@ -49,6 +50,7 @@ const UserSession = defineUserSession(sequelize, DataTypes);
 const NoteCategory = defineNoteCategory(sequelize, DataTypes);
 const NoteTag = defineNoteTag(sequelize, DataTypes);
 const NoteTagMapping = defineNoteTagMapping(sequelize, DataTypes);
+const Background = defineBackground(sequelize, DataTypes);
 
 // Define associations
 User.hasMany(Note, { foreignKey: 'userId', as: 'notes' });
@@ -333,6 +335,7 @@ export {
   NoteCategory,
   NoteTag,
   NoteTagMapping,
+  Background,
   Friendship,
   Message,
   PasswordReset,
