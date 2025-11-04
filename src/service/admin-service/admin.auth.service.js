@@ -13,20 +13,20 @@ class AdminAuthChild {
 
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(400).json({ message: 'Email không tồn tại' });
+      return res.status(400).json({ message: 'Email không tồn tại', code: 'EMAIL_NOT_FOUND' });
     }
 
     if (user.role !== 'admin') {
-      return res.status(403).json({ message: 'Không có quyền truy cập admin' });
+      return res.status(403).json({ message: 'Không có quyền truy cập admin', code: 'NOT_ADMIN' });
     }
 
     if (!user.isActive) {
-      return res.status(400).json({ message: 'Tài khoản đã bị vô hiệu hóa' });
+      return res.status(400).json({ message: 'Tài khoản đã bị vô hiệu hóa', code: 'ACCOUNT_DEACTIVATED' });
     }
 
     const isPasswordValid = await user.validatePassword(password);
     if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Mật khẩu không đúng' });
+      return res.status(400).json({ message: 'Mật khẩu không đúng', code: 'INVALID_PASSWORD' });
     }
 
     const token = jwt.sign(
