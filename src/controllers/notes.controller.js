@@ -63,6 +63,8 @@ class NotesController {
   createCategory = (...args) => this.categoriesChild.createCategory(...args);
   updateCategory = (...args) => this.categoriesChild.updateCategory(...args);
   deleteCategory = (...args) => this.categoriesChild.deleteCategory(...args);
+  pinCategory = (...args) => this.categoriesChild.pinCategory(...args);
+  unpinCategory = (...args) => this.categoriesChild.unpinCategory(...args);
   
   // Tag operations - delegate to tagsChild
   getTags = (...args) => this.tagsChild.getTags(...args);
@@ -117,6 +119,8 @@ export const getCategoryById = notesController.getCategoryById;
 export const createCategory = notesController.createCategory;
 export const updateCategory = notesController.updateCategory;
 export const deleteCategory = notesController.deleteCategory;
+export const pinCategory = notesController.pinCategory;
+export const unpinCategory = notesController.unpinCategory;
 export const getTags = notesController.getTags;
 export const getTagById = notesController.getTagById;
 export const createTag = notesController.createTag;

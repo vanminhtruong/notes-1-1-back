@@ -122,6 +122,8 @@ router.get('/categories', requirePermission('manage_notes.categories.view'), adm
 router.get('/categories/:id', requirePermission('manage_notes.categories.view'), adminController.getCategoryDetail);
 router.post('/categories', requirePermission('manage_notes.categories.create'), adminController.createCategoryForUser);
 router.put('/categories/:id', requirePermission('manage_notes.categories.edit'), adminController.updateCategory);
+router.patch('/categories/:id/pin', requirePermission('manage_notes.categories.edit'), adminController.pinCategory);
+router.patch('/categories/:id/unpin', requirePermission('manage_notes.categories.edit'), adminController.unpinCategory);
 router.delete('/categories/:id', requirePermission('manage_notes.categories.delete'), adminController.deleteCategory);
 
 // Tags management (require specific tags permissions)

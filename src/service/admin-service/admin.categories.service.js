@@ -43,14 +43,18 @@ class AdminCategoriesChild {
       );
     }
 
-    // Nếu filter theo userId, sort theo maxSelectionCount để giống users
+    // Nếu filter theo userId, sort theo isPinned và maxSelectionCount để giống users
     const orderClause = userId 
       ? [
+          ['isPinned', 'DESC'], // Categories ghim lên đầu
           ['maxSelectionCount', 'DESC'],
           ['selectionCount', 'DESC'],
           [sortBy, sortOrder]
         ]
-      : [[sortBy, sortOrder]];
+      : [
+          ['isPinned', 'DESC'], // Categories ghim lên đầu
+          [sortBy, sortOrder]
+        ];
 
     const { count, rows: categories } = await NoteCategory.findAndCountAll({
       where: whereClause,
@@ -137,6 +141,7 @@ class AdminCategoriesChild {
       where: whereClause,
       limit: parseInt(limit),
       order: [
+        ['isPinned', 'DESC'], // Categories ghim lên đầu
         ['maxSelectionCount', 'DESC'],
         ['selectionCount', 'DESC'],
         ['createdAt', 'DESC']
@@ -430,6 +435,108 @@ class AdminCategoriesChild {
       totalCategories,
       categoriesByUser,
       mostUsedCategories: sortedByUsage
+    });
+  });
+
+  // Pin category
+  pinCategory = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const category = await NoteCategory.findByPk(id);
+
+    if (!category) {
+      return res.status(404).json({ message: 'Không tìm thấy category' });
+    }
+
+    if (category.isPinned) {
+      return res.status(400).json({ message: 'Category đã được ghim' });
+    }
+
+    category.isPinned = true;
+    await category.save();
+
+    const updatedCategory = await NoteCategory.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'avatar']
+        }
+      ]
+    });
+
+    // Get notes count
+    const notesCount = await Note.count({
+      where: { categoryId: id }
+    });
+
+    const categoryData = {
+      ...updatedCategory.toJSON(),
+      notesCount
+    };
+
+    // Emit real-time events
+    emitToUser(category.userId, 'category_pinned', categoryData);
+    emitToAllAdmins('admin_category_pinned', {
+      category: categoryData,
+      pinnedBy: req.user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      message: 'Ghim category thành công',
+      category: categoryData
+    });
+  });
+
+  // Unpin category
+  unpinCategory = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const category = await NoteCategory.findByPk(id);
+
+    if (!category) {
+      return res.status(404).json({ message: 'Không tìm thấy category' });
+    }
+
+    if (!category.isPinned) {
+      return res.status(400).json({ message: 'Category chưa được ghim' });
+    }
+
+    category.isPinned = false;
+    await category.save();
+
+    const updatedCategory = await NoteCategory.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'avatar']
+        }
+      ]
+    });
+
+    // Get notes count
+    const notesCount = await Note.count({
+      where: { categoryId: id }
+    });
+
+    const categoryData = {
+      ...updatedCategory.toJSON(),
+      notesCount
+    };
+
+    // Emit real-time events
+    emitToUser(category.userId, 'category_unpinned', categoryData);
+    emitToAllAdmins('admin_category_unpinned', {
+      category: categoryData,
+      unpinnedBy: req.user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      message: 'Bỏ ghim category thành công',
+      category: categoryData
     });
   });
 }

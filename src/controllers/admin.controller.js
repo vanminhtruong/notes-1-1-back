@@ -84,6 +84,8 @@ class AdminController {
   updateCategory = (...args) => this.categoriesChild.updateCategory(...args);
   deleteCategory = (...args) => this.categoriesChild.deleteCategory(...args);
   getCategoriesStats = (...args) => this.categoriesChild.getCategoriesStats(...args);
+  pinCategory = (...args) => this.categoriesChild.pinCategory(...args);
+  unpinCategory = (...args) => this.categoriesChild.unpinCategory(...args);
   
   // Tags management
   getAllTags = (...args) => this.tagsService.getAllTags(...args);

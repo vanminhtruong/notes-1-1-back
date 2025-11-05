@@ -30,10 +30,11 @@ class NotesCategoriesChild {
       }
 
       // Tối ưu: Sử dụng subquery để tính notesCount thay vì GROUP BY
-      // Order: Mới nhất trước (createdAt DESC), sau đó theo usage
+      // Order: Pinned categories first, then by sortBy, then by usage
       const categories = await NoteCategory.findAll({
         where: whereClause,
         order: [
+          ['isPinned', 'DESC'], // Categories ghim lên đầu
           [sortBy, sortOrder], // Mặc định: createdAt DESC - mới nhất lên đầu
           ['maxSelectionCount', 'DESC'],
           ['selectionCount', 'DESC']
@@ -356,6 +357,116 @@ class NotesCategoriesChild {
       console.error('Delete category error:', error);
       res.status(500).json({ 
         message: 'Error deleting category', 
+        error: error.message 
+      });
+    }
+  };
+
+  /**
+   * Pin a category
+   */
+  pinCategory = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+
+      const category = await NoteCategory.findOne({
+        where: { 
+          id,
+          userId 
+        }
+      });
+
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+
+      if (category.isPinned) {
+        return res.status(400).json({ message: 'Category is already pinned' });
+      }
+
+      category.isPinned = true;
+      await category.save();
+
+      // Lấy notesCount hiện tại
+      const notesCount = await Note.count({
+        where: { categoryId: id },
+        benchmark: true,
+        logging: false
+      });
+
+      const categoryData = {
+        ...category.toJSON(),
+        notesCount
+      };
+
+      // Emit socket event for real-time update
+      emitToUser(userId, 'category_pinned', categoryData);
+      emitToAllAdmins('user_category_pinned', { ...categoryData, userId });
+
+      res.status(200).json({
+        message: 'Category pinned successfully',
+        category: categoryData,
+      });
+    } catch (error) {
+      console.error('Pin category error:', error);
+      res.status(500).json({ 
+        message: 'Error pinning category', 
+        error: error.message 
+      });
+    }
+  };
+
+  /**
+   * Unpin a category
+   */
+  unpinCategory = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+
+      const category = await NoteCategory.findOne({
+        where: { 
+          id,
+          userId 
+        }
+      });
+
+      if (!category) {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+
+      if (!category.isPinned) {
+        return res.status(400).json({ message: 'Category is not pinned' });
+      }
+
+      category.isPinned = false;
+      await category.save();
+
+      // Lấy notesCount hiện tại
+      const notesCount = await Note.count({
+        where: { categoryId: id },
+        benchmark: true,
+        logging: false
+      });
+
+      const categoryData = {
+        ...category.toJSON(),
+        notesCount
+      };
+
+      // Emit socket event for real-time update
+      emitToUser(userId, 'category_unpinned', categoryData);
+      emitToAllAdmins('user_category_unpinned', { ...categoryData, userId });
+
+      res.status(200).json({
+        message: 'Category unpinned successfully',
+        category: categoryData,
+      });
+    } catch (error) {
+      console.error('Unpin category error:', error);
+      res.status(500).json({ 
+        message: 'Error unpinning category', 
         error: error.message 
       });
     }

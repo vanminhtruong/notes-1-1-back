@@ -285,6 +285,11 @@ class ModelManager {
         allowNull: false,
         defaultValue: false,
       },
+      isPinned: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -314,6 +319,7 @@ class ModelManager {
     }, [
       { fields: ['userId'], name: 'notecategories_userid_idx' },
       { fields: ['name'], name: 'notecategories_name_idx' },
+      { fields: ['isPinned'], name: 'notecategories_ispinned_idx' },
     ]);
   }
 
@@ -332,6 +338,13 @@ class ModelManager {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    });
+
+    // Ensure isPinned column exists for pinning categories
+    await this.ensureColumnExists('NoteCategories', 'isPinned', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     });
 
     // Tối ưu: Đảm bảo indexes tồn tại cho performance
@@ -359,6 +372,14 @@ class ModelManager {
           name: 'notecategories_userid_name_idx',
         });
         console.log('✓ Added composite userId+name index to NoteCategories');
+      }
+
+      // Thêm index cho isPinned để tối ưu sorting
+      if (!indexNames.includes('notecategories_ispinned_idx')) {
+        await this.qi.addIndex('NoteCategories', ['isPinned'], {
+          name: 'notecategories_ispinned_idx',
+        });
+        console.log('✓ Added isPinned index to NoteCategories');
       }
     } catch (error) {
       console.warn('Warning: Could not add indexes to NoteCategories:', error.message);

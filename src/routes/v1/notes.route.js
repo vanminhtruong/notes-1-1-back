@@ -31,6 +31,8 @@ router.get('/categories', notesController.getCategories);
 router.post('/categories', validateCreateCategory, notesController.createCategory);
 router.get('/categories/:id', notesController.getCategoryById);
 router.put('/categories/:id', validateUpdateCategory, notesController.updateCategory);
+router.patch('/categories/:id/pin', notesController.pinCategory);
+router.patch('/categories/:id/unpin', notesController.unpinCategory);
 router.delete('/categories/:id', notesController.deleteCategory);
 
 // Tag routes - Must be before /:id to avoid conflict
