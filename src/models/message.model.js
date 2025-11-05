@@ -27,7 +27,8 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: false,
       validate: {
-        len: [1, 1000]
+        // Cho phép rỗng để phục vụ recall(all) đặt content=''
+        len: [0, 1000]
       }
     },
     isRead: {

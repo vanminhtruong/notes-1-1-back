@@ -439,8 +439,8 @@ class ChatMessagesChild {
         console.log('Failed to cleanup user pins on recallMessages(self):', e?.name || e);
       }
     } else {
-      // Thu hồi cho mọi người: xóa hoàn toàn khỏi database
-      // Xóa files đính kèm trước
+      // Thu hồi cho mọi người: giữ bản ghi để hiển thị placeholder nhưng xoá dữ liệu nhạy cảm
+      // 1) Xoá file đính kèm nếu có
       const filesToDelete = [];
       for (const msg of msgs) {
         if (hasUploadedFile(msg)) {
@@ -451,9 +451,15 @@ class ChatMessagesChild {
         console.log('[RecallMessages] Deleting files:', filesToDelete);
         deleteMultipleFiles(filesToDelete);
       }
-
-      // Xóa tin nhắn khỏi database (CASCADE sẽ tự động xóa reactions, reads, pins)
-      await Message.destroy({ where: { id: { [Op.in]: foundMessageIds } } });
+      // 2) Đánh dấu isDeletedForAll, đồng thời clear content & replyToMessageId (giữ nguyên messageType để UI biết loại gốc)
+      await Message.update(
+        { isDeletedForAll: true, content: '', replyToMessageId: null },
+        { where: { id: { [Op.in]: foundMessageIds } } }
+      );
+      // 3) Cleanup dữ liệu liên quan (cho cả hai phía)
+      try { await MessageRead.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup reads on recall(all):', e?.name || e); }
+      try { await MessageReaction.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup reactions on recall(all):', e?.name || e); }
+      try { await PinnedMessage.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup pins on recall(all):', e?.name || e); }
     }
 
     const io = req.app.get('io') || global.io;

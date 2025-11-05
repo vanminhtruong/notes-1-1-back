@@ -1,6 +1,6 @@
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { User } from '../../models/index.js';
-import { emitToAllAdmins } from '../../socket/socketHandler.js';
+import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
 import { deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
 // Child controller: quản lý hồ sơ Admin (kế thừa qua composition từ AdminController)
@@ -117,8 +117,11 @@ class AdminProfileChild {
 
     // Emit real-time tới chính admin để đồng bộ UI khác tab
     try {
+      console.log('[Admin Profile] Emitting admin_profile_updated to user:', me.id, 'avatar:', sanitized.avatar);
       emitToUser(me.id, 'admin_profile_updated', { admin: sanitized });
-    } catch {}
+    } catch (err) {
+      console.error('[Admin Profile] Failed to emit admin_profile_updated:', err);
+    }
 
     res.json({ success: true, message: 'Cập nhật hồ sơ thành công', admin: sanitized });
   });
@@ -296,8 +299,11 @@ class AdminProfileChild {
 
     // Emit real-time tới chính admin để đồng bộ UI 
     try {
+      console.log('[Admin Profile] Emitting admin_profile_updated to admin:', admin.id, 'avatar:', sanitized.avatar);
       emitToUser(admin.id, 'admin_profile_updated', { admin: sanitized });
-    } catch {}
+    } catch (err) {
+      console.error('[Admin Profile] Failed to emit admin_profile_updated:', err);
+    }
 
     res.json({ success: true, message: 'Cập nhật hồ sơ admin thành công', admin: sanitized });
   });
