@@ -133,8 +133,6 @@ router.get('/tags/:id', requirePermission('manage_notes.tags.view_detail'), admi
 router.post('/tags', requirePermission('manage_notes.tags.create'), adminController.createTagForUser);
 router.put('/tags/:id', requirePermission('manage_notes.tags.edit'), adminController.updateTag);
 router.delete('/tags/:id', requirePermission('manage_notes.tags.delete'), adminController.deleteTag);
-router.patch('/tags/:id/pin', requirePermission('manage_notes.tags.edit'), adminController.pinTag);
-router.patch('/tags/:id/unpin', requirePermission('manage_notes.tags.edit'), adminController.unpinTag);
 router.post('/tags/assign', requirePermission('manage_notes.tags.assign'), adminController.assignTagToNote);
 router.delete('/tags/:noteId/:tagId', requirePermission('manage_notes.tags.assign'), adminController.removeTagFromNote);
 
