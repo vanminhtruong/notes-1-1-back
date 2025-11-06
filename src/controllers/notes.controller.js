@@ -72,6 +72,7 @@ class NotesController {
   createTag = (...args) => this.tagsChild.createTag(...args);
   updateTag = (...args) => this.tagsChild.updateTag(...args);
   deleteTag = (...args) => this.tagsChild.deleteTag(...args);
+  togglePinTag = (...args) => this.tagsChild.togglePinTag(...args);
   addTagToNote = (...args) => this.tagsChild.addTagToNote(...args);
   removeTagFromNote = (...args) => this.tagsChild.removeTagFromNote(...args);
   getNotesByTag = (...args) => this.tagsChild.getNotesByTag(...args);
@@ -126,6 +127,7 @@ export const getTagById = notesController.getTagById;
 export const createTag = notesController.createTag;
 export const updateTag = notesController.updateTag;
 export const deleteTag = notesController.deleteTag;
+export const togglePinTag = notesController.togglePinTag;
 export const addTagToNote = notesController.addTagToNote;
 export const removeTagFromNote = notesController.removeTagFromNote;
 export const getNotesByTag = notesController.getNotesByTag;

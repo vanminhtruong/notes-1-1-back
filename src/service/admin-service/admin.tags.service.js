@@ -29,7 +29,7 @@ class AdminTagsService {
 
       const { count, rows: tags } = await NoteTag.findAndCountAll({
         where,
-        attributes: ['id', 'name', 'color', 'userId', 'createdAt', 'updatedAt'],
+        attributes: ['id', 'name', 'color', 'isPinned', 'userId', 'createdAt', 'updatedAt'],
         include: [
           {
             model: User,
@@ -43,7 +43,10 @@ class AdminTagsService {
             through: { attributes: [] },
           },
         ],
-        order: [[sortBy, sortOrder]],
+        order: [
+          ['isPinned', 'DESC'], // Pinned tags first
+          [sortBy, sortOrder]
+        ],
         limit: parseInt(limit),
         offset,
         distinct: true,
@@ -54,6 +57,7 @@ class AdminTagsService {
         id: tag.id,
         name: tag.name,
         color: tag.color,
+        isPinned: tag.isPinned || false,
         userId: tag.userId,
         user: tag.user,
         notesCount: tag.notes?.length || 0,
@@ -139,7 +143,7 @@ class AdminTagsService {
       const { page = 1, limit = 10 } = req.query;
 
       const tag = await NoteTag.findByPk(id, {
-        attributes: ['id', 'name', 'color', 'userId', 'createdAt', 'updatedAt'],
+        attributes: ['id', 'name', 'color', 'isPinned', 'userId', 'createdAt', 'updatedAt'],
         include: [
           {
             model: User,
@@ -177,6 +181,7 @@ class AdminTagsService {
           id: tag.id,
           name: tag.name,
           color: tag.color,
+          isPinned: tag.isPinned || false,
           userId: tag.userId,
           user: tag.user,
           notesCount: count,
@@ -230,6 +235,7 @@ class AdminTagsService {
             id: tag.id,
             name: tag.name,
             color: tag.color,
+            isPinned: tag.isPinned || false,
             notesCount: 0,
             createdAt: tag.createdAt,
             updatedAt: tag.updatedAt,
@@ -242,6 +248,7 @@ class AdminTagsService {
             id: tag.id,
             name: tag.name,
             color: tag.color,
+            isPinned: tag.isPinned || false,
             userId: tag.userId,
             user: {
               id: user.id,
@@ -261,6 +268,7 @@ class AdminTagsService {
           id: tag.id,
           name: tag.name,
           color: tag.color,
+          isPinned: tag.isPinned || false,
           userId: tag.userId,
           user: {
             id: user.id,
@@ -409,6 +417,148 @@ class AdminTagsService {
     } catch (error) {
       console.error('[Admin] Delete tag error:', error);
       res.status(500).json({ message: 'Lỗi khi xóa tag' });
+    }
+  }
+
+  // Pin tag
+  async pinTag(req, res) {
+    try {
+      const { id } = req.params;
+
+      const tag = await NoteTag.findByPk(id, {
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email'],
+          },
+        ],
+      });
+
+      if (!tag) {
+        return res.status(404).json({ message: 'Không tìm thấy tag' });
+      }
+
+      const userId = tag.userId;
+      
+      tag.isPinned = true;
+      await tag.save();
+
+      // Get notes count
+      const notesCount = await NoteTagMapping.count({
+        where: { tagId: id },
+      });
+
+      const updatedTag = {
+        id: tag.id,
+        name: tag.name,
+        color: tag.color,
+        isPinned: tag.isPinned,
+        userId: tag.userId,
+        user: tag.user,
+        notesCount,
+        createdAt: tag.createdAt,
+        updatedAt: tag.updatedAt,
+      };
+
+      // Emit real-time events
+      if (global.io) {
+        // To user
+        global.io.to(`user_${tag.userId}`).emit('tag_pinned', {
+          tag: {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color,
+            isPinned: tag.isPinned,
+            notesCount,
+            createdAt: tag.createdAt,
+            updatedAt: tag.updatedAt,
+          },
+        });
+
+        // To admin
+        global.io.to('admin_room').emit('admin_tag_pinned', {
+          tag: updatedTag,
+        });
+      }
+
+      res.json({
+        message: 'Ghim tag thành công',
+        tag: updatedTag,
+      });
+    } catch (error) {
+      console.error('[Admin] Pin tag error:', error);
+      res.status(500).json({ message: 'Lỗi khi ghim tag' });
+    }
+  }
+
+  // Unpin tag
+  async unpinTag(req, res) {
+    try {
+      const { id } = req.params;
+
+      const tag = await NoteTag.findByPk(id, {
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email'],
+          },
+        ],
+      });
+
+      if (!tag) {
+        return res.status(404).json({ message: 'Không tìm thấy tag' });
+      }
+
+      tag.isPinned = false;
+      await tag.save();
+
+      // Get notes count
+      const notesCount = await NoteTagMapping.count({
+        where: { tagId: id },
+      });
+
+      const updatedTag = {
+        id: tag.id,
+        name: tag.name,
+        color: tag.color,
+        isPinned: tag.isPinned,
+        userId: tag.userId,
+        user: tag.user,
+        notesCount,
+        createdAt: tag.createdAt,
+        updatedAt: tag.updatedAt,
+      };
+
+      // Emit real-time events
+      if (global.io) {
+        // To user
+        global.io.to(`user_${tag.userId}`).emit('tag_unpinned', {
+          tag: {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color,
+            isPinned: tag.isPinned,
+            notesCount,
+            createdAt: tag.createdAt,
+            updatedAt: tag.updatedAt,
+          },
+        });
+
+        // To admin
+        global.io.to('admin_room').emit('admin_tag_unpinned', {
+          tag: updatedTag,
+        });
+      }
+
+      res.json({
+        message: 'Bỏ ghim tag thành công',
+        tag: updatedTag,
+      });
+    } catch (error) {
+      console.error('[Admin] Unpin tag error:', error);
+      res.status(500).json({ message: 'Lỗi khi bỏ ghim tag' });
     }
   }
 

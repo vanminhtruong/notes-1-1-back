@@ -1,4 +1,4 @@
-import { Note, NoteTag, NoteTagMapping } from '../../models/index.js';
+import { Note, NoteTag, NoteTagMapping, User } from '../../models/index.js';
 import { Op } from 'sequelize';
 
 class NotesTagsChild {
@@ -6,7 +6,7 @@ class NotesTagsChild {
     this.parent = parent;
     // Simple in-memory cache
     this.tagsCache = new Map();
-    this.CACHE_TTL = 5000; // 5 seconds cache
+    this.CACHE_TTL = 0; // disable cache to ensure realtime updates
   }
 
   // Clear cache for a specific user
@@ -38,8 +38,11 @@ class NotesTagsChild {
 
       const tags = await NoteTag.findAll({
         where,
-        attributes: ['id', 'name', 'color', 'createdAt', 'updatedAt'],
-        order: [[sortBy, sortOrder]],
+        attributes: ['id', 'name', 'color', 'isPinned', 'createdAt', 'updatedAt'],
+        order: [
+          ['isPinned', 'DESC'], // Ghim lên đầu
+          [sortBy, sortOrder],
+        ],
         include: [
           {
             model: Note,
@@ -55,6 +58,7 @@ class NotesTagsChild {
         id: tag.id,
         name: tag.name,
         color: tag.color,
+        isPinned: tag.isPinned,
         notesCount: tag.notes?.length || 0,
         createdAt: tag.createdAt,
         updatedAt: tag.updatedAt,
@@ -139,18 +143,23 @@ class NotesTagsChild {
         userId,
       });
 
-      // Emit real-time event
+      // Emit real-time events
       if (global.io) {
-        global.io.to(`user_${userId}`).emit('tag_created', {
-          tag: {
-            id: tag.id,
-            name: tag.name,
-            color: tag.color,
-            notesCount: 0,
-            createdAt: tag.createdAt,
-            updatedAt: tag.updatedAt,
-          },
-        });
+        const tagData = {
+          id: tag.id,
+          name: tag.name,
+          color: tag.color,
+          isPinned: tag.isPinned || false,
+          notesCount: 0,
+          createdAt: tag.createdAt,
+          updatedAt: tag.updatedAt,
+        };
+        
+        // To user
+        global.io.to(`user_${userId}`).emit('tag_created', { tag: tagData });
+        
+        // To admin room
+        global.io.to('admin_room').emit('user_tag_created', { tag: tagData, userId });
       }
 
       // Clear cache after creating tag
@@ -162,6 +171,7 @@ class NotesTagsChild {
           id: tag.id,
           name: tag.name,
           color: tag.color,
+          isPinned: tag.isPinned || false,
           notesCount: 0,
           createdAt: tag.createdAt,
           updatedAt: tag.updatedAt,
@@ -216,6 +226,7 @@ class NotesTagsChild {
         id: tag.id,
         name: tag.name,
         color: tag.color,
+        isPinned: tag.isPinned || false,
         notesCount,
         createdAt: tag.createdAt,
         updatedAt: tag.updatedAt,
@@ -224,9 +235,13 @@ class NotesTagsChild {
       // Clear cache after updating tag
       this.clearUserCache(userId);
 
-      // Emit real-time event
+      // Emit real-time events
       if (global.io) {
+        // To user
         global.io.to(`user_${userId}`).emit('tag_updated', { tag: updatedTag });
+        
+        // To admin room
+        global.io.to('admin_room').emit('user_tag_updated', { tag: updatedTag, userId });
       }
 
       res.json({
@@ -263,9 +278,13 @@ class NotesTagsChild {
       // Clear cache after deleting tag
       this.clearUserCache(userId);
 
-      // Emit real-time event
+      // Emit real-time events
       if (global.io) {
+        // To user
         global.io.to(`user_${userId}`).emit('tag_deleted', { id: parseInt(id) });
+        
+        // To admin room
+        global.io.to('admin_room').emit('user_tag_deleted', { id: parseInt(id), userId });
       }
 
       res.json({ message: 'Xóa tag thành công' });
@@ -385,6 +404,71 @@ class NotesTagsChild {
     } catch (error) {
       console.error('Remove tag from note error:', error);
       res.status(500).json({ message: 'Lỗi khi xóa tag khỏi ghi chú' });
+    }
+  };
+
+  // Toggle pin tag
+  togglePinTag = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+
+      const tag = await NoteTag.findOne({
+        where: { id, userId },
+      });
+
+      if (!tag) {
+        return res.status(404).json({ message: 'Không tìm thấy tag' });
+      }
+
+      // Toggle isPinned
+      tag.isPinned = !tag.isPinned;
+      await tag.save();
+
+      // Get notes count
+      const notesCount = await NoteTagMapping.count({
+        where: { tagId: id },
+      });
+
+      const updatedTag = {
+        id: tag.id,
+        name: tag.name,
+        color: tag.color,
+        isPinned: tag.isPinned,
+        notesCount,
+        createdAt: tag.createdAt,
+        updatedAt: tag.updatedAt,
+      };
+
+      // Clear cache after toggling pin
+      this.clearUserCache(userId);
+
+      // Emit real-time events
+      if (global.io) {
+        const eventName = tag.isPinned ? 'tag_pinned' : 'tag_unpinned';
+        
+        // To user
+        global.io.to(`user_${userId}`).emit(eventName, { tag: updatedTag });
+
+        // To admins (emit to each admin's personal room)
+        try {
+          const adminEventName = tag.isPinned ? 'admin_tag_pinned' : 'admin_tag_unpinned';
+          const adminUsers = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          for (const admin of adminUsers) {
+            global.io.to(`user_${admin.id}`).emit(adminEventName, { tag: updatedTag });
+          }
+        } catch (e) {
+          console.error('Error emitting admin tag pin/unpin event:', e);
+        }
+      }
+
+      res.json({
+        message: tag.isPinned ? 'Đã ghim tag' : 'Đã bỏ ghim tag',
+        tag: updatedTag,
+      });
+    } catch (error) {
+      console.error('Toggle pin tag error:', error);
+      res.status(500).json({ message: 'Lỗi khi ghim/bỏ ghim tag' });
     }
   };
 

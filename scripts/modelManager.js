@@ -1,60 +1,105 @@
 import { sequelize } from '../src/db/index.js';
 import { DataTypes, QueryTypes } from 'sequelize';
+import {
+  ChatPreference,
+  NoteCategory,
+  NoteFolder,
+  NoteTag,
+  NoteTagMapping,
+  SharedNote,
+  GroupSharedNote,
+  MessageRead,
+  GroupMessageRead,
+  Message,
+  GroupMessage,
+  Note,
+  User,
+  Group,
+} from '../src/models/index.js';
 
 class ModelManager {
   constructor() {
     this.qi = sequelize.getQueryInterface();
   }
 
+  /**
+   * Helper method để lấy table definition từ Sequelize model
+   * @param {Object} model - Sequelize model instance
+   * @returns {Object} Table definition object
+   */
+  getTableDefinitionFromModel(model) {
+    const attributes = model.rawAttributes;
+    const tableDefinition = {};
+
+    for (const [key, attr] of Object.entries(attributes)) {
+      tableDefinition[key] = {
+        type: attr.type,
+        allowNull: attr.allowNull !== undefined ? attr.allowNull : true,
+        primaryKey: attr.primaryKey || false,
+        autoIncrement: attr.autoIncrement || false,
+        defaultValue: attr.defaultValue,
+        references: attr.references,
+        onDelete: attr.onDelete,
+        validate: attr.validate,
+      };
+
+      // Remove undefined values
+      Object.keys(tableDefinition[key]).forEach(k => {
+        if (tableDefinition[key][k] === undefined) {
+          delete tableDefinition[key][k];
+        }
+      });
+    }
+
+    return tableDefinition;
+  }
+
+  /**
+   * Helper method để lấy indexes từ Sequelize model
+   * @param {Object} model - Sequelize model instance
+   * @returns {Array} Array of index definitions
+   */
+  getIndexesFromModel(model) {
+    const indexes = model.options?.indexes || [];
+    return indexes.map(idx => ({
+      fields: idx.fields,
+      unique: idx.unique || false,
+      name: idx.name || `${model.tableName}_${idx.fields.join('_')}_idx`,
+    }));
+  }
+
+  /**
+   * Helper method để tự động sync tất cả columns từ model vào table
+   * @param {string} tableName - Tên bảng trong database
+   * @param {Object} model - Sequelize model instance
+   * @param {Array} excludeColumns - Danh sách columns cần bỏ qua (mặc định: id, createdAt, updatedAt)
+   */
+  async autoSyncModelColumns(tableName, model, excludeColumns = ['id', 'createdAt', 'updatedAt']) {
+    const modelAttrs = model.rawAttributes;
+    
+    for (const [colName, attr] of Object.entries(modelAttrs)) {
+      // Bỏ qua các columns trong excludeColumns
+      if (excludeColumns.includes(colName)) {
+        continue;
+      }
+      
+      // Tự động ensure column tồn tại
+      await this.ensureColumnExists(tableName, colName, {
+        type: attr.type,
+        allowNull: attr.allowNull !== undefined ? attr.allowNull : true,
+        defaultValue: attr.defaultValue,
+        references: attr.references,
+        onDelete: attr.onDelete,
+        validate: attr.validate,
+      });
+    }
+  }
+
   async createChatPreferenceTable() {
     console.log('Creating ChatPreferences table if missing...');
-    await this.ensureTableExists(
-      'ChatPreferences',
-      {
-        id: {
-          type: DataTypes.INTEGER,
-          primaryKey: true,
-          autoIncrement: true,
-        },
-        userId: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          references: { model: 'Users', key: 'id' },
-          onDelete: 'CASCADE',
-        },
-        otherUserId: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-          references: { model: 'Users', key: 'id' },
-          onDelete: 'CASCADE',
-        },
-        backgroundUrl: {
-          type: DataTypes.TEXT,
-          allowNull: true,
-        },
-        nickname: {
-          type: DataTypes.STRING(60),
-          allowNull: true,
-        },
-        createdAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
-        },
-        updatedAt: {
-          type: DataTypes.DATE,
-          allowNull: false,
-          defaultValue: DataTypes.NOW,
-        },
-      },
-      [
-        {
-          fields: ['userId', 'otherUserId'],
-          unique: true,
-          name: 'chatpreferences_user_other_unique',
-        },
-      ]
-    );
+    const tableDefinition = this.getTableDefinitionFromModel(ChatPreference);
+    const indexes = this.getIndexesFromModel(ChatPreference);
+    await this.ensureTableExists('ChatPreferences', tableDefinition, indexes);
   }
 
   async ensureColumnExists(tableName, columnName, columnDefinition) {
@@ -98,152 +143,21 @@ class ModelManager {
 
   async updateMessageTable() {
     console.log('Updating Messages table...');
-    
-    await this.ensureColumnExists('Messages', 'isDeletedForAll', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    await this.ensureColumnExists('Messages', 'deletedForUserIds', {
-      type: DataTypes.TEXT,
-      allowNull: false,
-      defaultValue: '[]',
-    });
-
-    await this.ensureColumnExists('Messages', 'status', {
-      type: DataTypes.ENUM('sent', 'delivered', 'read'),
-      allowNull: false,
-      defaultValue: 'sent',
-    });
-
-    await this.ensureColumnExists('Messages', 'replyToMessageId', {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'Messages',
-        key: 'id',
-      },
-      onDelete: 'SET NULL',
-    });
+    // Tự động sync tất cả columns từ model (bỏ qua id, createdAt, updatedAt)
+    await this.autoSyncModelColumns('Messages', Message);
   }
 
   async updateGroupMessageTable() {
     console.log('Updating GroupMessages table...');
-    
-    await this.ensureColumnExists('GroupMessages', 'status', {
-      type: DataTypes.ENUM('sent', 'delivered', 'read'),
-      allowNull: false,
-      defaultValue: 'sent',
-    });
-
-    await this.ensureColumnExists('GroupMessages', 'deletedForUserIds', {
-      type: DataTypes.TEXT,
-      allowNull: false,
-      defaultValue: '[]',
-    });
-
-    await this.ensureColumnExists('GroupMessages', 'isDeletedForAll', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    await this.ensureColumnExists('GroupMessages', 'isRead', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    await this.ensureColumnExists('GroupMessages', 'replyToMessageId', {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'GroupMessages',
-        key: 'id',
-      },
-      onDelete: 'SET NULL',
-    });
+    // Tự động sync tất cả columns từ model (bỏ qua id, createdAt, updatedAt)
+    await this.autoSyncModelColumns('GroupMessages', GroupMessage);
   }
 
   async updateNotesTable() {
     console.log('Updating Notes table...');
 
-    await this.ensureColumnExists('Notes', 'imageUrl', {
-      type: DataTypes.STRING,
-      allowNull: true,
-    });
-
-    await this.ensureColumnExists('Notes', 'videoUrl', {
-      type: DataTypes.STRING,
-      allowNull: true,
-    });
-
-    await this.ensureColumnExists('Notes', 'youtubeUrl', {
-      type: DataTypes.STRING,
-      allowNull: true,
-    });
-
-    // Reminder fields
-    await this.ensureColumnExists('Notes', 'reminderAt', {
-      type: DataTypes.DATE,
-      allowNull: true,
-    });
-
-    await this.ensureColumnExists('Notes', 'reminderSent', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    // Persistent acknowledgement state for reminders
-    await this.ensureColumnExists('Notes', 'reminderAcknowledged', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    // Folder support for organizing notes by topic
-    await this.ensureColumnExists('Notes', 'folderId', {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'NoteFolders',
-        key: 'id',
-      },
-      onDelete: 'SET NULL',
-    });
-
-    // Pin support for prioritizing important notes
-    await this.ensureColumnExists('Notes', 'isPinned', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    // Background customization support
-    await this.ensureColumnExists('Notes', 'backgroundColor', {
-      type: DataTypes.STRING(20),
-      allowNull: true,
-      defaultValue: null,
-    });
-
-    await this.ensureColumnExists('Notes', 'backgroundImage', {
-      type: DataTypes.STRING,
-      allowNull: true,
-      defaultValue: null,
-    });
-
-    // Category support using foreign key instead of string
-    await this.ensureColumnExists('Notes', 'categoryId', {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'NoteCategories',
-        key: 'id',
-      },
-      onDelete: 'SET NULL',
-    });
+    // Tự động sync tất cả columns từ model (bỏ qua id, createdAt, updatedAt)
+    await this.autoSyncModelColumns('Notes', Note);
 
     // Try to remove old category column if it exists (string type)
     try {
@@ -260,92 +174,20 @@ class ModelManager {
 
   async createNoteCategoriesTable() {
     console.log('Creating NoteCategories table if missing...');
-    await this.ensureTableExists('NoteCategories', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      name: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-      },
-      color: {
-        type: DataTypes.STRING(20),
-        allowNull: true,
-        defaultValue: '#3B82F6',
-      },
-      icon: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        defaultValue: 'Tag',
-      },
-      isDefault: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      isPinned: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Users', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      selectionCount: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      maxSelectionCount: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, [
+    const tableDefinition = this.getTableDefinitionFromModel(NoteCategory);
+    const indexes = [
       { fields: ['userId'], name: 'notecategories_userid_idx' },
       { fields: ['name'], name: 'notecategories_name_idx' },
       { fields: ['isPinned'], name: 'notecategories_ispinned_idx' },
-    ]);
+    ];
+    await this.ensureTableExists('NoteCategories', tableDefinition, indexes);
   }
 
   async updateNoteCategoriesTable() {
     console.log('Updating NoteCategories table...');
     
-    // Ensure selectionCount column exists
-    await this.ensureColumnExists('NoteCategories', 'selectionCount', {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    });
-
-    // Ensure maxSelectionCount column exists
-    await this.ensureColumnExists('NoteCategories', 'maxSelectionCount', {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    });
-
-    // Ensure isPinned column exists for pinning categories
-    await this.ensureColumnExists('NoteCategories', 'isPinned', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
+    // Tự động sync tất cả columns từ model
+    await this.autoSyncModelColumns('NoteCategories', NoteCategory);
 
     // Tối ưu: Đảm bảo indexes tồn tại cho performance
     try {
@@ -388,553 +230,104 @@ class ModelManager {
 
   async createNoteFoldersTable() {
     console.log('Creating NoteFolders table if missing...');
-    await this.ensureTableExists('NoteFolders', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      name: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-      },
-      color: {
-        type: DataTypes.STRING(20),
-        allowNull: true,
-        defaultValue: 'blue',
-      },
-      icon: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        defaultValue: 'folder',
-      },
-      userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Users', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, [
+    const tableDefinition = this.getTableDefinitionFromModel(NoteFolder);
+    const indexes = [
       { fields: ['userId'], name: 'notefolders_userid_idx' },
       { fields: ['name'], name: 'notefolders_name_idx' },
-    ]);
+    ];
+    await this.ensureTableExists('NoteFolders', tableDefinition, indexes);
   }
 
   async createNoteTagsTable() {
     console.log('Creating NoteTags table if missing...');
-    await this.ensureTableExists('NoteTags', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      name: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-      },
-      color: {
-        type: DataTypes.STRING(7),
-        allowNull: false,
-        defaultValue: '#3B82F6',
-      },
-      userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Users', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, [
+    const tableDefinition = this.getTableDefinitionFromModel(NoteTag);
+    const indexes = [
       { fields: ['userId'], name: 'notetags_userid_idx' },
       { fields: ['userId', 'name'], unique: true, name: 'notetags_userid_name_unique' },
-    ]);
+    ];
+    await this.ensureTableExists('NoteTags', tableDefinition, indexes);
+  }
+
+  async updateNoteTagsTable() {
+    console.log('Updating NoteTags table...');
+    // Tự động sync tất cả columns từ model
+    await this.autoSyncModelColumns('NoteTags', NoteTag);
   }
 
   async createNoteTagMappingsTable() {
     console.log('Creating NoteTagMappings table if missing...');
-    await this.ensureTableExists('NoteTagMappings', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      noteId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Notes', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      tagId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'NoteTags', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, [
+    const tableDefinition = this.getTableDefinitionFromModel(NoteTagMapping);
+    const indexes = [
       { fields: ['noteId'], name: 'notetagmappings_noteid_idx' },
       { fields: ['tagId'], name: 'notetagmappings_tagid_idx' },
       { fields: ['noteId', 'tagId'], unique: true, name: 'notetagmappings_note_tag_unique' },
-    ]);
+    ];
+    await this.ensureTableExists('NoteTagMappings', tableDefinition, indexes);
   }
 
   async createSharedNotesTable() {
     console.log('Creating SharedNotes table if missing...');
-    await this.ensureTableExists('SharedNotes', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      noteId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Notes', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      sharedWithUserId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Users', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      sharedByUserId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Users', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      canEdit: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      canDelete: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      message: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      messageId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: { model: 'Messages', key: 'id' },
-        onDelete: 'SET NULL',
-      },
-      sharedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      isActive: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true,
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, [
+    const tableDefinition = this.getTableDefinitionFromModel(SharedNote);
+    const indexes = [
       { fields: ['noteId'], name: 'sharednotes_noteid_idx' },
       { fields: ['sharedWithUserId'], name: 'sharednotes_sharedwithuser_idx' },
       { fields: ['sharedByUserId'], name: 'sharednotes_sharedbyuser_idx' },
       { fields: ['messageId'], name: 'sharednotes_messageid_idx' },
       { fields: ['sharedAt'], name: 'sharednotes_sharedat_idx' },
-    ]);
+    ];
+    await this.ensureTableExists('SharedNotes', tableDefinition, indexes);
   }
 
   async updateSharedNotesTable() {
     console.log('Updating SharedNotes table...');
-    
-    // Ensure messageId column exists (for linking to chat messages)
-    await this.ensureColumnExists('SharedNotes', 'messageId', {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'Messages',
-        key: 'id',
-      },
-      onDelete: 'SET NULL',
-    });
-
-    // Ensure canCreate column exists (for allowing recipient to create new notes)
-    await this.ensureColumnExists('SharedNotes', 'canCreate', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
+    // Tự động sync tất cả columns từ model
+    await this.autoSyncModelColumns('SharedNotes', SharedNote);
   }
 
   async createGroupSharedNotesTable() {
     console.log('Creating GroupSharedNotes table if missing...');
-    await this.ensureTableExists('GroupSharedNotes', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      noteId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Notes', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      groupId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Groups', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      sharedByUserId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: { model: 'Users', key: 'id' },
-        onDelete: 'CASCADE',
-      },
-      message: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      groupMessageId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: { model: 'GroupMessages', key: 'id' },
-        onDelete: 'SET NULL',
-      },
-      sharedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      isActive: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true,
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, [
+    const tableDefinition = this.getTableDefinitionFromModel(GroupSharedNote);
+    const indexes = [
       { fields: ['noteId'], name: 'groupsharednotes_noteid_idx' },
       { fields: ['groupId'], name: 'groupsharednotes_groupid_idx' },
       { fields: ['sharedByUserId'], name: 'groupsharednotes_sharedbyuser_idx' },
       { fields: ['groupMessageId'], name: 'groupsharednotes_groupmessageid_idx' },
       { fields: ['sharedAt'], name: 'groupsharednotes_sharedat_idx' },
-    ]);
+    ];
+    await this.ensureTableExists('GroupSharedNotes', tableDefinition, indexes);
   }
 
   async updateGroupSharedNotesTable() {
     console.log('Updating GroupSharedNotes table...');
-    
-    // Ensure groupMessageId column exists (for linking to group chat messages)
-    await this.ensureColumnExists('GroupSharedNotes', 'groupMessageId', {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'GroupMessages',
-        key: 'id',
-      },
-      onDelete: 'SET NULL',
-    });
-
-    // Ensure canEdit column exists (permissions for group members)
-    await this.ensureColumnExists('GroupSharedNotes', 'canEdit', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    // Ensure canDelete column exists (permissions for group members)
-    await this.ensureColumnExists('GroupSharedNotes', 'canDelete', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    // Ensure canCreate column exists (permissions for group members to create new notes)
-    await this.ensureColumnExists('GroupSharedNotes', 'canCreate', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
+    // Tự động sync tất cả columns từ model
+    await this.autoSyncModelColumns('GroupSharedNotes', GroupSharedNote);
   }
 
   async updateUsersTable() {
     console.log('Updating Users table...');
-    
-    await this.ensureColumnExists('Users', 'avatar', {
-      type: DataTypes.STRING,
-      allowNull: true,
-    });
-
-    // New profile fields
-    await this.ensureColumnExists('Users', 'phone', {
-      type: DataTypes.STRING,
-      allowNull: true,
-    });
-
-    await this.ensureColumnExists('Users', 'birthDate', {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-    });
-
-    await this.ensureColumnExists('Users', 'gender', {
-      type: DataTypes.ENUM('male', 'female', 'other', 'unspecified'),
-      allowNull: false,
-      defaultValue: 'unspecified',
-    });
-
-    await this.ensureColumnExists('Users', 'e2eeEnabled', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    await this.ensureColumnExists('Users', 'e2eePinHash', {
-      type: DataTypes.STRING,
-      allowNull: true,
-    });
-
-    await this.ensureColumnExists('Users', 'lastSeenAt', {
-      type: DataTypes.DATE,
-      allowNull: true,
-    });
-
-    await this.ensureColumnExists('Users', 'readStatusEnabled', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-    });
-
-    await this.ensureColumnExists('Users', 'theme', {
-      type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: 'light',
-    });
-
-    await this.ensureColumnExists('Users', 'language', {
-      type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: 'vi',
-    });
-
-    // Animated background settings for dark-black theme
-    await this.ensureColumnExists('Users', 'animatedBackground', {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: null,
-    });
-
-    // Remember-me preference persisted on backend
-    await this.ensureColumnExists('Users', 'rememberLogin', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    // Privacy flags
-    await this.ensureColumnExists('Users', 'hidePhone', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    await this.ensureColumnExists('Users', 'hideBirthDate', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    await this.ensureColumnExists('Users', 'allowMessagesFromNonFriends', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
-
-    // Role column for admin features
-    await this.ensureColumnExists('Users', 'role', {
-      type: DataTypes.ENUM('user', 'admin'),
-      allowNull: false,
-      defaultValue: 'user',
-    });
-
-    // Admin level for detailed admin permissions
-    await this.ensureColumnExists('Users', 'adminLevel', {
-      type: DataTypes.ENUM('super_admin', 'sub_admin'),
-      allowNull: true,
-    });
-
-    // Admin permissions as JSON array
-    await this.ensureColumnExists('Users', 'adminPermissions', {
-      type: DataTypes.JSON,
-      allowNull: true,
-    });
+    // Tự động sync tất cả columns từ model (bỏ qua id, email, password, name, createdAt, updatedAt)
+    // Giữ lại email, password, name vì đây là các trường cơ bản đã tồn tại từ đầu
+    await this.autoSyncModelColumns('Users', User, ['id', 'email', 'password', 'name', 'isActive', 'createdAt', 'updatedAt']);
   }
 
   async updateGroupsTable() {
     console.log('Updating Groups table...');
-    
-    await this.ensureColumnExists('Groups', 'avatar', {
-      type: DataTypes.STRING,
-      allowNull: true,
-    });
-
-    await this.ensureColumnExists('Groups', 'background', {
-      type: DataTypes.STRING,
-      allowNull: true,
-    });
-
-    // New: admins-only messaging switch
-    await this.ensureColumnExists('Groups', 'adminsOnly', {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    });
+    // Tự động sync tất cả columns từ model (bỏ qua id, name, ownerId, createdAt, updatedAt)
+    await this.autoSyncModelColumns('Groups', Group, ['id', 'name', 'ownerId', 'createdAt', 'updatedAt']);
   }
 
   async createReadTables() {
     console.log('Creating read tracking tables...');
 
     // MessageReads table
-    await this.ensureTableExists('MessageReads', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      messageId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'Messages',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-      },
-      userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'Users',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-      },
-      readAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, [
-      {
-        fields: ['messageId', 'userId'],
-        unique: true,
-        name: 'messageread_message_user_unique',
-      }
-    ]);
+    const messageReadTableDef = this.getTableDefinitionFromModel(MessageRead);
+    const messageReadIndexes = this.getIndexesFromModel(MessageRead);
+    await this.ensureTableExists('MessageReads', messageReadTableDef, messageReadIndexes);
 
     // GroupMessageReads table
-    await this.ensureTableExists('GroupMessageReads', {
-      id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-      },
-      messageId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'GroupMessages',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-      },
-      userId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'Users',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-      },
-      readAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
-    }, [
-      {
-        fields: ['messageId', 'userId'],
-        unique: true,
-        name: 'groupmessageread_message_user_unique',
-      }
-    ]);
+    const groupMessageReadTableDef = this.getTableDefinitionFromModel(GroupMessageRead);
+    const groupMessageReadIndexes = this.getIndexesFromModel(GroupMessageRead);
+    await this.ensureTableExists('GroupMessageReads', groupMessageReadTableDef, groupMessageReadIndexes);
   }
 
   async fixFriendshipIndexes() {
@@ -1035,6 +428,7 @@ class ModelManager {
       
       // Note Tags migrations - must be before NoteTagMappings
       await this.createNoteTagsTable();
+      await this.updateNoteTagsTable();
       await this.createNoteTagMappingsTable();
       
       await this.updateNotesTable();

@@ -40,6 +40,7 @@ router.get('/tags', notesController.getTags);
 router.post('/tags', validateCreateTag, notesController.createTag);
 router.get('/tags/:id', notesController.getTagById);
 router.put('/tags/:id', validateUpdateTag, notesController.updateTag);
+router.patch('/tags/:id/pin', notesController.togglePinTag);
 router.delete('/tags/:id', notesController.deleteTag);
 router.get('/tags/:tagId/notes', notesController.getNotesByTag);
 router.post('/:noteId/tags', validateAddTagToNote, notesController.addTagToNote);
