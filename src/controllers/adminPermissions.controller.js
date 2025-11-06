@@ -90,9 +90,7 @@ class AdminPermissionsController {
     'manage_admins.create',   // Tạo admin
     'manage_admins.edit',     // Sửa quyền admin
     'manage_admins.delete',   // Xóa admin
-    'view_analytics',         // Xem thống kê hệ thống
-    'delete_content',         // Xóa nội dung
-    'system_settings',        // Cài đặt hệ thống
+    'view_dashboard',         // Xem trang Dashboard với thống kê và biểu đồ
     // Quyền hồ sơ bản thân (cho phép sub admin xem/sửa trang Profile của chính mình)
     'profile.self.view',
     'profile.self.edit'

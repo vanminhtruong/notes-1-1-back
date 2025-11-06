@@ -42,6 +42,13 @@ router.post('/login', adminController.adminLogin);
 
 router.use(adminAuth);
 
+// Dashboard routes - require view_dashboard permission
+router.get('/dashboard/stats', requirePermission('view_dashboard'), adminController.getDashboardStats);
+router.get('/dashboard/top-notes-creators', requirePermission('view_dashboard'), adminController.getTopNotesCreators);
+router.get('/dashboard/recent-online-users', requirePermission('view_dashboard'), adminController.getRecentOnlineUsers);
+router.get('/dashboard/top-offline-users', requirePermission('view_dashboard'), adminController.getTopOfflineUsers);
+router.get('/dashboard/top-categories-creators', requirePermission('view_dashboard'), adminController.getTopCategoriesCreators);
+
 router.post('/refresh-token', adminController.refreshToken);
 
 router.get('/me', adminController.getMyProfile);

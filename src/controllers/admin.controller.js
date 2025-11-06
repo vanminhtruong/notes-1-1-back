@@ -11,6 +11,7 @@ import AdminAuthChild from '../service/admin-service/admin.auth.service.js';
 import AdminProfileChild from '../service/admin-service/admin.profile.service.js';
 import AdminCategoriesChild from '../service/admin-service/admin.categories.service.js';
 import AdminTagsService from '../service/admin-service/admin.tags.service.js';
+import AdminDashboardService from '../service/admin-service/admin.dashboard.service.js';
 
 // class này đã quá dài hãy tạo ra class con kế thừa để xử lý
 class AdminController {
@@ -24,6 +25,7 @@ class AdminController {
     this.profileChild = new AdminProfileChild(this);
     this.categoriesChild = new AdminCategoriesChild(this);
     this.tagsService = AdminTagsService;
+    this.dashboardChild = new AdminDashboardService(this);
   }
 
   // Admin login (delegated)
@@ -86,6 +88,13 @@ class AdminController {
   getCategoriesStats = (...args) => this.categoriesChild.getCategoriesStats(...args);
   pinCategory = (...args) => this.categoriesChild.pinCategory(...args);
   unpinCategory = (...args) => this.categoriesChild.unpinCategory(...args);
+  
+  // Dashboard management
+  getDashboardStats = (...args) => this.dashboardChild.getDashboardStats(...args);
+  getTopNotesCreators = (...args) => this.dashboardChild.getTopNotesCreators(...args);
+  getRecentOnlineUsers = (...args) => this.dashboardChild.getRecentOnlineUsers(...args);
+  getTopOfflineUsers = (...args) => this.dashboardChild.getTopOfflineUsers(...args);
+  getTopCategoriesCreators = (...args) => this.dashboardChild.getTopCategoriesCreators(...args);
   
   // Tags management
   getAllTags = (...args) => this.tagsService.getAllTags(...args);

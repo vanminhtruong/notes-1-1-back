@@ -12,13 +12,22 @@ async function addAdminPermissionsColumns() {
     );
 
     if (adminLevelExists.length === 0) {
-      // Thêm cột adminLevel
+      // Thêm cột adminLevel với đầy đủ các level
       await sequelize.query(
-        "ALTER TABLE Users ADD COLUMN adminLevel ENUM('super_admin', 'sub_admin') DEFAULT NULL"
+        "ALTER TABLE Users ADD COLUMN adminLevel ENUM('super_admin', 'sub_admin', 'dev', 'mod') DEFAULT NULL"
       );
       console.log('✅ Đã thêm cột adminLevel');
     } else {
       console.log('ℹ️ Cột adminLevel đã tồn tại');
+      // Cập nhật ENUM nếu cần thêm dev và mod
+      try {
+        await sequelize.query(
+          "ALTER TABLE Users MODIFY COLUMN adminLevel ENUM('super_admin', 'sub_admin', 'dev', 'mod') DEFAULT NULL"
+        );
+        console.log('✅ Đã cập nhật ENUM adminLevel');
+      } catch (err) {
+        console.log('ℹ️ ENUM adminLevel đã đầy đủ hoặc không thể cập nhật');
+      }
     }
 
     // Kiểm tra xem cột adminPermissions đã tồn tại chưa
@@ -37,14 +46,20 @@ async function addAdminPermissionsColumns() {
       console.log('ℹ️ Cột adminPermissions đã tồn tại');
     }
 
-    // Cập nhật admin hiện tại thành super_admin
+    // Cập nhật admin hiện tại thành super_admin với đầy đủ quyền
     const [results] = await sequelize.query(`
       UPDATE Users 
       SET adminLevel = 'super_admin',
           adminPermissions = JSON_ARRAY(
-            'manage_users', 'manage_notes', 'manage_admins', 
-            'view_analytics', 'manage_groups', 'view_messages',
-            'delete_content', 'system_settings'
+            'manage_users',
+            'manage_notes',
+            'manage_admins',
+            'view_dashboard',
+            'view_analytics',
+            'delete_content',
+            'system_settings',
+            'profile.self.view',
+            'profile.self.edit'
           )
       WHERE role = 'admin' AND adminLevel IS NULL
     `);
