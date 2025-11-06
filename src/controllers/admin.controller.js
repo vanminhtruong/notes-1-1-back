@@ -94,6 +94,7 @@ class AdminController {
   createTagForUser = (...args) => this.tagsService.createTagForUser(...args);
   updateTag = (...args) => this.tagsService.updateTag(...args);
   deleteTag = (...args) => this.tagsService.deleteTag(...args);
+  togglePinTag = (...args) => this.tagsService.togglePinTag(...args);
   assignTagToNote = (...args) => this.tagsService.assignTagToNote(...args);
   removeTagFromNote = (...args) => this.tagsService.removeTagFromNote(...args);
 }

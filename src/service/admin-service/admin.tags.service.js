@@ -29,7 +29,7 @@ class AdminTagsService {
 
       const { count, rows: tags } = await NoteTag.findAndCountAll({
         where,
-        attributes: ['id', 'name', 'color', 'userId', 'createdAt', 'updatedAt'],
+        attributes: ['id', 'name', 'color', 'userId', 'isPinned', 'createdAt', 'updatedAt'],
         include: [
           {
             model: User,
@@ -56,6 +56,7 @@ class AdminTagsService {
         color: tag.color,
         userId: tag.userId,
         user: tag.user,
+        isPinned: tag.isPinned,
         notesCount: tag.notes?.length || 0,
         createdAt: tag.createdAt,
         updatedAt: tag.updatedAt,
@@ -139,7 +140,7 @@ class AdminTagsService {
       const { page = 1, limit = 10 } = req.query;
 
       const tag = await NoteTag.findByPk(id, {
-        attributes: ['id', 'name', 'color', 'userId', 'createdAt', 'updatedAt'],
+        attributes: ['id', 'name', 'color', 'userId', 'isPinned', 'createdAt', 'updatedAt'],
         include: [
           {
             model: User,
@@ -179,6 +180,7 @@ class AdminTagsService {
           color: tag.color,
           userId: tag.userId,
           user: tag.user,
+          isPinned: tag.isPinned,
           notesCount: count,
           createdAt: tag.createdAt,
           updatedAt: tag.updatedAt,
@@ -230,6 +232,7 @@ class AdminTagsService {
             id: tag.id,
             name: tag.name,
             color: tag.color,
+            isPinned: tag.isPinned,
             notesCount: 0,
             createdAt: tag.createdAt,
             updatedAt: tag.updatedAt,
@@ -248,6 +251,7 @@ class AdminTagsService {
               name: user.name,
               email: user.email,
             },
+            isPinned: tag.isPinned,
             notesCount: 0,
             createdAt: tag.createdAt,
             updatedAt: tag.updatedAt,
@@ -267,6 +271,7 @@ class AdminTagsService {
             name: user.name,
             email: user.email,
           },
+          isPinned: tag.isPinned,
           notesCount: 0,
           createdAt: tag.createdAt,
           updatedAt: tag.updatedAt,
@@ -328,6 +333,7 @@ class AdminTagsService {
         color: tag.color,
         userId: tag.userId,
         user: tag.user,
+        isPinned: tag.isPinned,
         notesCount,
         createdAt: tag.createdAt,
         updatedAt: tag.updatedAt,
@@ -341,6 +347,7 @@ class AdminTagsService {
             id: tag.id,
             name: tag.name,
             color: tag.color,
+            isPinned: tag.isPinned,
             notesCount,
             createdAt: tag.createdAt,
             updatedAt: tag.updatedAt,
@@ -516,6 +523,73 @@ class AdminTagsService {
     } catch (error) {
       console.error('[Admin] Remove tag from note error:', error);
       res.status(500).json({ message: 'Lỗi khi xóa tag khỏi ghi chú' });
+    }
+  }
+
+  // Toggle pin status for a tag (admin action)
+  async togglePinTag(req, res) {
+    try {
+      const { id } = req.params;
+
+      const tag = await NoteTag.findByPk(id, {
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'name', 'email'],
+          },
+        ],
+      });
+
+      if (!tag) {
+        return res.status(404).json({ message: 'Không tìm thấy tag' });
+      }
+
+      // Toggle isPinned
+      tag.isPinned = !tag.isPinned;
+      await tag.save();
+
+      // Count notes
+      const notesCount = await NoteTagMapping.count({ where: { tagId: id } });
+
+      const updatedTagForAdmin = {
+        id: tag.id,
+        name: tag.name,
+        color: tag.color,
+        userId: tag.userId,
+        user: tag.user,
+        isPinned: tag.isPinned,
+        notesCount,
+        createdAt: tag.createdAt,
+        updatedAt: tag.updatedAt,
+      };
+
+      // Emit realtime events
+      if (global.io) {
+        // To user room
+        global.io.to(`user_${tag.userId}`).emit('tag_updated', {
+          tag: {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color,
+            isPinned: tag.isPinned,
+            notesCount,
+            createdAt: tag.createdAt,
+            updatedAt: tag.updatedAt,
+          },
+        });
+
+        // To admin room
+        global.io.to('admin_room').emit('admin_tag_updated', { tag: updatedTagForAdmin });
+      }
+
+      return res.json({
+        message: tag.isPinned ? 'Đã ghim tag' : 'Đã bỏ ghim tag',
+        tag: updatedTagForAdmin,
+      });
+    } catch (error) {
+      console.error('[Admin] Toggle pin tag error:', error);
+      return res.status(500).json({ message: 'Lỗi khi ghim/bỏ ghim tag' });
     }
   }
 }

@@ -1,4 +1,4 @@
-import { Note, NoteTag, NoteTagMapping } from '../../models/index.js';
+import { Note, NoteTag, NoteTagMapping, User } from '../../models/index.js';
 import { Op } from 'sequelize';
 
 class NotesTagsChild {
@@ -41,7 +41,7 @@ class NotesTagsChild {
         attributes: ['id', 'name', 'color', 'isPinned', 'createdAt', 'updatedAt'],
         order: [
           ['isPinned', 'DESC'], // Ghim lên đầu
-          [sortBy, sortOrder],
+          ['createdAt', 'DESC'], // Tag mới nhất lên đầu
         ],
         include: [
           {
@@ -150,6 +150,7 @@ class NotesTagsChild {
             id: tag.id,
             name: tag.name,
             color: tag.color,
+            isPinned: tag.isPinned || false,
             notesCount: 0,
             createdAt: tag.createdAt,
             updatedAt: tag.updatedAt,
@@ -166,6 +167,7 @@ class NotesTagsChild {
           id: tag.id,
           name: tag.name,
           color: tag.color,
+          isPinned: tag.isPinned || false,
           notesCount: 0,
           createdAt: tag.createdAt,
           updatedAt: tag.updatedAt,
@@ -230,7 +232,30 @@ class NotesTagsChild {
 
       // Emit real-time event
       if (global.io) {
+        // To user room
         global.io.to(`user_${userId}`).emit('tag_updated', { tag: updatedTag });
+
+        // To admin room: include user info for admin table
+        try {
+          const user = await User.findByPk(userId, { attributes: ['id', 'name', 'email'] });
+          if (user) {
+            global.io.to('admin_room').emit('admin_tag_updated', {
+              tag: {
+                id: tag.id,
+                name: tag.name,
+                color: tag.color,
+                userId: user.id,
+                user: user,
+                isPinned: tag.isPinned,
+                notesCount,
+                createdAt: tag.createdAt,
+                updatedAt: tag.updatedAt,
+              },
+            });
+          }
+        } catch (e) {
+          console.error('Emit admin_tag_updated failed:', e);
+        }
       }
 
       res.json({
