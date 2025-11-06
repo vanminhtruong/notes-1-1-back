@@ -95,6 +95,8 @@ class AdminController {
   getRecentOnlineUsers = (...args) => this.dashboardChild.getRecentOnlineUsers(...args);
   getTopOfflineUsers = (...args) => this.dashboardChild.getTopOfflineUsers(...args);
   getTopCategoriesCreators = (...args) => this.dashboardChild.getTopCategoriesCreators(...args);
+  getTopChatUsers = (...args) => this.dashboardChild.getTopChatUsers(...args);
+  getTopNoteSharers = (...args) => this.dashboardChild.getTopNoteSharers(...args);
   
   // Tags management
   getAllTags = (...args) => this.tagsService.getAllTags(...args);

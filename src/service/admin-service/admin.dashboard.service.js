@@ -128,6 +128,140 @@ class AdminDashboardService {
   });
 
   /**
+   * Lấy top users chat nhiều nhất (tính cả tin nhắn 1-1 và nhóm)
+   */
+  getTopChatUsers = asyncHandler(async (req, res) => {
+    const limit = parseInt(req.query.limit) || 10;
+
+    const { Message, GroupMessage } = await import('../../models/index.js');
+
+    // Đếm tin nhắn 1-1
+    const dmCounts = await Message.findAll({
+      attributes: [
+        'senderId',
+        [Message.sequelize.fn('COUNT', Message.sequelize.col('Message.id')), 'messageCount']
+      ],
+      include: [{
+        model: User,
+        as: 'sender',
+        attributes: ['id', 'name', 'email', 'avatar'],
+        where: {
+          isActive: true,
+          role: 'user'
+        }
+      }],
+      group: ['senderId', 'sender.id'],
+      raw: true,
+      nest: true
+    });
+
+    // Đếm tin nhắn nhóm
+    const groupCounts = await GroupMessage.findAll({
+      attributes: [
+        'senderId',
+        [GroupMessage.sequelize.fn('COUNT', GroupMessage.sequelize.col('GroupMessage.id')), 'messageCount']
+      ],
+      include: [{
+        model: User,
+        as: 'sender',
+        attributes: ['id', 'name', 'email', 'avatar'],
+        where: {
+          isActive: true,
+          role: 'user'
+        }
+      }],
+      group: ['senderId', 'sender.id'],
+      raw: true,
+      nest: true
+    });
+
+    // Gộp và tính tổng
+    const userMessageMap = new Map();
+    
+    dmCounts.forEach(item => {
+      const userId = item.senderId;
+      const count = parseInt(item.messageCount) || 0;
+      if (!userMessageMap.has(userId)) {
+        userMessageMap.set(userId, {
+          userId,
+          username: item.sender?.name || 'Unknown',
+          email: item.sender?.email || '',
+          avatar: item.sender?.avatar || '',
+          messagesCount: 0
+        });
+      }
+      userMessageMap.get(userId).messagesCount += count;
+    });
+
+    groupCounts.forEach(item => {
+      const userId = item.senderId;
+      const count = parseInt(item.messageCount) || 0;
+      if (!userMessageMap.has(userId)) {
+        userMessageMap.set(userId, {
+          userId,
+          username: item.sender?.name || 'Unknown',
+          email: item.sender?.email || '',
+          avatar: item.sender?.avatar || '',
+          messagesCount: 0
+        });
+      }
+      userMessageMap.get(userId).messagesCount += count;
+    });
+
+    // Sắp xếp và lấy top
+    const topUsers = Array.from(userMessageMap.values())
+      .sort((a, b) => b.messagesCount - a.messagesCount)
+      .slice(0, limit);
+
+    res.json({
+      success: true,
+      data: topUsers
+    });
+  });
+
+  /**
+   * Lấy top users chia sẻ ghi chú nhiều nhất
+   */
+  getTopNoteSharers = asyncHandler(async (req, res) => {
+    const limit = parseInt(req.query.limit) || 10;
+
+    const { SharedNote } = await import('../../models/index.js');
+
+    const topUsers = await SharedNote.findAll({
+      attributes: [
+        'sharedByUserId',
+        [SharedNote.sequelize.fn('COUNT', SharedNote.sequelize.col('SharedNote.id')), 'sharedCount']
+      ],
+      include: [{
+        model: User,
+        as: 'sharedByUser', // Chỉ định alias đúng
+        attributes: ['id', 'name', 'email', 'avatar'],
+        where: {
+          isActive: true,
+          role: 'user' // Chỉ thống kê user, không bao gồm admin
+        }
+      }],
+      group: ['sharedByUserId', 'sharedByUser.id'],
+      order: [[SharedNote.sequelize.literal('sharedCount'), 'DESC']],
+      limit: limit,
+      subQuery: false
+    });
+
+    const formattedData = topUsers.map(item => ({
+      userId: item.sharedByUserId,
+      username: item.sharedByUser?.name || 'Unknown',
+      email: item.sharedByUser?.email || '',
+      avatar: item.sharedByUser?.avatar || '',
+      sharedCount: parseInt(item.dataValues.sharedCount)
+    }));
+
+    res.json({
+      success: true,
+      data: formattedData
+    });
+  });
+
+  /**
    * Lấy danh sách users offline lâu nhất
    */
   getTopOfflineUsers = asyncHandler(async (req, res) => {

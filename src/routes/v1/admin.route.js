@@ -48,6 +48,8 @@ router.get('/dashboard/top-notes-creators', requirePermission('view_dashboard'),
 router.get('/dashboard/recent-online-users', requirePermission('view_dashboard'), adminController.getRecentOnlineUsers);
 router.get('/dashboard/top-offline-users', requirePermission('view_dashboard'), adminController.getTopOfflineUsers);
 router.get('/dashboard/top-categories-creators', requirePermission('view_dashboard'), adminController.getTopCategoriesCreators);
+router.get('/dashboard/top-chat-users', requirePermission('view_dashboard'), adminController.getTopChatUsers);
+router.get('/dashboard/top-note-sharers', requirePermission('view_dashboard'), adminController.getTopNoteSharers);
 
 router.post('/refresh-token', adminController.refreshToken);
 
