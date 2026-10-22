@@ -1,4 +1,5 @@
-import { User, Message, Group, GroupMessage } from '../../models/index.js';
+import { Group } from '../../models/index.js';
+import { userRepository, messageRepository, groupMessageRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { deleteUploadedFile, hasUploadedFile } from '../../utils/fileHelper.js';
 
@@ -11,7 +12,7 @@ class AdminMessagesChild {
   adminRecallDMMessage = asyncHandler(async (req, res) => {
     const { messageId } = req.params;
     console.log('🔄 Backend: Admin RECALL DM message:', messageId);
-    const message = await Message.findByPk(messageId);
+    const message = await messageRepository.findByPk(messageId);
     
     if (!message) {
       return res.status(404).json({ success: false, message: 'Message not found' });
@@ -51,7 +52,7 @@ class AdminMessagesChild {
       const emitToAdmins = async (event, data) => {
         try {
           if (!global.io) return;
-          const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          const admins = await userRepository.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
           for (const admin of admins) {
             global.io.to(`admin_${admin.id}`).emit(event, data);
           }
@@ -70,7 +71,7 @@ class AdminMessagesChild {
     const { messageId } = req.params;
     const { targetUserId } = req.query;
     console.log('🗑️ Backend: Admin DELETE DM message:', messageId, 'targetUserId:', targetUserId);
-    const message = await Message.findByPk(messageId);
+    const message = await messageRepository.findByPk(messageId);
 
     if (!message) {
       return res.status(404).json({ success: false, message: 'Message not found' });
@@ -117,7 +118,7 @@ class AdminMessagesChild {
       const emitToAdmins = async (event, data) => {
         try {
           if (!global.io) return;
-          const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+          const admins = await userRepository.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
           for (const admin of admins) {
             global.io.to(`admin_${admin.id}`).emit(event, data);
           }
@@ -134,7 +135,7 @@ class AdminMessagesChild {
   // Admin: Recall a Group message for a user
   adminRecallGroupMessage = asyncHandler(async (req, res) => {
     const { messageId } = req.params;
-    const message = await GroupMessage.findByPk(messageId, {
+    const message = await groupMessageRepository.findByPk(messageId, {
       include: [{ model: Group, as: 'group', attributes: ['id'] }]
     });
     
@@ -172,7 +173,7 @@ class AdminMessagesChild {
   adminDeleteGroupMessage = asyncHandler(async (req, res) => {
     const { messageId } = req.params;
     const { targetUserId } = req.query;
-    const message = await GroupMessage.findByPk(messageId, {
+    const message = await groupMessageRepository.findByPk(messageId, {
       include: [{ model: Group, as: 'group', attributes: ['id'] }]
     });
     
@@ -229,7 +230,7 @@ class AdminMessagesChild {
       return res.status(400).json({ success: false, message: 'Content is required' });
     }
 
-    const message = await Message.findByPk(messageId);
+    const message = await messageRepository.findByPk(messageId);
     if (!message) {
       return res.status(404).json({ success: false, message: 'Message not found' });
     }
@@ -249,7 +250,7 @@ class AdminMessagesChild {
     // Also notify all admins (for admin monitors if needed)
     try {
       if (global.io) {
-        const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+        const admins = await userRepository.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
         for (const admin of admins) {
           global.io.to(`admin_${admin.id}`).emit('admin_dm_edited', { messageId: message.id });
         }
@@ -267,7 +268,7 @@ class AdminMessagesChild {
       return res.status(400).json({ success: false, message: 'Content is required' });
     }
 
-    const message = await GroupMessage.findByPk(messageId, {
+    const message = await groupMessageRepository.findByPk(messageId, {
       include: [{ model: Group, as: 'group', attributes: ['id'] }]
     });
     if (!message) {
@@ -288,7 +289,7 @@ class AdminMessagesChild {
 
     try {
       if (global.io) {
-        const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
+        const admins = await userRepository.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
         for (const admin of admins) {
           global.io.to(`admin_${admin.id}`).emit('admin_group_message_edited', { messageId: message.id });
         }

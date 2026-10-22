@@ -1,4 +1,5 @@
-import { Note, User, SharedNote, NoteCategory, NoteTag, NoteFolder, GroupSharedNote, Group, GroupMember, GroupMessage, Message } from '../../models/index.js';
+import { User, NoteCategory, NoteTag, Group, GroupMember } from '../../models/index.js';
+import { noteRepository, sharedNoteRepository, noteCategoryRepository, groupSharedNoteRepository, groupMessageRepository, messageRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
@@ -37,7 +38,7 @@ class NotesBasicChild {
       if (sharedFromUserId) {
         // Check 1-1 shared note permission
         let hasPermission = false;
-        const permission = await SharedNote.findOne({
+        const permission = await sharedNoteRepository.findOne({
           where: { 
             sharedByUserId: sharedFromUserId,
             sharedWithUserId: userId,
@@ -49,7 +50,7 @@ class NotesBasicChild {
           hasPermission = true;
         } else {
           // Check group shared note permission
-          const groupPermission = await GroupSharedNote.findOne({
+          const groupPermission = await groupSharedNoteRepository.findOne({
             where: { 
               sharedByUserId: sharedFromUserId,
               canCreate: true,
@@ -75,7 +76,7 @@ class NotesBasicChild {
       }
 
       // Create note with includes to avoid additional query
-      const note = await Note.create({
+      const note = await noteRepository.create({
         title,
         content,
         imageUrl: imageUrl || null,
@@ -103,7 +104,7 @@ class NotesBasicChild {
       });
 
       // Get the created note with associations
-      const noteWithUser = await Note.findByPk(note.id, {
+      const noteWithUser = await noteRepository.findByPk(note.id, {
         include: NOTE_INCLUDES,
       });
 
@@ -122,12 +123,12 @@ class NotesBasicChild {
         setImmediate(async () => {
           try {
             // Tăng selectionCount
-            await NoteCategory.increment('selectionCount', {
+            await noteCategoryRepository.increment('selectionCount', {
               where: { id: categoryId, userId }
             });
             
             // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
-            const category = await NoteCategory.findByPk(categoryId);
+            const category = await noteCategoryRepository.findByPk(categoryId);
             if (category && category.selectionCount > category.maxSelectionCount) {
               await category.update({ maxSelectionCount: category.selectionCount });
             }
@@ -150,7 +151,7 @@ class NotesBasicChild {
       const { id } = req.params;
       const userId = req.user.id;
 
-      const note = await Note.findOne({ where: { id, userId } });
+      const note = await noteRepository.findByIdForUser(id, userId);
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
       }
@@ -206,7 +207,7 @@ class NotesBasicChild {
         ];
       }
 
-      const { count, rows: notes } = await Note.findAndCountAll({
+      const { count, rows: notes } = await noteRepository.findAndCountAll({
         where: whereClause,
         include: NOTE_INCLUDES,
         order: [
@@ -245,7 +246,7 @@ class NotesBasicChild {
       const limit = 10; // Max autocomplete suggestions
 
       // Search in both title and content, prioritizing title matches
-      const titleMatches = await Note.findAll({
+      const titleMatches = await noteRepository.findAll({
         where: {
           userId,
           isArchived: false,
@@ -269,7 +270,7 @@ class NotesBasicChild {
       let contentMatches = [];
       if (titleMatches.length < limit) {
         const titleIds = titleMatches.map(n => n.id);
-        contentMatches = await Note.findAll({
+        contentMatches = await noteRepository.findAll({
           where: {
             userId,
             isArchived: false,
@@ -344,7 +345,7 @@ class NotesBasicChild {
       const userId = req.user.id;
 
       // Load note by id first
-      const note = await Note.findByPk(id, {
+      const note = await noteRepository.findByPk(id, {
         include: NOTE_INCLUDES,
       });
 
@@ -355,14 +356,14 @@ class NotesBasicChild {
       // Permission: owner OR shared recipient OR group member
       if (note.userId !== userId) {
         // Check 1-1 shared note
-        const shared = await SharedNote.findOne({
+        const shared = await sharedNoteRepository.findOne({
           where: { noteId: id, sharedWithUserId: userId, isActive: true },
           attributes: ['id']
         });
         
         if (!shared) {
           // Check group shared note
-          const groupShared = await GroupSharedNote.findOne({
+          const groupShared = await groupSharedNoteRepository.findOne({
             where: { noteId: id, isActive: true },
             include: [{
               model: Group,
@@ -396,7 +397,7 @@ class NotesBasicChild {
       const userId = req.user.id;
 
       // Load note by id first
-      const note = await Note.findByPk(id);
+      const note = await noteRepository.findByPk(id);
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
@@ -408,7 +409,7 @@ class NotesBasicChild {
         canEditByUser = true;
       } else {
         // Check 1-1 shared note permission
-        const sharedPerm = await SharedNote.findOne({
+        const sharedPerm = await sharedNoteRepository.findOne({
           where: { noteId: id, sharedWithUserId: userId, isActive: true, canEdit: true },
           attributes: ['id']
         });
@@ -416,7 +417,7 @@ class NotesBasicChild {
           canEditByUser = true;
         } else {
           // Check group shared note permission
-          const groupSharedPerm = await GroupSharedNote.findOne({
+          const groupSharedPerm = await groupSharedNoteRepository.findOne({
             where: { noteId: id, isActive: true, canEdit: true },
             include: [{
               model: Group,
@@ -489,7 +490,7 @@ class NotesBasicChild {
       });
 
       // Fetch updated note với relations
-      const updatedNote = await Note.findByPk(note.id, {
+      const updatedNote = await noteRepository.findByPk(note.id, {
         include: NOTE_INCLUDES,
       });
 
@@ -520,12 +521,12 @@ class NotesBasicChild {
             
             // Chỉ tăng count của category mới
             if (newCategoryId) {
-              await NoteCategory.increment('selectionCount', {
+              await noteCategoryRepository.increment('selectionCount', {
                 where: { id: newCategoryId, userId: note.userId }
               });
               
               // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
-              const category = await NoteCategory.findByPk(newCategoryId);
+              const category = await noteCategoryRepository.findByPk(newCategoryId);
               if (category && category.selectionCount > category.maxSelectionCount) {
                 await category.update({ maxSelectionCount: category.selectionCount });
               }
@@ -536,7 +537,7 @@ class NotesBasicChild {
           }
 
           // Emit to all shared note receivers (1-1)
-          const shares = await SharedNote.findAll({
+          const shares = await sharedNoteRepository.findAll({
             where: { noteId: note.id, isActive: true },
             attributes: ['sharedWithUserId', 'sharedByUserId']
           });
@@ -549,7 +550,7 @@ class NotesBasicChild {
           }
 
           // Emit to all group members
-          const groupShares = await GroupSharedNote.findAll({
+          const groupShares = await groupSharedNoteRepository.findAll({
             where: { noteId: note.id, isActive: true },
             include: [{
               model: Group,
@@ -582,7 +583,7 @@ class NotesBasicChild {
       const userId = req.user.id;
 
       // Load note first
-      const note = await Note.findByPk(id);
+      const note = await noteRepository.findByPk(id);
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
@@ -594,7 +595,7 @@ class NotesBasicChild {
         canDeleteByUser = true;
       } else {
         // Check 1-1 shared note permission
-        const sharedPerm = await SharedNote.findOne({
+        const sharedPerm = await sharedNoteRepository.findOne({
           where: { noteId: id, sharedWithUserId: userId, isActive: true, canDelete: true },
           attributes: ['id']
         });
@@ -602,7 +603,7 @@ class NotesBasicChild {
           canDeleteByUser = true;
         } else {
           // Check group shared note permission
-          const groupSharedPerm = await GroupSharedNote.findOne({
+          const groupSharedPerm = await groupSharedNoteRepository.findOne({
             where: { noteId: id, isActive: true, canDelete: true },
             include: [{
               model: Group,
@@ -651,7 +652,7 @@ class NotesBasicChild {
       setImmediate(async () => {
         try {
           // Collect and cleanup all shares
-          const shares = await SharedNote.findAll({ 
+          const shares = await sharedNoteRepository.findAll({ 
             where: { noteId: id },
             attributes: ['id', 'noteId', 'messageId', 'sharedWithUserId', 'sharedByUserId']
           });
@@ -673,13 +674,13 @@ class NotesBasicChild {
           }
           
           // Delete share records and messages
-          await SharedNote.destroy({ where: { noteId: id } });
+          await sharedNoteRepository.destroy({ where: { noteId: id } });
           if (messageIdsToDelete.length > 0) {
-            await Message.destroy({ where: { id: messageIdsToDelete } });
+            await messageRepository.destroy({ where: { id: messageIdsToDelete } });
           }
 
           // Cleanup group shares
-          const groupShares = await GroupSharedNote.findAll({
+          const groupShares = await groupSharedNoteRepository.findAll({
             where: { noteId: id },
             include: [{
               model: Group,
@@ -709,9 +710,9 @@ class NotesBasicChild {
           }
           
           // Delete group share records and messages
-          await GroupSharedNote.destroy({ where: { noteId: id } });
+          await groupSharedNoteRepository.destroy({ where: { noteId: id } });
           if (groupMessageIdsToDelete.length > 0) {
-            await GroupMessage.destroy({ where: { id: groupMessageIdsToDelete } });
+            await groupMessageRepository.destroy({ where: { id: groupMessageIdsToDelete } });
           }
 
           // Delete files
@@ -735,7 +736,7 @@ class NotesBasicChild {
       const { id } = req.params;
       const userId = req.user.id;
 
-      const note = await Note.findOne({ where: { id, userId } });
+      const note = await noteRepository.findByIdForUser(id, userId);
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
@@ -772,9 +773,7 @@ class NotesBasicChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const note = await Note.findOne({
-        where: { id, userId }
-      });
+      const note = await noteRepository.findByIdForUser(id, userId);
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
@@ -784,7 +783,7 @@ class NotesBasicChild {
       await note.save();
 
       // Trả về note với thông tin user
-      const updatedNote = await Note.findByPk(note.id, {
+      const updatedNote = await noteRepository.findByPk(note.id, {
         include: [{
           model: User,
           as: 'user',
@@ -820,9 +819,7 @@ class NotesBasicChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const note = await Note.findOne({
-        where: { id, userId }
-      });
+      const note = await noteRepository.findByIdForUser(id, userId);
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
@@ -832,7 +829,7 @@ class NotesBasicChild {
       await note.save();
 
       // Trả về note với thông tin user
-      const updatedNote = await Note.findByPk(note.id, {
+      const updatedNote = await noteRepository.findByPk(note.id, {
         include: [{
           model: User,
           as: 'user',

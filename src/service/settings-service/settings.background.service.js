@@ -1,4 +1,4 @@
-import { Background } from '../../models/index.js';
+import { backgroundRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 
 class SettingsBackgroundChild {
@@ -24,7 +24,7 @@ class SettingsBackgroundChild {
         };
       }
 
-      const { count, rows } = await Background.findAndCountAll({
+      const { count, rows } = await backgroundRepository.findAndCountAll({
         where: whereClause,
         order: [['sortOrder', 'ASC'], ['id', 'ASC']],
         limit,
@@ -64,7 +64,7 @@ class SettingsBackgroundChild {
         };
       }
 
-      const { count, rows } = await Background.findAndCountAll({
+      const { count, rows } = await backgroundRepository.findAndCountAll({
         where: whereClause,
         order: [['sortOrder', 'ASC'], ['id', 'ASC']],
         limit,

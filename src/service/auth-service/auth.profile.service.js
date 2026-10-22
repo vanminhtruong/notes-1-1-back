@@ -1,4 +1,4 @@
-import { User, Friendship } from '../../models/index.js';
+import { userRepository, friendshipRepository } from '../../repositories/index.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 import { Op } from 'sequelize';
 import { deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
@@ -10,7 +10,7 @@ class AuthProfileChild {
 
   getProfile = async (req, res) => {
     try {
-      const user = await User.findByPk(req.user.id, {
+      const user = await userRepository.findByPk(req.user.id, {
         include: [{
           association: 'notes',
           attributes: ['id', 'title', 'createdAt'],
@@ -76,7 +76,7 @@ class AuthProfileChild {
 
       // Emit profile update to all connected friends for real-time sync
       try {
-        const friendships = await Friendship.findAll({
+        const friendships = await friendshipRepository.findAll({
           where: {
             [Op.or]: [
               { requesterId: user.id, status: 'accepted' },

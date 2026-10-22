@@ -1,4 +1,5 @@
-import { Group, GroupMember, GroupMessage, User, MessageReaction, Notification, PinnedMessage, GroupMessageRead } from '../../models/index.js';
+import { GroupMessage, User, MessageReaction, GroupMessageRead } from '../../models/index.js';
+import { groupRepository, groupMemberRepository, groupMessageRepository, userRepository, messageReactionRepository, pinnedMessageRepository, groupMessageReadRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins, isUserOnline } from '../../socket/socketHandler.js';
@@ -14,13 +15,13 @@ class GroupMessagesChild {
     const userId = req.user.id;
     const { page = 1, limit = 10 } = req.query;
 
-    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    const membership = await groupMemberRepository.findMembership(groupId, userId);
     if (!membership) {
       return res.status(403).json({ success: false, message: 'Not a group member' });
     }
 
     const offset = (page - 1) * limit;
-    const messages = await GroupMessage.findAll({
+    const messages = await groupMessageRepository.findAll({
       where: { groupId },
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
@@ -60,14 +61,14 @@ class GroupMessagesChild {
       // Always mark messages as read for unread count purposes
       for (const message of toMarkRead) {
         // Set isRead flag
-        await GroupMessage.update(
+        await groupMessageRepository.update(
           { isRead: true },
           { where: { id: message.id } }
         );
         
         // Only create read receipts if BOTH users have read status enabled
-        const currentUser = await User.findByPk(userId);
-        const senderUser = await User.findByPk(message.senderId);
+        const currentUser = await userRepository.findByPk(userId);
+        const senderUser = await userRepository.findByPk(message.senderId);
         
         if (currentUser && senderUser && currentUser.readStatusEnabled && senderUser.readStatusEnabled) {
           // Create GroupMessageRead record for read receipts with retry
@@ -75,7 +76,7 @@ class GroupMessagesChild {
           let retries = 3;
           while (retries > 0) {
             try {
-              [readRecord] = await GroupMessageRead.findOrCreate({
+              [readRecord] = await groupMessageReadRepository.findOrCreate({
                 where: { messageId: message.id, userId },
                 defaults: { messageId: message.id, userId, readAt: new Date() }
               });
@@ -96,7 +97,7 @@ class GroupMessagesChild {
           const io = req.app.get('io');
           if (io) {
             const members = await this.parent.membersChild.getGroupMemberIds(groupId);
-            const userInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+            const userInfo = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
             for (const memberId of members) {
               if (memberId !== userId) {
                 io.to(`user_${memberId}`).emit('group_message_read', {
@@ -126,13 +127,13 @@ class GroupMessagesChild {
     }
 
     // Verify membership
-    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    const membership = await groupMemberRepository.findMembership(groupId, userId);
     if (!membership) {
       return res.status(403).json({ success: false, message: 'Not a group member' });
     }
 
     const like = { [Op.like]: `%${q}%` };
-    const rows = await GroupMessage.findAll({
+    const rows = await groupMessageRepository.findAll({
       where: { groupId, content: like, isDeletedForAll: { [Op.not]: true } },
       attributes: ['id', 'groupId', 'senderId', 'content', 'messageType', 'createdAt'],
       order: [['createdAt', 'DESC']],
@@ -151,13 +152,13 @@ class GroupMessagesChild {
     const senderId = req.user.id;
     const { content, messageType = 'text', replyToMessageId } = req.body;
 
-    const membership = await GroupMember.findOne({ where: { groupId, userId: senderId } });
+    const membership = await groupMemberRepository.findMembership(groupId, senderId);
     if (!membership) {
       return res.status(403).json({ success: false, message: 'Not a group member' });
     }
 
     // Enforce adminsOnly setting: only owner/admin can send when enabled
-    const grp = await Group.findByPk(groupId);
+    const grp = await groupRepository.findByPk(groupId);
     if (grp && grp.adminsOnly === true) {
       const role = membership.role || 'member';
       if (role !== 'owner' && role !== 'admin') {
@@ -168,12 +169,7 @@ class GroupMessagesChild {
     // Validate replyToMessageId if provided
     let replyToMessage = null;
     if (replyToMessageId) {
-      replyToMessage = await GroupMessage.findOne({
-        where: {
-          id: replyToMessageId,
-          groupId: groupId
-        }
-      });
+      replyToMessage = await groupMessageRepository.findByIdInGroup(replyToMessageId, groupId);
       
       if (!replyToMessage) {
         return res.status(404).json({
@@ -183,7 +179,7 @@ class GroupMessagesChild {
       }
     }
 
-    const msg = await GroupMessage.create({ 
+    const msg = await groupMessageRepository.create({ 
       groupId, 
       senderId, 
       content, 
@@ -191,7 +187,7 @@ class GroupMessagesChild {
       status: 'sent',
       replyToMessageId: replyToMessageId || null 
     });
-    const messageWithData = await GroupMessage.findByPk(msg.id, {
+    const messageWithData = await groupMessageRepository.findByPk(msg.id, {
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
         {
@@ -260,7 +256,7 @@ class GroupMessagesChild {
           
           // Update message status to delivered if any member is online
           if (hasOnlineMembers) {
-            await GroupMessage.update({ status: 'delivered' }, { where: { id: msg.id } });
+            await groupMessageRepository.update({ status: 'delivered' }, { where: { id: msg.id } });
             io.to(`user_${senderId}`).emit('group_message_delivered', {
               messageId: msg.id,
               groupId: Number(groupId),
@@ -302,25 +298,25 @@ class GroupMessagesChild {
     const userId = req.user.id;
     const { type } = req.body || {};
 
-    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    const membership = await groupMemberRepository.findMembership(groupId, userId);
     if (!membership) return res.status(403).json({ success: false, message: 'Not a group member' });
 
-    const msg = await GroupMessage.findOne({ where: { id: messageId, groupId } });
+    const msg = await groupMessageRepository.findByIdInGroup(messageId, groupId);
     if (!msg) return res.status(404).json({ success: false, message: 'Message not found' });
 
     // If same type already exists, increment count
-    const existingSame = await MessageReaction.findOne({ where: { userId, groupMessageId: messageId, type } });
+    const existingSame = await messageReactionRepository.findGroupReaction(userId, messageId, type);
     if (existingSame) {
       await existingSame.increment('count', { by: 1 });
       await existingSame.update({ reactedAt: new Date() });
     } else {
       // If already 3, delete the current 3rd slot (keep first two)
       let removedType = null;
-      const list = await MessageReaction.findAll({ where: { userId, groupMessageId: messageId }, order: [['reactedAt', 'ASC']] });
+      const list = await messageReactionRepository.findAll({ where: { userId, groupMessageId: messageId }, order: [['reactedAt', 'ASC']] });
       if (list.length >= 3) {
         try { removedType = list[2].type; await list[2].destroy(); } catch {}
       }
-      await MessageReaction.findOrCreate({
+      await messageReactionRepository.findOrCreate({
         where: { userId, groupMessageId: messageId, type },
         defaults: { userId, groupMessageId: messageId, type, count: 1 }
       });
@@ -344,8 +340,8 @@ class GroupMessagesChild {
     const io = req.app.get('io') || global.io;
     if (io) {
       const members = await this.parent.membersChild.getGroupMemberIds(groupId);
-      const current = await MessageReaction.findOne({ where: { userId, groupMessageId: messageId, type } });
-      const userInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+      const current = await messageReactionRepository.findGroupReaction(userId, messageId, type);
+      const userInfo = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
       const payload = { groupId: Number(groupId), messageId: Number(messageId), userId, type, count: current?.count ?? 1, user: userInfo };
       for (const uid of members) io.to(`user_${uid}`).emit('group_message_reacted', payload);
       // Emit to admins
@@ -361,12 +357,12 @@ class GroupMessagesChild {
     const { groupId, messageId } = req.params;
     const userId = req.user.id;
     const { type } = req.query || {};
-    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    const membership = await groupMemberRepository.findMembership(groupId, userId);
     if (!membership) return res.status(403).json({ success: false, message: 'Not a group member' });
 
     const where = { userId, groupMessageId: messageId };
     if (type) where.type = type;
-    await MessageReaction.destroy({ where });
+    await messageReactionRepository.destroy({ where });
 
     const io = req.app.get('io') || global.io;
     if (io) {
@@ -388,7 +384,7 @@ class GroupMessagesChild {
     const { messageIds, scope } = req.body;
 
     // Validate membership
-    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    const membership = await groupMemberRepository.findMembership(groupId, userId);
     if (!membership) {
       return res.status(403).json({ success: false, message: 'Not a group member' });
     }
@@ -401,7 +397,7 @@ class GroupMessagesChild {
     }
 
     // Load messages ensure they belong to this group
-    const msgs = await GroupMessage.findAll({ where: { id: { [Op.in]: messageIds }, groupId } });
+    const msgs = await groupMessageRepository.findAll({ where: { id: { [Op.in]: messageIds }, groupId } });
     
     // Nếu không tìm thấy tin nhắn nào, có thể đã bị xóa trước đó
     if (msgs.length === 0) {
@@ -431,7 +427,7 @@ class GroupMessagesChild {
       }
       // Xóa pinned messages của user hiện tại
       try {
-        await PinnedMessage.destroy({ where: { userId, groupMessageId: { [Op.in]: foundMessageIds } } });
+        await pinnedMessageRepository.destroy({ where: { userId, groupMessageId: { [Op.in]: foundMessageIds } } });
       } catch (e) {
         console.log('Failed to cleanup user pins on recallGroupMessages(self):', e?.name || e);
       }
@@ -449,14 +445,14 @@ class GroupMessagesChild {
         deleteMultipleFiles(filesToDelete);
       }
       // 2) Đánh dấu isDeletedForAll, đồng thời clear content & replyToMessageId (giữ nguyên messageType)
-      await GroupMessage.update(
+      await groupMessageRepository.update(
         { isDeletedForAll: true, content: '', replyToMessageId: null },
         { where: { id: { [Op.in]: foundMessageIds }, groupId } }
       );
       // 3) Cleanup dữ liệu liên quan (cho mọi người)
-      try { await GroupMessageRead.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup group reads on recall(all):', e?.name || e); }
-      try { await MessageReaction.destroy({ where: { groupMessageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup group reactions on recall(all):', e?.name || e); }
-      try { await PinnedMessage.destroy({ where: { groupMessageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup group pins on recall(all):', e?.name || e); }
+      try { await groupMessageReadRepository.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup group reads on recall(all):', e?.name || e); }
+      try { await messageReactionRepository.destroy({ where: { groupMessageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup group reactions on recall(all):', e?.name || e); }
+      try { await pinnedMessageRepository.destroy({ where: { groupMessageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup group pins on recall(all):', e?.name || e); }
     }
 
     // Emit socket update
@@ -468,7 +464,7 @@ class GroupMessagesChild {
         io.to(`user_${userId}`).emit('group_messages_recalled', payload);
       } else {
         // Notify all members for recall for everyone
-        const members = await GroupMember.findAll({ where: { groupId }, attributes: ['userId'] });
+        const members = await groupMemberRepository.findAll({ where: { groupId }, attributes: ['userId'] });
         for (const m of members) {
           io.to(`user_${m.userId}`).emit('group_messages_recalled', payload);
         }
@@ -484,12 +480,12 @@ class GroupMessagesChild {
     const { content } = req.body || {};
 
     // Ensure user is a member
-    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    const membership = await groupMemberRepository.findMembership(groupId, userId);
     if (!membership) {
       return res.status(403).json({ success: false, message: 'Not a group member' });
     }
 
-    const msg = await GroupMessage.findOne({ where: { id: messageId, groupId } });
+    const msg = await groupMessageRepository.findByIdInGroup(messageId, groupId);
     if (!msg) {
       return res.status(404).json({ success: false, message: 'Message not found' });
     }
@@ -519,14 +515,14 @@ class GroupMessagesChild {
     const userId = req.user.id;
 
     // Verify user is group member
-    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    const membership = await groupMemberRepository.findMembership(groupId, userId);
     if (!membership) {
       return res.status(403).json({ success: false, message: 'Not a group member' });
     }
 
     // Get candidate messages in this group (sent by others), excluding system and globally-deleted
     // We will ensure GroupMessageRead exists per message for current user (if missing)
-    const candidates = await GroupMessage.findAll({
+    const candidates = await groupMessageRepository.findAll({
       where: { 
         groupId,
         senderId: { [Op.ne]: userId },
@@ -544,12 +540,12 @@ class GroupMessagesChild {
 
     for (const message of candidates) {
       // Skip if read record already exists for this user
-      const alreadyRead = await GroupMessageRead.findOne({ where: { messageId: message.id, userId } });
+      const alreadyRead = await groupMessageReadRepository.findOne({ where: { messageId: message.id, userId } });
       if (alreadyRead) {
         continue;
       }
       // Always mark as read for unread tracking purposes (legacy flag)
-      await GroupMessage.update(
+      await groupMessageRepository.update(
         { isRead: true },
         { where: { id: message.id } }
       );
@@ -561,7 +557,7 @@ class GroupMessagesChild {
       let retries = 3;
       while (retries > 0) {
         try {
-          [readRecord] = await GroupMessageRead.findOrCreate({
+          [readRecord] = await groupMessageReadRepository.findOrCreate({
             where: { messageId: message.id, userId },
             defaults: { messageId: message.id, userId, readAt: new Date() }
           });
@@ -578,8 +574,8 @@ class GroupMessagesChild {
         }
       }
       // Queue for socket emit if receipts enabled
-      const currentUser = await User.findByPk(userId);
-      const senderUser = await User.findByPk(message.senderId);
+      const currentUser = await userRepository.findByPk(userId);
+      const senderUser = await userRepository.findByPk(message.senderId);
       if (readRecord && currentUser && senderUser && currentUser.readStatusEnabled && senderUser.readStatusEnabled) {
         readReceiptsToCreate.push({ message, readRecord });
       }
@@ -590,7 +586,7 @@ class GroupMessagesChild {
       const io = req.app.get('io');
       if (io) {
         const members = await this.parent.membersChild.getGroupMemberIds(groupId);
-        const userInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+        const userInfo = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
         
         for (const { message, readRecord } of readReceiptsToCreate) {
           for (const memberId of members) {
@@ -624,13 +620,13 @@ class GroupMessagesChild {
     const userId = req.user.id;
 
     // Verify user is group owner
-    const ownerMembership = await GroupMember.findOne({ where: { groupId, userId } });
+    const ownerMembership = await groupMemberRepository.findMembership(groupId, userId);
     if (!ownerMembership || ownerMembership.role !== 'owner') {
       return res.status(403).json({ success: false, message: 'Only group owner can delete all messages' });
     }
 
     // Lấy tất cả messages để xóa files trước
-    const messages = await GroupMessage.findAll({ 
+    const messages = await groupMessageRepository.findAll({ 
       where: { groupId }, 
       attributes: ['id', 'content', 'messageType'] 
     });
@@ -652,23 +648,23 @@ class GroupMessagesChild {
 
     // Hard delete all messages and related data
     if (messageIds.length > 0) {
-      await MessageReaction.destroy({ 
+      await messageReactionRepository.destroy({ 
         where: { 
           groupMessageId: { [Op.in]: messageIds }
         }
       });
-      await GroupMessageRead.destroy({ 
+      await groupMessageReadRepository.destroy({ 
         where: { 
           messageId: { [Op.in]: messageIds }
         }
       });
-      await PinnedMessage.destroy({ 
+      await pinnedMessageRepository.destroy({ 
         where: { 
           groupMessageId: { [Op.in]: messageIds }
         }
       });
     }
-    await GroupMessage.destroy({ where: { groupId } });
+    await groupMessageRepository.destroy({ where: { groupId } });
 
     // Emit to all group members
     const io = req.app.get('io') || global.io;

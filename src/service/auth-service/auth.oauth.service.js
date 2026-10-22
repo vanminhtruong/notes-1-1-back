@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { User, UserSession } from '../../models/index.js';
+import { userRepository, userSessionRepository } from '../../repositories/index.js';
 import { OAuth2Client } from 'google-auth-library';
 import axios from 'axios';
 import crypto from 'crypto';
@@ -58,11 +58,11 @@ class AuthOAuthChild {
       }
 
       // Find or create user
-      let user = await User.findOne({ where: { email } });
+      let user = await userRepository.findByEmail(email);
       if (!user) {
         // Create a random password to satisfy model constraints
         const randomPassword = crypto.randomBytes(24).toString('hex');
-        user = await User.create({ email, name, password: randomPassword });
+        user = await userRepository.create({ email, name, password: randomPassword });
         
         // Emit to admins about new user registration
         emitToAllAdmins('user_registered', {
@@ -93,7 +93,7 @@ class AuthOAuthChild {
 
       // Create session record
       try {
-        await UserSession.create({
+        await userSessionRepository.create({
           userId: user.id,
           token: token,
           deviceType: deviceInfo.deviceType,
@@ -109,7 +109,7 @@ class AuthOAuthChild {
         });
 
         // Clean up old expired sessions for this user
-        await UserSession.destroy({
+        await userSessionRepository.destroy({
           where: {
             userId: user.id,
             expiresAt: { [require('sequelize').Op.lt]: new Date() }
@@ -152,11 +152,11 @@ class AuthOAuthChild {
       }
 
       // Find or create user
-      let user = await User.findOne({ where: { email } });
+      let user = await userRepository.findByEmail(email);
       if (!user) {
         // Create a random password to satisfy model constraints
         const randomPassword = crypto.randomBytes(24).toString('hex');
-        user = await User.create({ 
+        user = await userRepository.create({ 
           email, 
           name: name || email.split('@')[0], 
           password: randomPassword 
@@ -191,7 +191,7 @@ class AuthOAuthChild {
 
       // Create session record
       try {
-        await UserSession.create({
+        await userSessionRepository.create({
           userId: user.id,
           token: token,
           deviceType: deviceInfo.deviceType,
@@ -207,7 +207,7 @@ class AuthOAuthChild {
         });
 
         // Clean up old expired sessions for this user
-        await UserSession.destroy({
+        await userSessionRepository.destroy({
           where: {
             userId: user.id,
             expiresAt: { [require('sequelize').Op.lt]: new Date() }

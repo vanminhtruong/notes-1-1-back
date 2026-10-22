@@ -1,4 +1,5 @@
-import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import { GroupMessageRead } from '../../models/index.js';
+import { groupRepository, groupMemberRepository, groupMessageRepository, pinnedChatRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile, hasUploadedFile } from '../../utils/fileHelper.js';
@@ -14,14 +15,14 @@ class GroupManagementChild {
     const uid = Number(userId);
 
     // Collect group IDs where target user is a member
-    const memberships = await GroupMember.findAll({ where: { userId: uid }, attributes: ['groupId'] });
+    const memberships = await groupMemberRepository.findAll({ where: { userId: uid }, attributes: ['groupId'] });
     const groupIds = memberships.map(m => m.groupId);
     if (groupIds.length === 0) return res.json({ success: true, data: [] });
 
-    const groups = await Group.findAll({ where: { id: { [Op.in]: groupIds } }, order: [['updatedAt', 'DESC']] });
+    const groups = await groupRepository.findAll({ where: { id: { [Op.in]: groupIds } }, order: [['updatedAt', 'DESC']] });
 
     // Determine pinned groups for current user (for consistent shape)
-    const pinnedGroups = await PinnedChat.findAll({ where: { userId: currentUserId, pinnedGroupId: { [Op.not]: null } } });
+    const pinnedGroups = await pinnedChatRepository.findAll({ where: { userId: currentUserId, pinnedGroupId: { [Op.not]: null } } });
     const pinnedGroupIds = new Set(pinnedGroups.map(p => p.pinnedGroupId));
 
     const data = [];
@@ -49,17 +50,17 @@ class GroupManagementChild {
 
     // Get memberships for both users
     const [mine, theirs] = await Promise.all([
-      GroupMember.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] }),
-      GroupMember.findAll({ where: { userId: uid }, attributes: ['groupId'] }),
+      groupMemberRepository.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] }),
+      groupMemberRepository.findAll({ where: { userId: uid }, attributes: ['groupId'] }),
     ]);
     const mySet = new Set(mine.map(m => m.groupId));
     const commonIds = Array.from(new Set(theirs.map(t => t.groupId))).filter(id => mySet.has(id));
     if (commonIds.length === 0) return res.json({ success: true, data: [] });
 
-    const groups = await Group.findAll({ where: { id: { [Op.in]: commonIds } }, order: [['updatedAt', 'DESC']] });
+    const groups = await groupRepository.findAll({ where: { id: { [Op.in]: commonIds } }, order: [['updatedAt', 'DESC']] });
 
     // Pinned status for current user
-    const pinnedGroups = await PinnedChat.findAll({ where: { userId: currentUserId, pinnedGroupId: { [Op.not]: null } } });
+    const pinnedGroups = await pinnedChatRepository.findAll({ where: { userId: currentUserId, pinnedGroupId: { [Op.not]: null } } });
     const pinnedGroupIds = new Set(pinnedGroups.map(p => p.pinnedGroupId));
 
     const data = [];
@@ -85,10 +86,10 @@ class GroupManagementChild {
 
     const uniqueMemberIds = Array.from(new Set(memberIds.filter(id => id && id !== ownerId)));
 
-    const group = await Group.create({ name, ownerId, avatar, background, adminsOnly: !!adminsOnly });
-    await GroupMember.create({ groupId: group.id, userId: ownerId, role: 'owner' });
+    const group = await groupRepository.create({ name, ownerId, avatar, background, adminsOnly: !!adminsOnly });
+    await groupMemberRepository.create({ groupId: group.id, userId: ownerId, role: 'owner' });
     for (const uid of uniqueMemberIds) {
-      await GroupMember.create({ groupId: group.id, userId: uid, role: 'member' });
+      await groupMemberRepository.create({ groupId: group.id, userId: uid, role: 'member' });
     }
 
     const payload = { id: group.id, name: group.name, ownerId, avatar: group.avatar, background: group.background, adminsOnly: !!group.adminsOnly, members: [ownerId, ...uniqueMemberIds] };
@@ -105,7 +106,7 @@ class GroupManagementChild {
   listMyGroups = asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const { search } = req.query;
-    const memberships = await GroupMember.findAll({ where: { userId }, attributes: ['groupId'] });
+    const memberships = await groupMemberRepository.findAll({ where: { userId }, attributes: ['groupId'] });
     const groupIds = memberships.map(m => m.groupId);
     
     // Build where clause with optional search filter
@@ -114,10 +115,10 @@ class GroupManagementChild {
       whereClause.name = { [Op.like]: `%${search.trim()}%` };
     }
     
-    const groups = await Group.findAll({ where: whereClause, order: [['updatedAt', 'DESC']] });
+    const groups = await groupRepository.findAll({ where: whereClause, order: [['updatedAt', 'DESC']] });
 
     // Get pinned groups for current user
-    const pinnedGroups = await PinnedChat.findAll({
+    const pinnedGroups = await pinnedChatRepository.findAll({
       where: { userId, pinnedGroupId: { [Op.not]: null } }
     });
     const pinnedGroupIds = new Set(pinnedGroups.map(p => p.pinnedGroupId));
@@ -126,11 +127,11 @@ class GroupManagementChild {
     for (const g of groups) {
       const memberIds = await this.parent.membersChild.getGroupMemberIds(g.id);
       // Determine my role in this group for convenience on the client
-      const myMembership = await GroupMember.findOne({ where: { groupId: g.id, userId }, attributes: ['role'] });
+      const myMembership = await groupMemberRepository.findOne({ where: { groupId: g.id, userId }, attributes: ['role'] });
       // Compute unread count per user using GroupMessageRead (per-user tracking)
       let unreadCount = 0;
       try {
-        const rows = await GroupMessage.findAll({
+        const rows = await groupMessageRepository.findAll({
           where: {
             groupId: g.id,
             senderId: { [Op.ne]: userId },
@@ -171,7 +172,7 @@ class GroupManagementChild {
       // Determine latest visible message time for current user (exclude system messages, and messages deleted-for-me)
       let lastMessageAt = null;
       try {
-        const recent = await GroupMessage.findAll({
+        const recent = await groupMessageRepository.findAll({
           where: { groupId: g.id, messageType: { [Op.ne]: 'system' } },
           attributes: ['id', 'createdAt', 'deletedForUserIds'],
           order: [['createdAt', 'DESC']],
@@ -227,7 +228,7 @@ class GroupManagementChild {
     const userId = req.user.id;
 
     // Ensure requester is owner
-    const ownerMembership = await GroupMember.findOne({ where: { groupId, userId } });
+    const ownerMembership = await groupMemberRepository.findMembership(groupId, userId);
     if (!ownerMembership || ownerMembership.role !== 'owner') {
       return res.status(403).json({ success: false, message: 'Only group owner can delete group' });
     }
@@ -236,7 +237,7 @@ class GroupManagementChild {
     const members = await this.parent.membersChild.getGroupMemberIds(groupId);
 
     // Lấy thông tin group để xóa files
-    const group = await Group.findByPk(groupId);
+    const group = await groupRepository.findByPk(groupId);
     
     // Xóa avatar và background của group
     const filesToDelete = [];
@@ -244,7 +245,7 @@ class GroupManagementChild {
     if (group?.background) filesToDelete.push(group.background);
     
     // Lấy tất cả messages và xóa files đính kèm
-    const messages = await GroupMessage.findAll({ 
+    const messages = await groupMessageRepository.findAll({ 
       where: { groupId }, 
       attributes: ['id', 'content', 'messageType'] 
     });
@@ -259,9 +260,9 @@ class GroupManagementChild {
     }
 
     // Remove messages and memberships, then the group
-    await GroupMessage.destroy({ where: { groupId } });
-    await GroupMember.destroy({ where: { groupId } });
-    await Group.destroy({ where: { id: groupId } });
+    await groupMessageRepository.destroy({ where: { groupId } });
+    await groupMemberRepository.destroy({ where: { groupId } });
+    await groupRepository.destroy({ where: { id: groupId } });
 
     const io = req.app.get('io');
     if (io && Array.isArray(members)) {
@@ -279,13 +280,13 @@ class GroupManagementChild {
     const userId = req.user.id;
     const { name, avatar, background, adminsOnly } = req.body;
 
-    const ownerMembership = await GroupMember.findOne({ where: { groupId, userId } });
+    const ownerMembership = await groupMemberRepository.findMembership(groupId, userId);
     if (!ownerMembership || ownerMembership.role !== 'owner') {
       return res.status(403).json({ success: false, message: 'Only group owner can update group' });
     }
 
     // Lấy thông tin group hiện tại để lưu giá trị cũ
-    const currentGroup = await Group.findByPk(groupId);
+    const currentGroup = await groupRepository.findByPk(groupId);
     const oldAvatar = currentGroup.avatar;
     const oldBackground = currentGroup.background;
     let shouldDeleteOldAvatar = false;
@@ -309,7 +310,7 @@ class GroupManagementChild {
     }
     if (typeof adminsOnly !== 'undefined') fieldsToUpdate.adminsOnly = !!adminsOnly;
 
-    await Group.update(fieldsToUpdate, { where: { id: groupId } });
+    await groupRepository.update(fieldsToUpdate, { where: { id: groupId } });
 
     // Xóa files cũ SAU khi update thành công
     if (shouldDeleteOldAvatar) {
@@ -318,7 +319,7 @@ class GroupManagementChild {
     if (shouldDeleteOldBackground) {
       deleteOldFileOnUpdate(oldBackground, fieldsToUpdate.background);
     }
-    const updated = await Group.findByPk(groupId);
+    const updated = await groupRepository.findByPk(groupId);
     const members = await this.parent.membersChild.getGroupMemberIds(groupId);
 
     const data = { id: updated.id, name: updated.name, ownerId: updated.ownerId, avatar: updated.avatar, background: updated.background, adminsOnly: !!updated.adminsOnly, members };

@@ -1,4 +1,4 @@
-import { Background } from '../../models/index.js';
+import { backgroundRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 
@@ -32,7 +32,7 @@ class AdminBackgroundsService {
         whereClause.isActive = isActive === 'true' || isActive === true;
       }
 
-      const { count, rows } = await Background.findAndCountAll({
+      const { count, rows } = await backgroundRepository.findAndCountAll({
         where: whereClause,
         order: [['sortOrder', 'ASC'], ['id', 'ASC']],
         limit,
@@ -63,12 +63,12 @@ class AdminBackgroundsService {
       const { uniqueId, value, label, category, sortOrder, isActive } = req.body;
 
       // Check if uniqueId already exists
-      const existingBackground = await Background.findOne({ where: { uniqueId } });
+      const existingBackground = await backgroundRepository.findByUniqueId(uniqueId);
       if (existingBackground) {
         return res.status(400).json({ message: 'UniqueId already exists' });
       }
 
-      const background = await Background.create({
+      const background = await backgroundRepository.create({
         uniqueId,
         type: 'color', // Force type to color
         value,
@@ -123,7 +123,7 @@ class AdminBackgroundsService {
         whereClause.isActive = isActive === 'true' || isActive === true;
       }
 
-      const { count, rows } = await Background.findAndCountAll({
+      const { count, rows } = await backgroundRepository.findAndCountAll({
         where: whereClause,
         order: [['sortOrder', 'ASC'], ['id', 'ASC']],
         limit,
@@ -154,12 +154,12 @@ class AdminBackgroundsService {
       const { uniqueId, value, label, category, sortOrder, isActive } = req.body;
 
       // Check if uniqueId already exists
-      const existingBackground = await Background.findOne({ where: { uniqueId } });
+      const existingBackground = await backgroundRepository.findByUniqueId(uniqueId);
       if (existingBackground) {
         return res.status(400).json({ message: 'UniqueId already exists' });
       }
 
-      const background = await Background.create({
+      const background = await backgroundRepository.create({
         uniqueId,
         type: 'image', // Force type to image
         value,
@@ -217,7 +217,7 @@ class AdminBackgroundsService {
         whereClause.isActive = isActive === 'true' || isActive === true;
       }
 
-      const { count, rows } = await Background.findAndCountAll({
+      const { count, rows } = await backgroundRepository.findAndCountAll({
         where: whereClause,
         order: [['sortOrder', 'ASC'], ['id', 'ASC']],
         limit,
@@ -246,7 +246,7 @@ class AdminBackgroundsService {
     try {
       const { id } = req.params;
 
-      const background = await Background.findByPk(id);
+      const background = await backgroundRepository.findByPk(id);
 
       if (!background) {
         return res.status(404).json({ message: 'Background not found' });
@@ -265,12 +265,12 @@ class AdminBackgroundsService {
       const { uniqueId, type, value, label, category, sortOrder, isActive } = req.body;
 
       // Check if uniqueId already exists
-      const existingBackground = await Background.findOne({ where: { uniqueId } });
+      const existingBackground = await backgroundRepository.findByUniqueId(uniqueId);
       if (existingBackground) {
         return res.status(400).json({ message: 'UniqueId already exists' });
       }
 
-      const background = await Background.create({
+      const background = await backgroundRepository.create({
         uniqueId,
         type,
         value,
@@ -296,7 +296,7 @@ class AdminBackgroundsService {
       const { id } = req.params;
       const { uniqueId, type, value, label, category, sortOrder, isActive } = req.body;
 
-      const background = await Background.findByPk(id);
+      const background = await backgroundRepository.findByPk(id);
 
       if (!background) {
         return res.status(404).json({ message: 'Background not found' });
@@ -304,7 +304,7 @@ class AdminBackgroundsService {
 
       // Check if uniqueId is being changed and already exists
       if (uniqueId && uniqueId !== background.uniqueId) {
-        const existingBackground = await Background.findOne({ where: { uniqueId } });
+        const existingBackground = await backgroundRepository.findByUniqueId(uniqueId);
         if (existingBackground) {
           return res.status(400).json({ message: 'UniqueId already exists' });
         }
@@ -341,7 +341,7 @@ class AdminBackgroundsService {
     try {
       const { id } = req.params;
 
-      const background = await Background.findByPk(id);
+      const background = await backgroundRepository.findByPk(id);
 
       if (!background) {
         return res.status(404).json({ message: 'Background not found' });
@@ -368,7 +368,7 @@ class AdminBackgroundsService {
     try {
       const { id } = req.params;
 
-      const background = await Background.findByPk(id);
+      const background = await backgroundRepository.findByPk(id);
 
       if (!background) {
         return res.status(404).json({ message: 'Background not found' });

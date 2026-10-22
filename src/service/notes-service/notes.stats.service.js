@@ -1,4 +1,4 @@
-import { Note, NoteFolder } from '../../models/index.js';
+import { noteRepository, noteFolderRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 
 class NotesStatsChild {
@@ -11,31 +11,31 @@ class NotesStatsChild {
       const userId = req.user.id;
 
       // Only count notes that are NOT in any folder
-      const totalNotes = await Note.count({ where: { userId, folderId: null } });
-      const archivedNotes = await Note.count({ where: { userId, isArchived: true, folderId: null } });
-      const activeNotes = await Note.count({ where: { userId, isArchived: false, folderId: null } });
+      const totalNotes = await noteRepository.count({ where: { userId, folderId: null } });
+      const archivedNotes = await noteRepository.count({ where: { userId, isArchived: true, folderId: null } });
+      const activeNotes = await noteRepository.count({ where: { userId, isArchived: false, folderId: null } });
 
       // Count folders
-      const totalFolders = await NoteFolder.count({ where: { userId } });
+      const totalFolders = await noteFolderRepository.count({ where: { userId } });
 
       // Count notes in folders
-      const notesInFolders = await Note.count({ where: { userId, folderId: { [Op.ne]: null } } });
+      const notesInFolders = await noteRepository.count({ where: { userId, folderId: { [Op.ne]: null } } });
 
-      const notesByPriority = await Note.findAll({
+      const notesByPriority = await noteRepository.findAll({
         where: { userId, isArchived: false, folderId: null },
         attributes: [
           'priority',
-          [Note.sequelize.fn('COUNT', Note.sequelize.col('id')), 'count']
+          [noteRepository.sequelize.fn('COUNT', noteRepository.sequelize.col('id')), 'count']
         ],
         group: ['priority'],
         raw: true,
       });
 
-      const notesByCategory = await Note.findAll({
+      const notesByCategory = await noteRepository.findAll({
         where: { userId, isArchived: false, folderId: null },
         attributes: [
           'category',
-          [Note.sequelize.fn('COUNT', Note.sequelize.col('id')), 'count']
+          [noteRepository.sequelize.fn('COUNT', noteRepository.sequelize.col('id')), 'count']
         ],
         group: ['category'],
         raw: true,

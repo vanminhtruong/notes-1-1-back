@@ -1,4 +1,4 @@
-import { User, Message, MessageReaction, BlockedUser } from '../../models/index.js';
+import { userRepository, messageRepository, messageReactionRepository, blockedUserRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
@@ -13,7 +13,7 @@ class ChatReactionsChild {
     const { messageId } = req.params;
     const { type } = req.body || {};
 
-    const msg = await Message.findByPk(messageId);
+    const msg = await messageRepository.findByPk(messageId);
     if (!msg) return res.status(404).json({ success: false, message: 'Message not found' });
     if (msg.senderId !== currentUserId && msg.receiverId !== currentUserId) {
       return res.status(403).json({ success: false, message: 'Not allowed' });
@@ -21,7 +21,7 @@ class ChatReactionsChild {
 
     try {
       const otherUserId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId;
-      const blocked = await BlockedUser.findOne({
+      const blocked = await blockedUserRepository.findOne({
         where: {
           [Op.or]: [
             { userId: currentUserId, blockedUserId: otherUserId },
@@ -34,17 +34,17 @@ class ChatReactionsChild {
       }
     } catch {}
 
-    const existingSame = await MessageReaction.findOne({ where: { userId: currentUserId, messageId, type } });
+    const existingSame = await messageReactionRepository.findReaction(currentUserId, messageId, type);
     if (existingSame) {
       await existingSame.increment('count', { by: 1 });
       await existingSame.update({ reactedAt: new Date() });
     } else {
       let removedType = null;
-      const list = await MessageReaction.findAll({ where: { userId: currentUserId, messageId }, order: [['reactedAt', 'ASC']] });
+      const list = await messageReactionRepository.findAll({ where: { userId: currentUserId, messageId }, order: [['reactedAt', 'ASC']] });
       if (list.length >= 3) {
         try { removedType = list[2].type; await list[2].destroy(); } catch {}
       }
-      await MessageReaction.findOrCreate({
+      await messageReactionRepository.findOrCreate({
         where: { userId: currentUserId, messageId, type },
         defaults: { userId: currentUserId, messageId, type, count: 1 }
       });
@@ -66,8 +66,8 @@ class ChatReactionsChild {
     }
 
     try {
-      const current = await MessageReaction.findOne({ where: { userId: currentUserId, messageId, type } });
-      const userInfo = await User.findByPk(currentUserId, { attributes: ['id', 'name', 'avatar'] });
+      const current = await messageReactionRepository.findReaction(currentUserId, messageId, type);
+      const userInfo = await userRepository.findByPk(currentUserId, { attributes: ['id', 'name', 'avatar'] });
       const payload = { messageId: Number(messageId), userId: currentUserId, type, count: current?.count ?? 1, user: userInfo };
       const a = msg.senderId, b = msg.receiverId;
       const io = req.app.get('io') || global.io;
@@ -89,7 +89,7 @@ class ChatReactionsChild {
     const { messageId } = req.params;
     const { type } = req.query || {};
 
-    const msg = await Message.findByPk(messageId);
+    const msg = await messageRepository.findByPk(messageId);
     if (!msg) return res.status(404).json({ success: false, message: 'Message not found' });
     if (msg.senderId !== currentUserId && msg.receiverId !== currentUserId) {
       return res.status(403).json({ success: false, message: 'Not allowed' });
@@ -97,7 +97,7 @@ class ChatReactionsChild {
 
     try {
       const otherUserId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId;
-      const blocked = await BlockedUser.findOne({
+      const blocked = await blockedUserRepository.findOne({
         where: {
           [Op.or]: [
             { userId: currentUserId, blockedUserId: otherUserId },
@@ -112,7 +112,7 @@ class ChatReactionsChild {
 
     const where = { userId: currentUserId, messageId };
     if (type) where.type = type;
-    await MessageReaction.destroy({ where });
+    await messageReactionRepository.destroy({ where });
 
     try {
       const payload = { messageId: Number(messageId), userId: currentUserId, ...(type ? { type } : {}) };

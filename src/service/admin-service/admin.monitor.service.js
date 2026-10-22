@@ -1,4 +1,5 @@
-import { User, Message, Group, GroupMember, Friendship, GroupMessage, MessageRead, GroupMessageRead, MessageReaction, PinnedMessage, BlockedUser } from '../../models/index.js';
+import { User, Message, Group, GroupMessage, MessageRead, GroupMessageRead, MessageReaction } from '../../models/index.js';
+import { userRepository, messageRepository, groupRepository, groupMemberRepository, friendshipRepository, groupMessageRepository, pinnedMessageRepository, blockedUserRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 
@@ -10,10 +11,10 @@ class AdminMonitorChild {
   // Admin: Get Group members with role (owner/admin/member) for monitoring
   adminGetGroupMembers = asyncHandler(async (req, res) => {
     const { groupId } = req.params;
-    const group = await Group.findByPk(groupId, { attributes: ['id', 'name', 'ownerId', 'avatar'] });
+    const group = await groupRepository.findByPk(groupId, { attributes: ['id', 'name', 'ownerId', 'avatar'] });
     if (!group) return res.status(404).json({ success: false, message: 'Group not found' });
 
-    const rows = await GroupMember.findAll({
+    const rows = await groupMemberRepository.findAll({
       where: { groupId: Number(groupId) },
       attributes: ['userId', 'role'],
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }]
@@ -35,7 +36,7 @@ class AdminMonitorChild {
     const b = Number(otherUserId);
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
-    const messages = await Message.findAll({
+    const messages = await messageRepository.findAll({
       where: {
         [Op.or]: [
           { senderId: a, receiverId: b },
@@ -76,7 +77,7 @@ class AdminMonitorChild {
     const gid = Number(groupId);
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
-    const messages = await GroupMessage.findAll({
+    const messages = await groupMessageRepository.findAll({
       where: { groupId: gid, isDeletedForAll: { [Op.not]: true } },
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
@@ -107,10 +108,10 @@ class AdminMonitorChild {
     const limitNum = parseInt(limit, 10) || 20;
     const offset = (pageNum - 1) * limitNum;
 
-    const user = await User.findByPk(userId, { attributes: ['id', 'name', 'email', 'avatar', 'lastSeenAt'] });
+    const user = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'email', 'avatar', 'lastSeenAt'] });
     if (!user) { return res.status(404).json({ message: 'Không tìm thấy người dùng' }); }
 
-    const messages = await Message.findAll({
+    const messages = await messageRepository.findAll({
       where: {
         [Op.or]: [ { senderId: userId }, { receiverId: userId } ],
         isDeletedForAll: { [Op.not]: true },
@@ -125,13 +126,13 @@ class AdminMonitorChild {
       offset,
     });
 
-    const groups = await GroupMember.findAll({
+    const groups = await groupMemberRepository.findAll({
       where: { userId },
       include: [{ model: Group, as: 'group', attributes: ['id', 'name', 'avatar', 'createdAt'], include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email'] }] }],
       order: [['createdAt', 'DESC']]
     });
 
-    const friendships = await Friendship.findAll({
+    const friendships = await friendshipRepository.findAll({
       where: { [Op.or]: [ { requesterId: userId, status: 'accepted' }, { addresseeId: userId, status: 'accepted' } ] },
       include: [ { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar'] }, { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar'] } ]
     });
@@ -153,7 +154,7 @@ class AdminMonitorChild {
     const a = Number(userId); // monitored user
     const b = Number(otherUserId);
 
-    const pinnedMessages = await PinnedMessage.findAll({
+    const pinnedMessages = await pinnedMessageRepository.findAll({
       where: {
         // Lấy tin ghim của CẢ HAI người trong cuộc trò chuyện
         userId: { [Op.in]: [a, b] }
@@ -194,7 +195,7 @@ class AdminMonitorChild {
     const { groupId } = req.params;
     const gid = Number(groupId);
 
-    const pinnedMessages = await PinnedMessage.findAll({
+    const pinnedMessages = await pinnedMessageRepository.findAll({
       where: {},
       include: [
         {
@@ -233,7 +234,7 @@ class AdminMonitorChild {
     const uid = Number(userId);
 
     // Lấy CẢ HAI: user block ai + ai block user
-    const blockedUsers = await BlockedUser.findAll({
+    const blockedUsers = await blockedUserRepository.findAll({
       where: {
         [Op.or]: [
           { userId: uid },           // User này block ai

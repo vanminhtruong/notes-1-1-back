@@ -1,4 +1,4 @@
-import { NoteCategory, Note } from '../../models/index.js';
+import { noteCategoryRepository, noteRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
@@ -22,8 +22,8 @@ class NotesCategoriesChild {
         const searchTerm = search.trim();
         whereClause[Op.and] = whereClause[Op.and] || [];
         whereClause[Op.and].push(
-          Note.sequelize.where(
-            Note.sequelize.fn('LOWER', Note.sequelize.col('NoteCategory.name')),
+          noteRepository.sequelize.where(
+            noteRepository.sequelize.fn('LOWER', noteRepository.sequelize.col('NoteCategory.name')),
             { [Op.like]: `%${searchTerm.toLowerCase()}%` }
           )
         );
@@ -31,7 +31,7 @@ class NotesCategoriesChild {
 
       // Tối ưu: Sử dụng subquery để tính notesCount thay vì GROUP BY
       // Order: Pinned categories first, then by sortBy, then by usage
-      const categories = await NoteCategory.findAll({
+      const categories = await noteCategoryRepository.findAll({
         where: whereClause,
         order: [
           ['isPinned', 'DESC'], // Categories ghim lên đầu
@@ -42,7 +42,7 @@ class NotesCategoriesChild {
         attributes: {
           include: [
             [
-              Note.sequelize.literal(
+              noteRepository.sequelize.literal(
                 `(SELECT COUNT(*) FROM Notes WHERE Notes.categoryId = NoteCategory.id)`
               ),
               'notesCount'
@@ -98,15 +98,15 @@ class NotesCategoriesChild {
       const whereClause = {
         userId,
         [Op.and]: [
-          Note.sequelize.where(
-            Note.sequelize.fn('LOWER', Note.sequelize.col('NoteCategory.name')),
+          noteRepository.sequelize.where(
+            noteRepository.sequelize.fn('LOWER', noteRepository.sequelize.col('NoteCategory.name')),
             { [Op.like]: `%${searchTerm.toLowerCase()}%` }
           )
         ]
       };
 
       // Tìm kiếm với limit và sắp xếp theo usage
-      const categories = await NoteCategory.findAll({
+      const categories = await noteCategoryRepository.findAll({
         where: whereClause,
         limit: parseInt(limit),
         order: [
@@ -117,7 +117,7 @@ class NotesCategoriesChild {
         attributes: {
           include: [
             [
-              Note.sequelize.literal(
+              noteRepository.sequelize.literal(
                 `(SELECT COUNT(*) FROM Notes WHERE Notes.categoryId = NoteCategory.id)`
               ),
               'notesCount'
@@ -151,7 +151,7 @@ class NotesCategoriesChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const category = await NoteCategory.findOne({
+      const category = await noteCategoryRepository.findOne({
         where: { 
           id,
           userId 
@@ -159,7 +159,7 @@ class NotesCategoriesChild {
         attributes: {
           include: [
             [
-              Note.sequelize.literal(
+              noteRepository.sequelize.literal(
                 `(SELECT COUNT(*) FROM Notes WHERE Notes.categoryId = NoteCategory.id)`
               ),
               'notesCount'
@@ -192,11 +192,11 @@ class NotesCategoriesChild {
 
       // Tối ưu: Check trùng lặp nhanh với composite index
       const trimmedName = name.trim().toLowerCase();
-      const existingCategory = await NoteCategory.findOne({
+      const existingCategory = await noteCategoryRepository.findOne({
         where: { 
           userId,
-          name: Note.sequelize.where(
-            Note.sequelize.fn('LOWER', Note.sequelize.col('name')),
+          name: noteRepository.sequelize.where(
+            noteRepository.sequelize.fn('LOWER', noteRepository.sequelize.col('name')),
             trimmedName
           )
         },
@@ -209,7 +209,7 @@ class NotesCategoriesChild {
         });
       }
 
-      const category = await NoteCategory.create({
+      const category = await noteCategoryRepository.create({
         name: name.trim(),
         color: color || '#3B82F6',
         icon: icon || 'Tag',
@@ -248,12 +248,7 @@ class NotesCategoriesChild {
       const { id } = req.params;
       const { name, color, icon } = req.body;
 
-      const category = await NoteCategory.findOne({
-        where: { 
-          id,
-          userId 
-        }
-      });
+      const category = await noteCategoryRepository.findByIdForUser(id, userId);
 
       if (!category) {
         return res.status(404).json({ message: 'Category not found' });
@@ -262,11 +257,11 @@ class NotesCategoriesChild {
       // Tối ưu: Chỉ check trùng tên khi tên thay đổi
       if (name && name.trim().toLowerCase() !== category.name.toLowerCase()) {
         const trimmedName = name.trim().toLowerCase();
-        const existingCategory = await NoteCategory.findOne({
+        const existingCategory = await noteCategoryRepository.findOne({
           where: { 
             userId,
-            name: Note.sequelize.where(
-              Note.sequelize.fn('LOWER', Note.sequelize.col('name')),
+            name: noteRepository.sequelize.where(
+              noteRepository.sequelize.fn('LOWER', noteRepository.sequelize.col('name')),
               trimmedName
             ),
             id: { [Op.ne]: id }
@@ -289,7 +284,7 @@ class NotesCategoriesChild {
       await category.save();
 
       // Tối ưu: Lấy notesCount hiện tại với hint index
-      const notesCount = await Note.count({
+      const notesCount = await noteRepository.count({
         where: { categoryId: id },
         benchmark: true,
         logging: false
@@ -325,19 +320,14 @@ class NotesCategoriesChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const category = await NoteCategory.findOne({
-        where: { 
-          id,
-          userId 
-        }
-      });
+      const category = await noteCategoryRepository.findByIdForUser(id, userId);
 
       if (!category) {
         return res.status(404).json({ message: 'Category not found' });
       }
 
       // Set all notes with this category to null
-      await Note.update(
+      await noteRepository.update(
         { categoryId: null },
         { where: { categoryId: id } }
       );
@@ -370,12 +360,7 @@ class NotesCategoriesChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const category = await NoteCategory.findOne({
-        where: { 
-          id,
-          userId 
-        }
-      });
+      const category = await noteCategoryRepository.findByIdForUser(id, userId);
 
       if (!category) {
         return res.status(404).json({ message: 'Category not found' });
@@ -389,7 +374,7 @@ class NotesCategoriesChild {
       await category.save();
 
       // Lấy notesCount hiện tại
-      const notesCount = await Note.count({
+      const notesCount = await noteRepository.count({
         where: { categoryId: id },
         benchmark: true,
         logging: false
@@ -425,12 +410,7 @@ class NotesCategoriesChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const category = await NoteCategory.findOne({
-        where: { 
-          id,
-          userId 
-        }
-      });
+      const category = await noteCategoryRepository.findByIdForUser(id, userId);
 
       if (!category) {
         return res.status(404).json({ message: 'Category not found' });
@@ -444,7 +424,7 @@ class NotesCategoriesChild {
       await category.save();
 
       // Lấy notesCount hiện tại
-      const notesCount = await Note.count({
+      const notesCount = await noteRepository.count({
         where: { categoryId: id },
         benchmark: true,
         logging: false

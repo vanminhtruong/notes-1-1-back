@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { User } from '../../models/index.js';
+import { userRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 
 class AdminAuthChild {
@@ -11,7 +11,7 @@ class AdminAuthChild {
   adminLogin = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ where: { email } });
+    const user = await userRepository.findByEmail(email);
     if (!user) {
       return res.status(400).json({ message: 'Email không tồn tại', code: 'EMAIL_NOT_FOUND' });
     }

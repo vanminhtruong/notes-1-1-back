@@ -1,4 +1,4 @@
-import { User } from '../../models/index.js';
+import { userRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
 import { AdminPermissionsController } from '../../controllers/adminPermissions.controller.js';
@@ -13,9 +13,7 @@ class AdminPermissionsChild {
     const { adminId } = req.params;
     const { permissions = [], adminLevel } = req.body;
 
-    const targetAdmin = await User.findOne({
-      where: { id: adminId, role: 'admin' }
-    });
+    const targetAdmin = await userRepository.findAdminById(adminId);
 
     if (!targetAdmin) {
       return res.status(404).json({ message: 'Không tìm thấy admin' });
@@ -47,7 +45,7 @@ class AdminPermissionsChild {
 
     await targetAdmin.update(updateData);
 
-    const updatedAdmin = await User.findByPk(adminId, {
+    const updatedAdmin = await userRepository.findByPk(adminId, {
       attributes: ['id', 'name', 'email', 'role', 'adminLevel', 'adminPermissions', 'isActive']
     });
 
@@ -78,9 +76,7 @@ class AdminPermissionsChild {
     const { adminId } = req.params;
     const { permission } = req.body;
 
-    const targetAdmin = await User.findOne({
-      where: { id: adminId, role: 'admin' }
-    });
+    const targetAdmin = await userRepository.findAdminById(adminId);
 
     if (!targetAdmin) {
       return res.status(404).json({ message: 'Không tìm thấy admin' });
@@ -118,7 +114,7 @@ class AdminPermissionsChild {
       adminPermissions: currentPermissions
     });
 
-    const updatedAdmin = await User.findByPk(adminId, {
+    const updatedAdmin = await userRepository.findByPk(adminId, {
       attributes: ['id', 'name', 'email', 'role', 'adminLevel', 'adminPermissions', 'isActive']
     });
 

@@ -1,4 +1,4 @@
-import { UserSession } from '../../models/index.js';
+import { userSessionRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 
 class UserSessionManagementChild {
@@ -15,7 +15,7 @@ class UserSessionManagementChild {
       const currentToken = req.token; // From auth middleware
 
       // Clean up expired sessions first
-      await UserSession.destroy({
+      await userSessionRepository.destroy({
         where: {
           userId,
           expiresAt: { [Op.lt]: new Date() }
@@ -23,7 +23,7 @@ class UserSessionManagementChild {
       });
 
       // Get all active sessions
-      const sessions = await UserSession.findAll({
+      const sessions = await userSessionRepository.findAll({
         where: {
           userId,
           isActive: true,
@@ -70,7 +70,7 @@ class UserSessionManagementChild {
     try {
       const currentToken = req.token;
 
-      await UserSession.update(
+      await userSessionRepository.update(
         { lastActivityAt: new Date() },
         {
           where: {

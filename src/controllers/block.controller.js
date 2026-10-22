@@ -11,6 +11,7 @@ class BlockController {
   // Delegate methods to child services
   blockUser = (...args) => this.actionsChild.blockUser(...args);
   unblockUser = (...args) => this.actionsChild.unblockUser(...args);
+  bulkBlockUsers = (...args) => this.actionsChild.bulkBlockUsers(...args);
   getBlockStatus = (...args) => this.statusChild.getBlockStatus(...args);
   listBlockedUsers = (...args) => this.statusChild.listBlockedUsers(...args);
 }
@@ -21,5 +22,6 @@ export { BlockController };
 
 export const blockUser = blockController.blockUser;
 export const unblockUser = blockController.unblockUser;
+export const bulkBlockUsers = blockController.bulkBlockUsers;
 export const getBlockStatus = blockController.getBlockStatus;
 export const listBlockedUsers = blockController.listBlockedUsers;

@@ -1,4 +1,4 @@
-import { User } from '../../models/index.js';
+import { userRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
@@ -30,7 +30,7 @@ class AdminManagementChild {
       whereClause.adminLevel = adminLevel;
     }
 
-    const { count, rows: admins } = await User.findAndCountAll({
+    const { count, rows: admins } = await userRepository.findAndCountAll({
       where: whereClause,
       attributes: ['id', 'name', 'email', 'role', 'adminLevel', 'adminPermissions', 'isActive', 'avatar', 'lastSeenAt', 'createdAt'],
       offset,
@@ -56,7 +56,7 @@ class AdminManagementChild {
     const { email, password, name, permissions = [], adminLevel } = req.body;
 
     // Kiểm tra email đã tồn tại
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: 'Email đã được sử dụng' });
     }
@@ -67,7 +67,7 @@ class AdminManagementChild {
     const targetLevel = allowedLevels.includes(adminLevel) ? adminLevel : 'sub_admin';
     const filteredPermissions = AdminPermissionsController.filterPermissionsByLevel(validPermissions, targetLevel);
 
-    const newAdmin = await User.create({
+    const newAdmin = await userRepository.create({
       email,
       password,
       name,
@@ -106,9 +106,7 @@ class AdminManagementChild {
   deleteAdmin = asyncHandler(async (req, res) => {
     const { adminId } = req.params;
 
-    const targetAdmin = await User.findOne({
-      where: { id: adminId, role: 'admin' }
-    });
+    const targetAdmin = await userRepository.findAdminById(adminId);
 
     if (!targetAdmin) {
       return res.status(404).json({ message: 'Không tìm thấy admin' });

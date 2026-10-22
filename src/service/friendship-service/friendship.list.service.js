@@ -1,4 +1,5 @@
-import { User, Friendship } from '../../models/index.js';
+import { User } from '../../models/index.js';
+import { friendshipRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isUserOnline } from '../../socket/socketHandler.js';
@@ -13,7 +14,7 @@ class FriendshipListChild {
   getFriends = asyncHandler(async (req, res) => {
     const userId = req.user.id;
 
-    const friendships = await Friendship.findAll({
+    const friendships = await friendshipRepository.findAll({
       where: {
         [Op.or]: [
           { requesterId: userId, status: 'accepted' },

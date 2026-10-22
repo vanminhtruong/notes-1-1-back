@@ -1,4 +1,5 @@
-import { User, Note, Message, Group, GroupMember, GroupMessage, Notification, SharedNote, GroupSharedNote, NoteFolder, NoteCategory, NoteTag } from '../../models/index.js';
+import { User, Note, Group, GroupMember, NoteCategory, NoteTag } from '../../models/index.js';
+import { userRepository, noteRepository, messageRepository, groupMemberRepository, groupMessageRepository, notificationRepository, sharedNoteRepository, groupSharedNoteRepository, noteFolderRepository, noteCategoryRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
@@ -26,7 +27,7 @@ class AdminNotesChild {
     const where = { userId: uid, type: { [Op.ne]: 'bell_dismiss' } };
     if (String(unreadOnly) === 'true') where.isRead = false;
 
-    const rows = await Notification.findAll({
+    const rows = await notificationRepository.findAll({
       where,
       include: [
         { model: User, as: 'fromUser', attributes: ['id', 'name', 'avatar'] },
@@ -38,7 +39,7 @@ class AdminNotesChild {
 
     // Apply user's bell dismiss preferences to hide items they chose to dismiss
     try {
-      const dismissRows = await Notification.findAll({
+      const dismissRows = await notificationRepository.findAll({
         where: { userId: uid, type: 'bell_dismiss' },
         order: [['createdAt', 'DESC']],
         limit: 1000,
@@ -92,7 +93,7 @@ class AdminNotesChild {
         .map((n) => Number(n.metadata.messageId));
       if (Array.isArray(msgIds) && msgIds.length > 0) {
         const uniq = Array.from(new Set(msgIds));
-        const msgs = await Message.findAll({ where: { id: { [Op.in]: uniq } }, attributes: ['id', 'content', 'messageType'] });
+        const msgs = await messageRepository.findAll({ where: { id: { [Op.in]: uniq } }, attributes: ['id', 'content', 'messageType'] });
         const map = new Map(msgs.map((m) => [Number(m.id), { content: m.content, messageType: m.messageType }]));
         for (const n of rows) {
           if (n && n.type === 'message' && n.metadata && Number.isFinite(Number(n.metadata.messageId))) {
@@ -170,7 +171,7 @@ class AdminNotesChild {
       return res.status(400).json({ success: false, message: 'Invalid userId or notificationId' });
     }
 
-    const notif = await Notification.findOne({ where: { id: nid, userId: uid } });
+    const notif = await notificationRepository.findByIdForUser(nid, uid);
     if (!notif) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
     }
@@ -195,7 +196,7 @@ class AdminNotesChild {
 
     // Do not delete internal bell_dismiss rows
     const where = { userId: uid, type: { [Op.ne]: 'bell_dismiss' } };
-    const deleted = await Notification.destroy({ where });
+    const deleted = await notificationRepository.destroy({ where });
 
     try {
       // Notify the affected user and all admins to refresh in realtime
@@ -266,7 +267,7 @@ class AdminNotesChild {
       categoryInclude.required = true; // Chỉ lấy notes có category match
     }
 
-    const { count, rows: notes } = await Note.findAndCountAll({
+    const { count, rows: notes } = await noteRepository.findAndCountAll({
       where: whereClause,
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
@@ -287,8 +288,8 @@ class AdminNotesChild {
     });
 
     // Count total folders and notes in folders for dashboard stats
-    const totalFolders = await NoteFolder.count();
-    const notesInFolders = await Note.count({ where: { folderId: { [Op.ne]: null } } });
+    const totalFolders = await noteFolderRepository.count();
+    const notesInFolders = await noteRepository.count({ where: { folderId: { [Op.ne]: null } } });
 
     res.json({
       notes,
@@ -309,12 +310,12 @@ class AdminNotesChild {
   createNoteForUser = asyncHandler(async (req, res) => {
     const { userId, title, content, imageUrl, videoUrl, youtubeUrl, category, categoryId, priority, reminderAt, folderId } = req.body;
 
-    const targetUser = await User.findByPk(userId);
+    const targetUser = await userRepository.findByPk(userId);
     if (!targetUser) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     } 
 
-    const note = await Note.create({
+    const note = await noteRepository.create({
       title,
       content,
       imageUrl: imageUrl || null,
@@ -331,12 +332,12 @@ class AdminNotesChild {
 
     // Tăng selectionCount nếu có categoryId
     if (categoryId) {
-      await NoteCategory.increment('selectionCount', {
+      await noteCategoryRepository.increment('selectionCount', {
         where: { id: categoryId, userId }
       });
       
       // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
-      const category = await NoteCategory.findByPk(categoryId);
+      const category = await noteCategoryRepository.findByPk(categoryId);
       if (category && category.selectionCount > category.maxSelectionCount) {
         await category.update({ maxSelectionCount: category.selectionCount });
       }
@@ -345,7 +346,7 @@ class AdminNotesChild {
       emitToUser(userId, 'categories_reorder_needed', { action: 'create' });
     }
 
-    const noteWithUser = await Note.findByPk(note.id, {
+    const noteWithUser = await noteRepository.findByPk(note.id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
         { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'], required: false }
@@ -366,7 +367,7 @@ class AdminNotesChild {
     const { id } = req.params;
     const { title, content, imageUrl, videoUrl, youtubeUrl, category, categoryId, priority, isArchived, reminderAt, folderId } = req.body;
 
-    const note = await Note.findByPk(id, {
+    const note = await noteRepository.findByPk(id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
     });
 
@@ -432,12 +433,12 @@ class AdminNotesChild {
       
       // Chỉ tăng count của category mới
       if (newCategoryId) {
-        await NoteCategory.increment('selectionCount', {
+        await noteCategoryRepository.increment('selectionCount', {
           where: { id: newCategoryId, userId: note.userId }
         });
         
         // Cập nhật maxSelectionCount nếu selectionCount hiện tại lớn hơn
-        const category = await NoteCategory.findByPk(newCategoryId);
+        const category = await noteCategoryRepository.findByPk(newCategoryId);
         if (category && category.selectionCount > category.maxSelectionCount) {
           await category.update({ maxSelectionCount: category.selectionCount });
         }
@@ -447,7 +448,7 @@ class AdminNotesChild {
       emitToUser(note.userId, 'categories_reorder_needed', { action: 'update' });
     }
 
-    const updatedNote = await Note.findByPk(note.id, {
+    const updatedNote = await noteRepository.findByPk(note.id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
         { model: NoteCategory, as: 'category', attributes: ['id', 'name', 'color', 'icon'], required: false }
@@ -467,7 +468,7 @@ class AdminNotesChild {
   deleteUserNote = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const note = await Note.findByPk(id, {
+    const note = await noteRepository.findByPk(id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
     });
 
@@ -501,7 +502,7 @@ class AdminNotesChild {
     const { noteId } = req.params;
     const { folderId } = req.body;
 
-    const note = await Note.findByPk(noteId, {
+    const note = await noteRepository.findByPk(noteId, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
     });
 
@@ -513,9 +514,7 @@ class AdminNotesChild {
 
     // Verify folder belongs to user if folderId is provided
     if (folderId) {
-      const folder = await NoteFolder.findOne({
-        where: { id: folderId, userId }
-      });
+      const folder = await noteFolderRepository.findByIdForUser(folderId, userId);
       if (!folder) {
         return res.status(404).json({ message: 'Không tìm thấy thư mục' });
       }
@@ -523,7 +522,7 @@ class AdminNotesChild {
 
     await note.update({ folderId: folderId || null });
 
-    const noteWithUser = await Note.findByPk(note.id, {
+    const noteWithUser = await noteRepository.findByPk(note.id, {
       include: [{
         model: User,
         as: 'user',
@@ -585,7 +584,7 @@ class AdminNotesChild {
     }
 
     // Get individual shares
-    const individualShares = await SharedNote.findAll({
+    const individualShares = await sharedNoteRepository.findAll({
       where: individualWhereClause,
       include: [
         { 
@@ -600,7 +599,7 @@ class AdminNotesChild {
     });
 
     // Get group shares
-    const groupShares = await GroupSharedNote.findAll({
+    const groupShares = await groupSharedNoteRepository.findAll({
       where: groupWhereClause,
       include: [
         { 
@@ -652,7 +651,7 @@ class AdminNotesChild {
   getSharedNoteDetail = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const sharedNote = await SharedNote.findByPk(id, {
+    const sharedNote = await sharedNoteRepository.findByPk(id, {
       include: [
         { 
           model: Note, 
@@ -676,7 +675,7 @@ class AdminNotesChild {
     const { id } = req.params;
 
     // Try to find individual shared note first
-    let sharedNote = await SharedNote.findByPk(id, {
+    let sharedNote = await sharedNoteRepository.findByPk(id, {
       include: [
         { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email'] },
         { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
@@ -688,7 +687,7 @@ class AdminNotesChild {
 
     // If not found, try group shared note
     if (!sharedNote) {
-      groupSharedNote = await GroupSharedNote.findByPk(id, {
+      groupSharedNote = await groupSharedNoteRepository.findByPk(id, {
         include: [
           { model: Group, as: 'group', attributes: ['id', 'name'] },
           { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email'] }
@@ -712,7 +711,7 @@ class AdminNotesChild {
         
         // Delete associated group message if exists
         if (groupSharedNote.groupMessageId) {
-          const groupMessage = await GroupMessage.findByPk(groupSharedNote.groupMessageId);
+          const groupMessage = await groupMessageRepository.findByPk(groupSharedNote.groupMessageId);
           if (groupMessage) {
             console.log(`🗑️ Deleting group message ${groupSharedNote.groupMessageId} for group ${groupId}`);
             await groupMessage.destroy();
@@ -727,7 +726,7 @@ class AdminNotesChild {
               });
               
               // Also emit to all users in case they're not in the socket room
-              const groupMembers = await GroupMember.findAll({
+              const groupMembers = await groupMemberRepository.findAll({
                 where: { groupId },
                 attributes: ['userId']
               });
@@ -771,7 +770,7 @@ class AdminNotesChild {
         
         // Delete associated message if exists
         if (sharedNote.messageId) {
-          const message = await Message.findByPk(sharedNote.messageId);
+          const message = await messageRepository.findByPk(sharedNote.messageId);
           if (message) {
             console.log(`🗑️ Deleting message ${sharedNote.messageId} between users ${sharedByUserId} and ${sharedWithUserId}`);
             await message.destroy();
@@ -832,7 +831,7 @@ class AdminNotesChild {
     const { canCreate, canEdit, canDelete, message } = req.body || {};
 
     // Try update individual share first
-    let sharedNote = await SharedNote.findByPk(sid, {
+    let sharedNote = await sharedNoteRepository.findByPk(sid, {
       include: [
         { model: Note, as: 'note', include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }] },
         { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
@@ -849,7 +848,7 @@ class AdminNotesChild {
 
       await sharedNote.update(fields);
 
-      sharedNote = await SharedNote.findByPk(sid, {
+      sharedNote = await sharedNoteRepository.findByPk(sid, {
         include: [
           { 
             model: Note, 
@@ -892,7 +891,7 @@ class AdminNotesChild {
     }
 
     // Else, try group share
-    let groupShared = await GroupSharedNote.findByPk(sid, {
+    let groupShared = await groupSharedNoteRepository.findByPk(sid, {
       include: [
         { model: Note, as: 'note', include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }] },
         { model: Group, as: 'group', attributes: ['id', 'name', 'avatar'] },
@@ -918,7 +917,7 @@ class AdminNotesChild {
       console.log('✅ GroupSharedNote updated successfully');
     }
 
-    groupShared = await GroupSharedNote.findByPk(sid, {
+    groupShared = await groupSharedNoteRepository.findByPk(sid, {
       include: [
         { 
           model: Note, 
@@ -999,7 +998,7 @@ class AdminNotesChild {
       whereClause.name = { [Op.like]: `%${search}%` };
     }
 
-    const { count, rows: folders } = await NoteFolder.findAndCountAll({
+    const { count, rows: folders } = await noteFolderRepository.findAndCountAll({
       where: whereClause,
       include: [
         { 
@@ -1043,7 +1042,7 @@ class AdminNotesChild {
   getFolderById = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const folder = await NoteFolder.findByPk(id, {
+    const folder = await noteFolderRepository.findByPk(id, {
       include: [
         { 
           model: User, 
@@ -1073,19 +1072,19 @@ class AdminNotesChild {
   createFolderForUser = asyncHandler(async (req, res) => {
     const { userId, name, color, icon } = req.body;
 
-    const targetUser = await User.findByPk(userId);
+    const targetUser = await userRepository.findByPk(userId);
     if (!targetUser) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
 
-    const folder = await NoteFolder.create({
+    const folder = await noteFolderRepository.create({
       name,
       color: color || 'blue',
       icon: icon || '📁',
       userId,
     });
 
-    const folderWithUser = await NoteFolder.findByPk(folder.id, {
+    const folderWithUser = await noteFolderRepository.findByPk(folder.id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
       ],
@@ -1106,7 +1105,7 @@ class AdminNotesChild {
     const { id } = req.params;
     const { name, color, icon } = req.body;
 
-    const folder = await NoteFolder.findByPk(id, {
+    const folder = await noteFolderRepository.findByPk(id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
       ],
@@ -1122,7 +1121,7 @@ class AdminNotesChild {
       icon: icon !== undefined ? icon : folder.icon,
     });
 
-    const updatedFolder = await NoteFolder.findByPk(folder.id, {
+    const updatedFolder = await noteFolderRepository.findByPk(folder.id, {
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }
       ],
@@ -1147,7 +1146,7 @@ class AdminNotesChild {
       return res.status(400).json({ message: 'userId là bắt buộc' });
     }
 
-    const folder = await NoteFolder.findOne({ where: { id: parseInt(id), userId } });
+    const folder = await noteFolderRepository.findByIdForUser(parseInt(id), userId);
     if (!folder) {
       return res.status(404).json({ message: 'Không tìm thấy thư mục' });
     }
@@ -1165,7 +1164,7 @@ class AdminNotesChild {
   pinUserNote = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const note = await Note.findByPk(id, {
+    const note = await noteRepository.findByPk(id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
     });
 
@@ -1175,7 +1174,7 @@ class AdminNotesChild {
 
     await note.update({ isPinned: true });
 
-    const updatedNote = await Note.findByPk(note.id, {
+    const updatedNote = await noteRepository.findByPk(note.id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
     });
 
@@ -1201,7 +1200,7 @@ class AdminNotesChild {
   unpinUserNote = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const note = await Note.findByPk(id, {
+    const note = await noteRepository.findByPk(id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }],
     });
 
@@ -1211,7 +1210,7 @@ class AdminNotesChild {
 
     await note.update({ isPinned: false });
 
-    const updatedNote = await Note.findByPk(note.id, {
+    const updatedNote = await noteRepository.findByPk(note.id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
     });
 

@@ -1,4 +1,5 @@
-import { User, Friendship, Notification } from '../../models/index.js';
+import { User } from '../../models/index.js';
+import { userRepository, friendshipRepository, notificationRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op, fn, col, where } from 'sequelize';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
@@ -28,7 +29,7 @@ class FriendshipManagementChild {
       ];
     }
 
-    const users = await User.findAll({
+    const users = await userRepository.findAll({
       where: whereClause,
       limit: parseInt(limit),
       attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'createdAt', 'lastSeenAt', 'hidePhone', 'hideBirthDate', 'isActive'],
@@ -54,7 +55,7 @@ class FriendshipManagementChild {
     }
 
     // Check if target user exists
-    const targetUser = await User.findByPk(userId);
+    const targetUser = await userRepository.findByPk(userId);
     if (!targetUser) {
       return res.status(404).json({
         success: false,
@@ -68,9 +69,9 @@ class FriendshipManagementChild {
         message: 'Cannot send friend request due to block'
       });
     }
-    
+
     // Check if friendship already exists
-    const existingFriendship = await Friendship.findOne({
+    const existingFriendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId, addresseeId: userId },
@@ -88,7 +89,7 @@ class FriendshipManagementChild {
 
     let friendship;
     try {
-      friendship = await Friendship.create({
+      friendship = await friendshipRepository.create({
         requesterId,
         addresseeId: userId,
         status: 'pending'
@@ -106,7 +107,7 @@ class FriendshipManagementChild {
 
     // Persist a notification for the addressee
     try {
-      const notif = await Notification.create({
+      const notif = await notificationRepository.create({
         userId: userId,
         type: 'friend_request',
         fromUserId: requesterId,
@@ -116,7 +117,7 @@ class FriendshipManagementChild {
       // Emit admin realtime to refresh notification tab in admin user activity
       try {
         emitToAllAdmins && emitToAllAdmins('admin_notification_created', { userId, type: notif.type });
-      } catch {}
+      } catch { }
     } catch (e) {
       // non-blocking
     }
@@ -136,7 +137,7 @@ class FriendshipManagementChild {
     }
 
     // Get the friendship with user data
-    const friendshipWithData = await Friendship.findByPk(friendship.id, {
+    const friendshipWithData = await friendshipRepository.findByPk(friendship.id, {
       include: [
         { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] },
         { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'lastSeenAt', 'hidePhone', 'hideBirthDate'] }
@@ -155,7 +156,7 @@ class FriendshipManagementChild {
     const { friendshipId } = req.params;
     const userId = req.user.id;
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         id: friendshipId,
         [Op.or]: [
@@ -201,6 +202,78 @@ class FriendshipManagementChild {
     res.json({
       success: true,
       message: 'Friend removed successfully'
+    });
+  });
+
+  // Bulk remove friends
+  bulkRemoveFriends = asyncHandler(async (req, res) => {
+    const { friendshipIds } = req.body;
+    const userId = req.user.id;
+
+    if (!friendshipIds || !Array.isArray(friendshipIds) || friendshipIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'friendshipIds array is required'
+      });
+    }
+
+    // Find all friendships that belong to the user
+    const friendships = await friendshipRepository.findAll({
+      where: {
+        id: { [Op.in]: friendshipIds },
+        [Op.or]: [
+          { requesterId: userId },
+          { addresseeId: userId }
+        ],
+        status: 'accepted'
+      },
+      include: [
+        { model: User, as: 'requester', attributes: ['id', 'name', 'email', 'avatar'] },
+        { model: User, as: 'addressee', attributes: ['id', 'name', 'email', 'avatar'] }
+      ]
+    });
+
+    if (friendships.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No valid friendships found'
+      });
+    }
+
+    const io = req.app.get('io');
+    const removedIds = [];
+    const affectedUserIds = [];
+
+    for (const friendship of friendships) {
+      const otherUserId = friendship.requesterId === userId ? friendship.addresseeId : friendship.requesterId;
+
+      await friendship.destroy();
+      removedIds.push(friendship.id);
+      affectedUserIds.push(otherUserId);
+
+      // Emit socket event
+      if (io) {
+        io.to(`user_${otherUserId}`).emit('friend_removed', {
+          removedBy: {
+            id: req.user.id,
+            name: req.user.name,
+            email: req.user.email,
+            avatar: req.user.avatar
+          },
+          friendshipId: friendship.id,
+          removedAt: new Date()
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully removed ${removedIds.length} friend(s)`,
+      data: {
+        removedCount: removedIds.length,
+        removedIds,
+        affectedUserIds
+      }
     });
   });
 }

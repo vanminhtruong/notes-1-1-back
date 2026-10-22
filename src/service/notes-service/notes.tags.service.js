@@ -1,4 +1,5 @@
-import { Note, NoteTag, NoteTagMapping, User } from '../../models/index.js';
+import { Note, NoteTag } from '../../models/index.js';
+import { noteRepository, noteTagRepository, noteTagMappingRepository, userRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 
 class NotesTagsChild {
@@ -36,7 +37,7 @@ class NotesTagsChild {
         where.name = { [Op.like]: `%${search}%` };
       }
 
-      const tags = await NoteTag.findAll({
+      const tags = await noteTagRepository.findAll({
         where,
         attributes: ['id', 'name', 'color', 'isPinned', 'createdAt', 'updatedAt'],
         order: [
@@ -88,7 +89,7 @@ class NotesTagsChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const tag = await NoteTag.findOne({
+      const tag = await noteTagRepository.findOne({
         where: { id, userId },
         attributes: ['id', 'name', 'color', 'createdAt', 'updatedAt'],
         include: [
@@ -129,7 +130,7 @@ class NotesTagsChild {
       const { name, color = '#3B82F6' } = req.body;
 
       // Check if tag name already exists for this user
-      const existingTag = await NoteTag.findOne({
+      const existingTag = await noteTagRepository.findOne({
         where: { userId, name: { [Op.like]: name } },
       });
 
@@ -137,7 +138,7 @@ class NotesTagsChild {
         return res.status(400).json({ message: 'Tag với tên này đã tồn tại' });
       }
 
-      const tag = await NoteTag.create({
+      const tag = await noteTagRepository.create({
         name,
         color,
         userId,
@@ -186,7 +187,7 @@ class NotesTagsChild {
       const { id } = req.params;
       const { name, color } = req.body;
 
-      const tag = await NoteTag.findOne({
+      const tag = await noteTagRepository.findOne({
         where: { id, userId },
       });
 
@@ -196,7 +197,7 @@ class NotesTagsChild {
 
       // Check if new name conflicts with another tag
       if (name && name !== tag.name) {
-        const existingTag = await NoteTag.findOne({
+        const existingTag = await noteTagRepository.findOne({
           where: {
             userId,
             name: { [Op.like]: name },
@@ -214,7 +215,7 @@ class NotesTagsChild {
       await tag.save();
 
       // Get notes count
-      const notesCount = await NoteTagMapping.count({
+      const notesCount = await noteTagMappingRepository.count({
         where: { tagId: id },
       });
 
@@ -237,7 +238,7 @@ class NotesTagsChild {
 
         // To admin room: include user info for admin table
         try {
-          const user = await User.findByPk(userId, { attributes: ['id', 'name', 'email'] });
+          const user = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'email'] });
           if (user) {
             global.io.to('admin_room').emit('admin_tag_updated', {
               tag: {
@@ -274,7 +275,7 @@ class NotesTagsChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const tag = await NoteTag.findOne({
+      const tag = await noteTagRepository.findOne({
         where: { id, userId },
       });
 
@@ -283,7 +284,7 @@ class NotesTagsChild {
       }
 
       // Delete all mappings first (cascade should handle this, but being explicit)
-      await NoteTagMapping.destroy({
+      await noteTagMappingRepository.destroy({
         where: { tagId: id },
       });
 
@@ -312,7 +313,7 @@ class NotesTagsChild {
       const { tagId } = req.body;
 
       // Verify note belongs to user
-      const note = await Note.findOne({
+      const note = await noteRepository.findOne({
         where: { id: noteId, userId },
       });
 
@@ -321,7 +322,7 @@ class NotesTagsChild {
       }
 
       // Verify tag belongs to user
-      const tag = await NoteTag.findOne({
+      const tag = await noteTagRepository.findOne({
         where: { id: tagId, userId },
       });
 
@@ -330,7 +331,7 @@ class NotesTagsChild {
       }
 
       // Check if mapping already exists
-      const existingMapping = await NoteTagMapping.findOne({
+      const existingMapping = await noteTagMappingRepository.findOne({
         where: { noteId, tagId },
       });
 
@@ -339,12 +340,12 @@ class NotesTagsChild {
       }
 
       // Enforce max 3 tags per note
-      const currentTagCount = await NoteTagMapping.count({ where: { noteId } });
+      const currentTagCount = await noteTagMappingRepository.count({ where: { noteId } });
       if (currentTagCount >= 3) {
         return res.status(400).json({ message: 'Mỗi ghi chú chỉ được gắn tối đa 3 tag' });
       }
 
-      await NoteTagMapping.create({ noteId, tagId });
+      await noteTagMappingRepository.create({ noteId, tagId });
 
       // Emit real-time event
       if (global.io) {
@@ -382,7 +383,7 @@ class NotesTagsChild {
       const { noteId, tagId } = req.params;
 
       // Verify note belongs to user
-      const note = await Note.findOne({
+      const note = await noteRepository.findOne({
         where: { id: noteId, userId },
       });
 
@@ -391,7 +392,7 @@ class NotesTagsChild {
       }
 
       // Delete mapping
-      const deleted = await NoteTagMapping.destroy({
+      const deleted = await noteTagMappingRepository.destroy({
         where: { noteId, tagId },
       });
 
@@ -423,7 +424,7 @@ class NotesTagsChild {
       const userId = req.user.id;
       const { id } = req.params;
 
-      const tag = await NoteTag.findOne({
+      const tag = await noteTagRepository.findOne({
         where: { id, userId },
       });
 
@@ -436,7 +437,7 @@ class NotesTagsChild {
       await tag.save();
 
       // Get notes count
-      const notesCount = await NoteTagMapping.count({
+      const notesCount = await noteTagMappingRepository.count({
         where: { tagId: id },
       });
 
@@ -476,7 +477,7 @@ class NotesTagsChild {
       const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
 
       // Verify tag belongs to user
-      const tag = await NoteTag.findOne({
+      const tag = await noteTagRepository.findOne({
         where: { id: tagId, userId },
       });
 
@@ -486,7 +487,7 @@ class NotesTagsChild {
 
       const offset = (parseInt(page) - 1) * parseInt(limit);
 
-      const { count, rows: notes } = await Note.findAndCountAll({
+      const { count, rows: notes } = await noteRepository.findAndCountAll({
         where: { userId },
         include: [
           {

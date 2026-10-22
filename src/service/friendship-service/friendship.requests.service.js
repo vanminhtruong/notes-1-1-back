@@ -1,4 +1,5 @@
-import { User, Friendship, Notification } from '../../models/index.js';
+import { User } from '../../models/index.js';
+import { friendshipRepository, notificationRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
@@ -12,7 +13,7 @@ class FriendshipRequestsChild {
   getFriendRequests = asyncHandler(async (req, res) => {
     const userId = req.user.id;
 
-    const friendRequests = await Friendship.findAll({
+    const friendRequests = await friendshipRepository.findAll({
       where: {
         addresseeId: userId,
         status: 'pending'
@@ -37,7 +38,7 @@ class FriendshipRequestsChild {
   getSentRequests = asyncHandler(async (req, res) => {
     const userId = req.user.id;
 
-    const sentRequests = await Friendship.findAll({
+    const sentRequests = await friendshipRepository.findAll({
       where: {
         requesterId: userId,
         status: 'pending'
@@ -63,7 +64,7 @@ class FriendshipRequestsChild {
     const { friendshipId } = req.params;
     const userId = req.user.id;
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         id: friendshipId,
         addresseeId: userId,
@@ -93,7 +94,7 @@ class FriendshipRequestsChild {
 
     // Mark persisted notification as read for the addressee (current user)
     try {
-      await Notification.update(
+      await notificationRepository.update(
         { isRead: true },
         {
           where: {
@@ -150,13 +151,7 @@ class FriendshipRequestsChild {
     const { friendshipId } = req.params;
     const userId = req.user.id;
 
-    const friendship = await Friendship.findOne({
-      where: {
-        id: friendshipId,
-        addresseeId: userId,
-        status: 'pending'
-      }
-    });
+    const friendship = await friendshipRepository.findPendingRequest(friendshipId, userId);
 
     if (!friendship) {
       return res.status(404).json({
@@ -171,7 +166,7 @@ class FriendshipRequestsChild {
 
     // Mark persisted notification as read since it has been processed (rejected)
     try {
-      await Notification.update(
+      await notificationRepository.update(
         { isRead: true },
         {
           where: {

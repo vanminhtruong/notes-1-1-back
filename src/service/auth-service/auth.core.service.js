@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { User, UserSession } from '../../models/index.js';
+import { userRepository, userSessionRepository } from '../../repositories/index.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 import { parseDeviceInfo } from '../../utils/deviceParser.js';
 
@@ -35,13 +35,13 @@ class AuthCoreChild {
       const { email, password, name, phone, birthDate, gender } = req.body;
 
       // Check if user already exists
-      const existingUser = await User.findOne({ where: { email } });
+      const existingUser = await userRepository.findByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: 'Email đã được sử dụng' });
       }
 
       // Create new user
-      const user = await User.create({
+      const user = await userRepository.create({
         email,
         password,
         name,
@@ -80,7 +80,7 @@ class AuthCoreChild {
       const { email, password, remember } = req.body;
 
       // Find user by email
-      const user = await User.findOne({ where: { email } });
+      const user = await userRepository.findByEmail(email);
       if (!user) {
         return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
       }
@@ -110,7 +110,7 @@ class AuthCoreChild {
 
       // Create session record
       try {
-        await UserSession.create({
+        await userSessionRepository.create({
           userId: user.id,
           token: token,
           deviceType: deviceInfo.deviceType,
@@ -126,7 +126,7 @@ class AuthCoreChild {
         });
 
         // Clean up old expired sessions for this user
-        await UserSession.destroy({
+        await userSessionRepository.destroy({
           where: {
             userId: user.id,
             expiresAt: { [require('sequelize').Op.lt]: new Date() }
@@ -188,7 +188,7 @@ class AuthCoreChild {
   getRememberPreference = async (req, res) => {
     try {
       const { email } = req.body;
-      const user = await User.findOne({ where: { email } });
+      const user = await userRepository.findByEmail(email);
       const remember = user ? !!user.rememberLogin : false;
       // Always 200 with generic payload to reduce enumeration risk
       return res.json({ remember });

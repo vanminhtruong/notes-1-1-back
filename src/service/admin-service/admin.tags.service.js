@@ -1,4 +1,5 @@
-import { Note, NoteTag, NoteTagMapping, User } from '../../models/index.js';
+import { Note, NoteTag, User } from '../../models/index.js';
+import { noteRepository, noteTagRepository, noteTagMappingRepository, userRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 
 class AdminTagsService {
@@ -27,7 +28,7 @@ class AdminTagsService {
         where.userId = userId;
       }
 
-      const { count, rows: tags } = await NoteTag.findAndCountAll({
+      const { count, rows: tags } = await noteTagRepository.findAndCountAll({
         where,
         attributes: ['id', 'name', 'color', 'userId', 'isPinned', 'createdAt', 'updatedAt'],
         include: [
@@ -80,11 +81,11 @@ class AdminTagsService {
   // Get tag stats
   async getTagsStats(req, res) {
     try {
-      const totalTags = await NoteTag.count();
-      const totalTagMappings = await NoteTagMapping.count();
+      const totalTags = await noteTagRepository.count();
+      const totalTagMappings = await noteTagMappingRepository.count();
       
       // Get most used tags
-      const mostUsedTags = await NoteTag.findAll({
+      const mostUsedTags = await noteTagRepository.findAll({
         attributes: [
           'id',
           'name',
@@ -139,7 +140,7 @@ class AdminTagsService {
       const { id } = req.params;
       const { page = 1, limit = 10 } = req.query;
 
-      const tag = await NoteTag.findByPk(id, {
+      const tag = await noteTagRepository.findByPk(id, {
         attributes: ['id', 'name', 'color', 'userId', 'isPinned', 'createdAt', 'updatedAt'],
         include: [
           {
@@ -156,7 +157,7 @@ class AdminTagsService {
 
       // Get notes with this tag (paginated)
       const offset = (parseInt(page) - 1) * parseInt(limit);
-      const { count, rows: notes } = await Note.findAndCountAll({
+      const { count, rows: notes } = await noteRepository.findAndCountAll({
         where: { userId: tag.userId },
         include: [
           {
@@ -205,13 +206,13 @@ class AdminTagsService {
       const { userId, name, color = '#3B82F6' } = req.body;
 
       // Check if user exists
-      const user = await User.findByPk(userId);
+      const user = await userRepository.findByPk(userId);
       if (!user) {
         return res.status(404).json({ message: 'Không tìm thấy người dùng' });
       }
 
       // Check if tag name already exists for this user
-      const existingTag = await NoteTag.findOne({
+      const existingTag = await noteTagRepository.findOne({
         where: { userId, name: { [Op.like]: name } },
       });
 
@@ -219,7 +220,7 @@ class AdminTagsService {
         return res.status(400).json({ message: 'Tag với tên này đã tồn tại cho người dùng này' });
       }
 
-      const tag = await NoteTag.create({
+      const tag = await noteTagRepository.create({
         name,
         color,
         userId,
@@ -289,7 +290,7 @@ class AdminTagsService {
       const { id } = req.params;
       const { name, color } = req.body;
 
-      const tag = await NoteTag.findByPk(id, {
+      const tag = await noteTagRepository.findByPk(id, {
         include: [
           {
             model: User,
@@ -305,7 +306,7 @@ class AdminTagsService {
 
       // Check if new name conflicts with another tag for this user
       if (name && name !== tag.name) {
-        const existingTag = await NoteTag.findOne({
+        const existingTag = await noteTagRepository.findOne({
           where: {
             userId: tag.userId,
             name: { [Op.like]: name },
@@ -323,7 +324,7 @@ class AdminTagsService {
       await tag.save();
 
       // Get notes count
-      const notesCount = await NoteTagMapping.count({
+      const notesCount = await noteTagMappingRepository.count({
         where: { tagId: id },
       });
 
@@ -375,7 +376,7 @@ class AdminTagsService {
     try {
       const { id } = req.params;
 
-      const tag = await NoteTag.findByPk(id, {
+      const tag = await noteTagRepository.findByPk(id, {
         include: [
           {
             model: User,
@@ -392,7 +393,7 @@ class AdminTagsService {
       const userId = tag.userId;
 
       // Delete all mappings first
-      await NoteTagMapping.destroy({
+      await noteTagMappingRepository.destroy({
         where: { tagId: id },
       });
 
@@ -425,12 +426,12 @@ class AdminTagsService {
       const { noteId, tagId } = req.body;
 
       // Verify note and tag exist and belong to same user
-      const note = await Note.findByPk(noteId);
+      const note = await noteRepository.findByPk(noteId);
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
       }
 
-      const tag = await NoteTag.findByPk(tagId);
+      const tag = await noteTagRepository.findByPk(tagId);
       if (!tag) {
         return res.status(404).json({ message: 'Không tìm thấy tag' });
       }
@@ -440,7 +441,7 @@ class AdminTagsService {
       }
 
       // Check if mapping already exists
-      const existingMapping = await NoteTagMapping.findOne({
+      const existingMapping = await noteTagMappingRepository.findOne({
         where: { noteId, tagId },
       });
 
@@ -448,7 +449,7 @@ class AdminTagsService {
         return res.status(400).json({ message: 'Tag đã được gắn vào ghi chú này' });
       }
 
-      await NoteTagMapping.create({ noteId, tagId });
+      await noteTagMappingRepository.create({ noteId, tagId });
 
       // Emit real-time events
       if (global.io) {
@@ -489,13 +490,13 @@ class AdminTagsService {
     try {
       const { noteId, tagId } = req.params;
 
-      const note = await Note.findByPk(noteId);
+      const note = await noteRepository.findByPk(noteId);
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
       }
 
       // Delete mapping
-      const deleted = await NoteTagMapping.destroy({
+      const deleted = await noteTagMappingRepository.destroy({
         where: { noteId, tagId },
       });
 
@@ -531,7 +532,7 @@ class AdminTagsService {
     try {
       const { id } = req.params;
 
-      const tag = await NoteTag.findByPk(id, {
+      const tag = await noteTagRepository.findByPk(id, {
         include: [
           {
             model: User,
@@ -550,7 +551,7 @@ class AdminTagsService {
       await tag.save();
 
       // Count notes
-      const notesCount = await NoteTagMapping.count({ where: { tagId: id } });
+      const notesCount = await noteTagMappingRepository.count({ where: { tagId: id } });
 
       const updatedTagForAdmin = {
         id: tag.id,

@@ -1,4 +1,5 @@
-import { Note, User, SharedNote, Group, GroupSharedNote, GroupMember, NoteCategory } from '../../models/index.js';
+import { Note, User, Group, GroupMember, NoteCategory } from '../../models/index.js';
+import { noteRepository, userRepository, sharedNoteRepository, groupRepository, groupSharedNoteRepository, groupMemberRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
@@ -15,7 +16,7 @@ class NotesSharingChild {
       const sharedByUserId = req.user.id;
 
       // Check if note exists and belongs to the user
-      const note = await Note.findOne({ 
+      const note = await noteRepository.findOne({ 
         where: { id, userId: sharedByUserId },
         include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
       });
@@ -25,15 +26,13 @@ class NotesSharingChild {
       }
 
       // Check if already shared with this user
-      const existingShare = await SharedNote.findOne({
-        where: { noteId: id, sharedWithUserId, isActive: true }
-      });
+      const existingShare = await sharedNoteRepository.findByNoteAndUser(id, sharedWithUserId);
 
       if (existingShare) {
         return res.status(400).json({ message: 'Ghi chú đã được chia sẻ với người dùng này' });
       }
 
-      const sharedNote = await SharedNote.create({
+      const sharedNote = await sharedNoteRepository.create({
         noteId: id,
         sharedWithUserId,
         sharedByUserId,
@@ -45,7 +44,7 @@ class NotesSharingChild {
       });
 
       // Get complete shared note data for response
-      const completeSharedNote = await SharedNote.findByPk(sharedNote.id, {
+      const completeSharedNote = await sharedNoteRepository.findByPk(sharedNote.id, {
         include: [
           { 
             model: Note, 
@@ -104,7 +103,7 @@ class NotesSharingChild {
         };
       }
 
-      const { count, rows: sharedNotes } = await SharedNote.findAndCountAll({
+      const { count, rows: sharedNotes } = await sharedNoteRepository.findAndCountAll({
         where: whereClause,
         include: [
           { 
@@ -166,7 +165,7 @@ class NotesSharingChild {
         };
       }
 
-      const { count, rows: sharedNotes } = await SharedNote.findAndCountAll({
+      const { count, rows: sharedNotes } = await sharedNoteRepository.findAndCountAll({
         where: whereClause,
         include: [
           { 
@@ -205,7 +204,7 @@ class NotesSharingChild {
       const { id } = req.params; // shared note id
       const userId = req.user.id;
 
-      const sharedNote = await SharedNote.findByPk(id, {
+      const sharedNote = await sharedNoteRepository.findByPk(id, {
         include: [
           { model: User, as: 'sharedWithUser', attributes: ['id', 'name', 'email', 'avatar'] },
           { model: User, as: 'sharedByUser', attributes: ['id', 'name', 'email', 'avatar'] }
@@ -268,7 +267,7 @@ class NotesSharingChild {
 
       console.log('🔍 Where clause:', whereClause);
 
-      const users = await User.findAll({
+      const users = await userRepository.findAll({
         where: whereClause,
         attributes: ['id', 'name', 'email', 'avatar'],
         limit: parseInt(limit),
@@ -293,7 +292,7 @@ class NotesSharingChild {
       console.log(`🔍 Getting permissions for note ${noteId}, user ${userId}`);
 
       // First check if note exists
-      const note = await Note.findByPk(noteId);
+      const note = await noteRepository.findByPk(noteId);
       if (!note) {
         console.log(`❌ Note ${noteId} does not exist`);
         return res.status(404).json({ message: 'Note not found' });
@@ -312,7 +311,7 @@ class NotesSharingChild {
       }
 
       // Debug: Check all shared notes for this note
-      const allSharedNotes = await SharedNote.findAll({
+      const allSharedNotes = await sharedNoteRepository.findAll({
         where: { noteId: noteId },
         attributes: ['id', 'sharedWithUserId', 'canEdit', 'canDelete', 'isActive']
       });
@@ -325,7 +324,7 @@ class NotesSharingChild {
       })));
 
       // Check shared permissions
-      const sharedNote = await SharedNote.findOne({
+      const sharedNote = await sharedNoteRepository.findOne({
         where: {
           noteId: noteId,
           sharedWithUserId: userId,
@@ -338,7 +337,7 @@ class NotesSharingChild {
         console.log(`❌ No active 1-1 shared note found for note ${noteId}, user ${userId}`);
         
         // Check group shared note permissions
-        const groupSharedNote = await GroupSharedNote.findOne({
+        const groupSharedNote = await groupSharedNoteRepository.findOne({
           where: {
             noteId: noteId,
             isActive: true
@@ -396,7 +395,7 @@ class NotesSharingChild {
     try {
       const userId = req.user.id;
 
-      const createPermissions = await SharedNote.findAll({
+      const createPermissions = await sharedNoteRepository.findAll({
         where: {
           sharedWithUserId: userId,
           canCreate: true,
@@ -443,7 +442,7 @@ class NotesSharingChild {
       const offset = (pageNum - 1) * limitNum;
 
       // Find all groups where user is a member
-      const userGroups = await GroupMember.findAll({
+      const userGroups = await groupMemberRepository.findAll({
         where: { userId },
         attributes: ['groupId']
       });
@@ -478,7 +477,7 @@ class NotesSharingChild {
         };
       }
 
-      const { count, rows: groupSharedNotes } = await GroupSharedNote.findAndCountAll({
+      const { count, rows: groupSharedNotes } = await groupSharedNoteRepository.findAndCountAll({
         where: whereClause,
         include: [
           { 
@@ -521,7 +520,7 @@ class NotesSharingChild {
       const sharedByUserId = req.user.id;
 
       // Check if note exists and belongs to the user
-      const note = await Note.findOne({ 
+      const note = await noteRepository.findOne({ 
         where: { id, userId: sharedByUserId },
         include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] }]
       });
@@ -531,7 +530,7 @@ class NotesSharingChild {
       }
 
       // Check if target group exists and user is a member, and get all members
-      const group = await Group.findByPk(groupId, {
+      const group = await groupRepository.findByPk(groupId, {
         attributes: ['id', 'name', 'avatar'],
         include: [{
           model: GroupMember,
@@ -556,7 +555,7 @@ class NotesSharingChild {
       }
 
       // Check if already shared to this group
-      const existingShare = await GroupSharedNote.findOne({
+      const existingShare = await groupSharedNoteRepository.findOne({
         where: { noteId: id, groupId, sharedByUserId }
       });
 
@@ -565,7 +564,7 @@ class NotesSharingChild {
       }
 
       // Create group shared note with permissions
-      const groupSharedNote = await GroupSharedNote.create({
+      const groupSharedNote = await groupSharedNoteRepository.create({
         noteId: id,
         groupId,
         sharedByUserId,
@@ -578,7 +577,7 @@ class NotesSharingChild {
       });
 
       // Get complete group shared note data for response
-      const completeGroupSharedNote = await GroupSharedNote.findByPk(groupSharedNote.id, {
+      const completeGroupSharedNote = await groupSharedNoteRepository.findByPk(groupSharedNote.id, {
         include: [
           { 
             model: Note, 
@@ -619,7 +618,7 @@ class NotesSharingChild {
       const { canEdit, canDelete, canCreate } = req.body;
       const userId = req.user.id;
 
-      const groupSharedNote = await GroupSharedNote.findByPk(id, {
+      const groupSharedNote = await groupSharedNoteRepository.findByPk(id, {
         include: [
           { model: Group, as: 'group', 
             include: [{
@@ -690,7 +689,7 @@ class NotesSharingChild {
       const { canEdit, canDelete, canCreate } = req.body;
       const userId = req.user.id;
 
-      const sharedNote = await SharedNote.findByPk(id, {
+      const sharedNote = await sharedNoteRepository.findByPk(id, {
         include: [
           { 
             model: Note, 
@@ -748,7 +747,7 @@ class NotesSharingChild {
       const { id } = req.params; // groupSharedNoteId
       const userId = req.user.id;
 
-      const groupSharedNote = await GroupSharedNote.findByPk(id, {
+      const groupSharedNote = await groupSharedNoteRepository.findByPk(id, {
         include: [
           { 
             model: Group, 

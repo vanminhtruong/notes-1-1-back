@@ -1,4 +1,5 @@
-import { User, Message, Friendship, MessageRead, BlockedUser, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import { User, Message, MessageRead, MessageReaction } from '../../models/index.js';
+import { userRepository, messageRepository, friendshipRepository, messageReadRepository, blockedUserRepository, pinnedMessageRepository, messageReactionRepository, notificationRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isUserOnline, emitToAllAdmins } from '../../socket/socketHandler.js';
@@ -15,7 +16,7 @@ class ChatMessagesChild {
     const currentUserId = req.user.id;
     const { page = 1, limit = 10 } = req.query;
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -26,7 +27,7 @@ class ChatMessagesChild {
 
     const offset = (page - 1) * limit;
 
-    let messages = await Message.findAll({
+    let messages = await messageRepository.findAll({
       where: {
         [Op.or]: [
           { senderId: currentUserId, receiverId: userId },
@@ -63,7 +64,7 @@ class ChatMessagesChild {
       .map(m => m.toJSON())
       .filter(m => !(Array.isArray(m.deletedForUserIds) && m.deletedForUserIds.includes(currentUserId)));
 
-    const toMarkRead = await Message.findAll({
+    const toMarkRead = await messageRepository.findAll({
       where: {
         senderId: userId,
         receiverId: currentUserId,
@@ -71,7 +72,7 @@ class ChatMessagesChild {
       }
     });
 
-    await Message.update(
+    await messageRepository.update(
       { isRead: true },
       {
         where: {
@@ -82,13 +83,13 @@ class ChatMessagesChild {
       }
     );
 
-    const currentUser = await User.findByPk(currentUserId);
-    const otherUser = await User.findByPk(userId);
+    const currentUser = await userRepository.findByPk(currentUserId);
+    const otherUser = await userRepository.findByPk(userId);
     
     if (currentUser && otherUser && currentUser.readStatusEnabled && otherUser.readStatusEnabled) {
       const io = req.app.get('io');
       for (const message of toMarkRead) {
-        const [readRecord] = await MessageRead.findOrCreate({
+        const [readRecord] = await messageReadRepository.findOrCreate({
           where: { messageId: message.id, userId: currentUserId },
           defaults: { 
             messageId: message.id, 
@@ -121,7 +122,7 @@ class ChatMessagesChild {
     });
 
     // Get recipient info including isActive status
-    const recipient = await User.findByPk(userId, {
+    const recipient = await userRepository.findByPk(userId, {
       attributes: ['id', 'name', 'email', 'avatar', 'isActive']
     });
 
@@ -155,7 +156,7 @@ class ChatMessagesChild {
       });
     }
 
-    const receiver = await User.findByPk(receiverId);
+    const receiver = await userRepository.findByPk(receiverId);
     if (!receiver) {
       return res.status(404).json({
         success: false,
@@ -171,7 +172,7 @@ class ChatMessagesChild {
       });
     }
 
-    const blocked = await BlockedUser.findOne({
+    const blocked = await blockedUserRepository.findOne({
       where: {
         [Op.or]: [
           { userId: senderId, blockedUserId: receiverId },
@@ -186,7 +187,7 @@ class ChatMessagesChild {
       });
     }
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: senderId, addresseeId: receiverId, status: 'accepted' },
@@ -206,7 +207,7 @@ class ChatMessagesChild {
 
     let replyToMessage = null;
     if (replyToMessageId) {
-      replyToMessage = await Message.findOne({
+      replyToMessage = await messageRepository.findOne({
         where: {
           id: replyToMessageId,
           [Op.or]: [
@@ -224,7 +225,7 @@ class ChatMessagesChild {
       }
     }
 
-    const message = await Message.create({
+    const message = await messageRepository.create({
       senderId,
       receiverId,
       content,
@@ -233,7 +234,7 @@ class ChatMessagesChild {
       replyToMessageId: replyToMessageId || null
     });
 
-    const messageWithData = await Message.findByPk(message.id, {
+    const messageWithData = await messageRepository.findByPk(message.id, {
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] },
         { model: User, as: 'receiver', attributes: ['id', 'name', 'avatar'] },
@@ -253,7 +254,7 @@ class ChatMessagesChild {
     setImmediate(async () => {
       try {
         // Persist a notification ONLY for the receiver so bell feed shows incoming messages for them
-        const notif = await Notification.create({
+        const notif = await notificationRepository.create({
           userId: receiverId,
           type: 'message',
           fromUserId: senderId,
@@ -262,7 +263,7 @@ class ChatMessagesChild {
         });
         // Cleanup legacy sender-side 'message' notifications created by previous versions
         try {
-          await Notification.destroy({ where: { userId: senderId, type: 'message', fromUserId: senderId } });
+          await notificationRepository.destroy({ where: { userId: senderId, type: 'message', fromUserId: senderId } });
         } catch {}
         // Emit admin realtime to refresh notification tab in admin user activity
         try {
@@ -320,7 +321,7 @@ class ChatMessagesChild {
       if (isReceiverOnline) {
         setImmediate(async () => {
           try {
-            await Message.update({ status: 'delivered' }, { where: { id: message.id } });
+            await messageRepository.update({ status: 'delivered' }, { where: { id: message.id } });
           } catch (e) {
             console.error('Error updating message status:', e);
           }
@@ -371,7 +372,7 @@ class ChatMessagesChild {
     const { messageId } = req.params;
     const { content } = req.body || {};
 
-    const msg = await Message.findByPk(messageId);
+    const msg = await messageRepository.findByPk(messageId);
     if (!msg) {
       return res.status(404).json({ success: false, message: 'Message not found' });
     }
@@ -405,7 +406,7 @@ class ChatMessagesChild {
       return res.status(400).json({ success: false, message: 'Invalid scope' });
     }
 
-    const msgs = await Message.findAll({ where: { id: { [Op.in]: messageIds } } });
+    const msgs = await messageRepository.findAll({ where: { id: { [Op.in]: messageIds } } });
     
     // Nếu không tìm thấy tin nhắn nào, có thể đã bị xóa trước đó
     if (msgs.length === 0) {
@@ -434,7 +435,7 @@ class ChatMessagesChild {
       }
       // Xóa pinned messages của user hiện tại
       try {
-        await PinnedMessage.destroy({ where: { userId, messageId: { [Op.in]: foundMessageIds } } });
+        await pinnedMessageRepository.destroy({ where: { userId, messageId: { [Op.in]: foundMessageIds } } });
       } catch (e) {
         console.log('Failed to cleanup user pins on recallMessages(self):', e?.name || e);
       }
@@ -452,14 +453,14 @@ class ChatMessagesChild {
         deleteMultipleFiles(filesToDelete);
       }
       // 2) Đánh dấu isDeletedForAll, đồng thời clear content & replyToMessageId (giữ nguyên messageType để UI biết loại gốc)
-      await Message.update(
+      await messageRepository.update(
         { isDeletedForAll: true, content: '', replyToMessageId: null },
         { where: { id: { [Op.in]: foundMessageIds } } }
       );
       // 3) Cleanup dữ liệu liên quan (cho cả hai phía)
-      try { await MessageRead.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup reads on recall(all):', e?.name || e); }
-      try { await MessageReaction.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup reactions on recall(all):', e?.name || e); }
-      try { await PinnedMessage.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup pins on recall(all):', e?.name || e); }
+      try { await messageReadRepository.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup reads on recall(all):', e?.name || e); }
+      try { await messageReactionRepository.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup reactions on recall(all):', e?.name || e); }
+      try { await pinnedMessageRepository.destroy({ where: { messageId: { [Op.in]: foundMessageIds } } }); } catch (e) { console.log('Failed to cleanup pins on recall(all):', e?.name || e); }
     }
 
     const io = req.app.get('io') || global.io;
@@ -495,7 +496,7 @@ class ChatMessagesChild {
     const { userId } = req.params;
     const currentUserId = req.user.id;
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -512,7 +513,7 @@ class ChatMessagesChild {
     }
 
     // Lấy tất cả tin nhắn giữa 2 người
-    const messages = await Message.findAll({
+    const messages = await messageRepository.findAll({
       where: {
         [Op.or]: [
           { senderId: currentUserId, receiverId: userId },
@@ -538,7 +539,7 @@ class ChatMessagesChild {
     try {
       const messageIds = messages.map(m => m.id);
       if (messageIds.length > 0) {
-        await PinnedMessage.destroy({ where: { userId: currentUserId, messageId: { [Op.in]: messageIds } } });
+        await pinnedMessageRepository.destroy({ where: { userId: currentUserId, messageId: { [Op.in]: messageIds } } });
       }
     } catch (e) {
       console.log('Failed to cleanup user pins on deleteAllMessages:', e?.name || e);
@@ -581,7 +582,7 @@ class ChatMessagesChild {
       return res.json({ success: true, data: [] });
     }
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -594,7 +595,7 @@ class ChatMessagesChild {
     }
 
     const like = { [Op.like]: `%${q}%` };
-    const rows = await Message.findAll({
+    const rows = await messageRepository.findAll({
       where: {
         [Op.or]: [
           { senderId: currentUserId, receiverId: userId, content: like },

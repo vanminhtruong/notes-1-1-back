@@ -1,4 +1,4 @@
-import { User, BlockedUser } from '../../models/index.js';
+import { userRepository, blockedUserRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 
@@ -17,8 +17,8 @@ class BlockStatusChild {
     }
 
     const [blockedByMe, blockedMe] = await Promise.all([
-      BlockedUser.findOne({ where: { userId: currentUserId, blockedUserId: targetId } }),
-      BlockedUser.findOne({ where: { userId: targetId, blockedUserId: currentUserId } }),
+      blockedUserRepository.findBlock(currentUserId, targetId),
+      blockedUserRepository.findBlock(targetId, currentUserId),
     ]);
 
     return res.json({
@@ -36,11 +36,11 @@ class BlockStatusChild {
   listBlockedUsers = asyncHandler(async (req, res) => {
     const currentUserId = req.user.id;
     // Lấy danh sách id người bị chặn
-    const rows = await BlockedUser.findAll({ where: { userId: currentUserId }, attributes: ['blockedUserId'] });
+    const rows = await blockedUserRepository.findAll({ where: { userId: currentUserId }, attributes: ['blockedUserId'] });
     const ids = rows.map((r) => r.blockedUserId).filter(Boolean);
     if (ids.length === 0) return res.json({ success: true, data: [] });
     // Lấy thông tin cơ bản của user bị chặn
-    const users = await User.findAll({
+    const users = await userRepository.findAll({
       where: { id: { [Op.in]: ids } },
       attributes: ['id', 'name', 'email', 'avatar', 'lastSeenAt']
     });

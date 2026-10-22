@@ -1,4 +1,4 @@
-import { UserSession } from '../../models/index.js';
+import { userSessionRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 
 class UserSessionDeletionChild {
@@ -16,12 +16,7 @@ class UserSessionDeletionChild {
       const currentToken = req.token;
 
       // Find the session
-      const session = await UserSession.findOne({
-        where: {
-          id: sessionId,
-          userId,
-        }
-      });
+      const session = await userSessionRepository.findByIdForUser(sessionId, userId);
 
       if (!session) {
         return res.status(404).json({ message: 'Session không tồn tại' });
@@ -66,7 +61,7 @@ class UserSessionDeletionChild {
       const currentToken = req.token;
 
       // Delete all sessions except current
-      const deletedCount = await UserSession.destroy({
+      const deletedCount = await userSessionRepository.destroy({
         where: {
           userId,
           token: { [Op.ne]: currentToken },

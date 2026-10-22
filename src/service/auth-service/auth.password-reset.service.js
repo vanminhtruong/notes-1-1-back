@@ -1,12 +1,12 @@
-import { User, PasswordReset } from '../../models/index.js';
+import { userRepository, passwordResetRepository } from '../../repositories/index.js';
 import bcrypt from 'bcryptjs';
 import { sendEmail } from '../../utils/email.js';
 import { sendSms } from '../../utils/sms.js';
 
 // Helper to resolve user by email or phone
 const findUserByIdentifier = async ({ email, phone }) => {
-  if (email) return await User.findOne({ where: { email } });
-  if (phone) return await User.findOne({ where: { phone: String(phone).trim() } });
+  if (email) return await userRepository.findByEmail(email);
+  if (phone) return await userRepository.findByPhone(String(phone).trim());
   return null;
 };
 
@@ -33,7 +33,7 @@ class AuthPasswordResetChild {
       const otpHash = await bcrypt.hash(otp, 10);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-      await PasswordReset.create({
+      await passwordResetRepository.create({
         userId: user.id,
         email: user.email,
         otpHash,
@@ -71,7 +71,7 @@ class AuthPasswordResetChild {
         return res.status(400).json({ message: 'OTP không hợp lệ hoặc đã hết hạn' });
       }
 
-      const record = await PasswordReset.findOne({
+      const record = await passwordResetRepository.findOne({
         where: { email: user.email, used: false },
         order: [['createdAt', 'DESC']],
       });
@@ -113,7 +113,7 @@ class AuthPasswordResetChild {
         return res.status(400).json({ message: 'OTP không hợp lệ hoặc đã hết hạn' });
       }
 
-      const record = await PasswordReset.findOne({
+      const record = await passwordResetRepository.findOne({
         where: { email: user.email, used: false },
         order: [['createdAt', 'DESC']],
       });

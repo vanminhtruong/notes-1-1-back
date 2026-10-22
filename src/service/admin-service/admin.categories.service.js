@@ -1,4 +1,5 @@
-import { User, NoteCategory, Note } from '../../models/index.js';
+import { User } from '../../models/index.js';
+import { userRepository, noteCategoryRepository, noteRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
@@ -36,8 +37,8 @@ class AdminCategoriesChild {
       const searchTerm = search.trim();
       whereClause[Op.and] = whereClause[Op.and] || [];
       whereClause[Op.and].push(
-        Note.sequelize.where(
-          Note.sequelize.fn('LOWER', Note.sequelize.col('NoteCategory.name')),
+        noteRepository.sequelize.where(
+          noteRepository.sequelize.fn('LOWER', noteRepository.sequelize.col('NoteCategory.name')),
           { [Op.like]: `%${searchTerm.toLowerCase()}%` }
         )
       );
@@ -56,7 +57,7 @@ class AdminCategoriesChild {
           [sortBy, sortOrder]
         ];
 
-    const { count, rows: categories } = await NoteCategory.findAndCountAll({
+    const { count, rows: categories } = await noteCategoryRepository.findAndCountAll({
       where: whereClause,
       include: [
         {
@@ -73,7 +74,7 @@ class AdminCategoriesChild {
     // Get notes count for each category
     const categoriesWithCount = await Promise.all(
       categories.map(async (category) => {
-        const notesCount = await Note.count({
+        const notesCount = await noteRepository.count({
           where: { categoryId: category.id }
         });
         return {
@@ -130,14 +131,14 @@ class AdminCategoriesChild {
     const whereClause = {
       userId: parseInt(userId),
       [Op.and]: [
-        Note.sequelize.where(
-          Note.sequelize.fn('LOWER', Note.sequelize.col('NoteCategory.name')),
+        noteRepository.sequelize.where(
+          noteRepository.sequelize.fn('LOWER', noteRepository.sequelize.col('NoteCategory.name')),
           { [Op.like]: `%${searchTerm.toLowerCase()}%` }
         )
       ]
     };
 
-    const categories = await NoteCategory.findAll({
+    const categories = await noteCategoryRepository.findAll({
       where: whereClause,
       limit: parseInt(limit),
       order: [
@@ -158,7 +159,7 @@ class AdminCategoriesChild {
     // Get notes count for each category
     const categoriesWithCount = await Promise.all(
       categories.map(async (category) => {
-        const notesCount = await Note.count({
+        const notesCount = await noteRepository.count({
           where: { categoryId: category.id }
         });
         return {
@@ -180,7 +181,7 @@ class AdminCategoriesChild {
   getCategoryDetail = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const category = await NoteCategory.findByPk(id, {
+    const category = await noteCategoryRepository.findByPk(id, {
       include: [
         {
           model: User,
@@ -195,12 +196,12 @@ class AdminCategoriesChild {
     }
 
     // Get notes count
-    const notesCount = await Note.count({
+    const notesCount = await noteRepository.count({
       where: { categoryId: category.id }
     });
 
     // Get some sample notes
-    const sampleNotes = await Note.findAll({
+    const sampleNotes = await noteRepository.findAll({
       where: { categoryId: category.id },
       limit: 5,
       attributes: ['id', 'title', 'createdAt'],
@@ -227,18 +228,13 @@ class AdminCategoriesChild {
     }
 
     // Validate user exists
-    const user = await User.findByPk(userId);
+    const user = await userRepository.findByPk(userId);
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
 
     // Check duplicate name for this user
-    const existingCategory = await NoteCategory.findOne({
-      where: {
-        userId,
-        name
-      }
-    });
+    const existingCategory = await noteCategoryRepository.findByNameForUser(userId, name);
 
     if (existingCategory) {
       return res.status(400).json({ 
@@ -247,14 +243,14 @@ class AdminCategoriesChild {
     }
 
     // Create category
-    const category = await NoteCategory.create({
+    const category = await noteCategoryRepository.create({
       userId,
       name,
       color,
       icon
     });
 
-    const categoryWithUser = await NoteCategory.findByPk(category.id, {
+    const categoryWithUser = await noteCategoryRepository.findByPk(category.id, {
       include: [
         {
           model: User,
@@ -283,7 +279,7 @@ class AdminCategoriesChild {
     const { id } = req.params;
     const { name, color, icon } = req.body;
 
-    const category = await NoteCategory.findByPk(id);
+    const category = await noteCategoryRepository.findByPk(id);
 
     if (!category) {
       return res.status(404).json({ message: 'Không tìm thấy category' });
@@ -291,7 +287,7 @@ class AdminCategoriesChild {
 
     // Check duplicate name for this user (if name is being changed)
     if (name && name !== category.name) {
-      const existingCategory = await NoteCategory.findOne({
+      const existingCategory = await noteCategoryRepository.findOne({
         where: {
           userId: category.userId,
           name,
@@ -314,7 +310,7 @@ class AdminCategoriesChild {
 
     await category.update(updateData);
 
-    const updatedCategory = await NoteCategory.findByPk(id, {
+    const updatedCategory = await noteCategoryRepository.findByPk(id, {
       include: [
         {
           model: User,
@@ -342,20 +338,20 @@ class AdminCategoriesChild {
   deleteCategory = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const category = await NoteCategory.findByPk(id);
+    const category = await noteCategoryRepository.findByPk(id);
 
     if (!category) {
       return res.status(404).json({ message: 'Không tìm thấy category' });
     }
 
     // Check if category has notes
-    const notesCount = await Note.count({
+    const notesCount = await noteRepository.count({
       where: { categoryId: id }
     });
 
     if (notesCount > 0) {
       // Update notes to remove category
-      await Note.update(
+      await noteRepository.update(
         { categoryId: null },
         { where: { categoryId: id } }
       );
@@ -383,16 +379,16 @@ class AdminCategoriesChild {
   // Lấy thống kê categories
   getCategoriesStats = asyncHandler(async (req, res) => {
     // Total categories
-    const totalCategories = await NoteCategory.count();
+    const totalCategories = await noteCategoryRepository.count();
 
     // Categories by user
-    const categoriesByUser = await NoteCategory.findAll({
+    const categoriesByUser = await noteCategoryRepository.findAll({
       attributes: [
         'userId',
-        [NoteCategory.sequelize.fn('COUNT', NoteCategory.sequelize.col('id')), 'count']
+        [noteCategoryRepository.sequelize.fn('COUNT', noteCategoryRepository.sequelize.col('id')), 'count']
       ],
       group: ['userId'],
-      order: [[NoteCategory.sequelize.fn('COUNT', NoteCategory.sequelize.col('id')), 'DESC']],
+      order: [[noteCategoryRepository.sequelize.fn('COUNT', noteCategoryRepository.sequelize.col('id')), 'DESC']],
       limit: 10,
       include: [
         {
@@ -404,7 +400,7 @@ class AdminCategoriesChild {
     });
 
     // Most used categories (by notes count)
-    const mostUsedCategories = await NoteCategory.findAll({
+    const mostUsedCategories = await noteCategoryRepository.findAll({
       limit: 10,
       include: [
         {
@@ -417,7 +413,7 @@ class AdminCategoriesChild {
 
     const categoriesWithNotesCount = await Promise.all(
       mostUsedCategories.map(async (cat) => {
-        const notesCount = await Note.count({
+        const notesCount = await noteRepository.count({
           where: { categoryId: cat.id }
         });
         return {
@@ -442,7 +438,7 @@ class AdminCategoriesChild {
   pinCategory = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const category = await NoteCategory.findByPk(id);
+    const category = await noteCategoryRepository.findByPk(id);
 
     if (!category) {
       return res.status(404).json({ message: 'Không tìm thấy category' });
@@ -455,7 +451,7 @@ class AdminCategoriesChild {
     category.isPinned = true;
     await category.save();
 
-    const updatedCategory = await NoteCategory.findByPk(id, {
+    const updatedCategory = await noteCategoryRepository.findByPk(id, {
       include: [
         {
           model: User,
@@ -466,7 +462,7 @@ class AdminCategoriesChild {
     });
 
     // Get notes count
-    const notesCount = await Note.count({
+    const notesCount = await noteRepository.count({
       where: { categoryId: id }
     });
 
@@ -493,7 +489,7 @@ class AdminCategoriesChild {
   unpinCategory = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const category = await NoteCategory.findByPk(id);
+    const category = await noteCategoryRepository.findByPk(id);
 
     if (!category) {
       return res.status(404).json({ message: 'Không tìm thấy category' });
@@ -506,7 +502,7 @@ class AdminCategoriesChild {
     category.isPinned = false;
     await category.save();
 
-    const updatedCategory = await NoteCategory.findByPk(id, {
+    const updatedCategory = await noteCategoryRepository.findByPk(id, {
       include: [
         {
           model: User,
@@ -517,7 +513,7 @@ class AdminCategoriesChild {
     });
 
     // Get notes count
-    const notesCount = await Note.count({
+    const notesCount = await noteRepository.count({
       where: { categoryId: id }
     });
 

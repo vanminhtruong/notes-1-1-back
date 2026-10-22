@@ -1,4 +1,4 @@
-import { Group, GroupMember, GroupMessage, User, Friendship, GroupInvite, GroupMessageRead, PinnedChat, PinnedMessage, MessageReaction, Notification } from '../../models/index.js';
+import { groupMemberRepository, groupMessageRepository, pinnedChatRepository, pinnedMessageRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isBlockedBetween, getBlockedUserIdSetFor } from '../../utils/block.js';
@@ -14,9 +14,7 @@ class GroupPinsChild {
     const { pinned } = req.body;
 
     // Ensure user is a member of the group
-    const membership = await GroupMember.findOne({
-      where: { groupId, userId: currentUserId }
-    });
+    const membership = await groupMemberRepository.findMembership(groupId, currentUserId);
 
     if (!membership) {
       return res.status(403).json({
@@ -27,7 +25,7 @@ class GroupPinsChild {
 
     if (pinned) {
       // Pin the group
-      const [pinnedGroup, created] = await PinnedChat.findOrCreate({
+      const [pinnedGroup, created] = await pinnedChatRepository.findOrCreate({
         where: { userId: currentUserId, pinnedGroupId: groupId },
         defaults: { userId: currentUserId, pinnedGroupId: groupId }
       });
@@ -39,7 +37,7 @@ class GroupPinsChild {
       });
     } else {
       // Unpin the group
-      const deleted = await PinnedChat.destroy({
+      const deleted = await pinnedChatRepository.destroy({
         where: { userId: currentUserId, pinnedGroupId: groupId }
       });
       
@@ -55,9 +53,7 @@ class GroupPinsChild {
     const currentUserId = req.user.id;
     const { groupId } = req.params;
 
-    const pinnedGroup = await PinnedChat.findOne({
-      where: { userId: currentUserId, pinnedGroupId: groupId }
-    });
+    const pinnedGroup = await pinnedChatRepository.findPinnedGroup(currentUserId, groupId);
 
     return res.json({
       success: true,
@@ -72,26 +68,26 @@ class GroupPinsChild {
     const { pinned } = req.body;
 
     // Verify membership
-    const membership = await GroupMember.findOne({ where: { groupId, userId: currentUserId } });
+    const membership = await groupMemberRepository.findMembership(groupId, currentUserId);
     if (!membership) return res.status(403).json({ success: false, message: 'Not a group member' });
 
-    const msg = await GroupMessage.findOne({ where: { id: messageId, groupId } });
+    const msg = await groupMessageRepository.findByIdInGroup(messageId, groupId);
     if (!msg) return res.status(404).json({ success: false, message: 'Message not found' });
 
     if (pinned) {
       // Create a record for current user; shared semantics derived from any record existence
-      await PinnedMessage.findOrCreate({
+      await pinnedMessageRepository.findOrCreate({
         where: { userId: currentUserId, groupMessageId: messageId },
         defaults: { userId: currentUserId, groupMessageId: messageId },
       });
     } else {
       // Unpin globally for the group message
-      await PinnedMessage.destroy({ where: { groupMessageId: messageId } });
+      await pinnedMessageRepository.destroy({ where: { groupMessageId: messageId } });
     }
 
     // Realtime notify all group members
     try {
-      const members = await GroupMember.findAll({ where: { groupId } });
+      const members = await groupMemberRepository.findAll({ where: { groupId } });
       const payload = { messageId: Number(messageId), groupId: Number(groupId), pinned: !!pinned };
       for (const m of members) {
         global.io && global.io.to(`user_${m.userId}`).emit('group_message_pinned', payload);
@@ -113,17 +109,17 @@ class GroupPinsChild {
     const { groupId } = req.params;
 
     // Verify membership
-    const membership = await GroupMember.findOne({ where: { groupId, userId: currentUserId } });
+    const membership = await groupMemberRepository.findMembership(groupId, currentUserId);
     if (!membership) return res.status(403).json({ success: false, message: 'Not a group member' });
 
-    const msgs = await GroupMessage.findAll({
+    const msgs = await groupMessageRepository.findAll({
       where: { groupId },
       attributes: ['id', 'groupId', 'senderId', 'content', 'messageType', 'createdAt'],
       order: [['createdAt', 'ASC']],
     });
     const idSet = new Set(msgs.map(m => m.id));
     // Shared pins: return distinct groupMessageIds regardless of who pinned
-    const pins = await PinnedMessage.findAll({ where: { groupMessageId: { [Op.in]: Array.from(idSet) } }, order: [['pinnedAt', 'DESC']] });
+    const pins = await pinnedMessageRepository.findAll({ where: { groupMessageId: { [Op.in]: Array.from(idSet) } }, order: [['pinnedAt', 'DESC']] });
     const map = new Map(msgs.map(m => [m.id, m]));
     const seen = new Set();
     const data = [];
@@ -136,7 +132,7 @@ class GroupPinsChild {
       const isHiddenForMe = deletedFor.includes(currentUserId);
       if (m.isDeletedForAll || isHiddenForMe) {
         if (m.isDeletedForAll) {
-          await PinnedMessage.destroy({ where: { groupMessageId: p.groupMessageId } });
+          await pinnedMessageRepository.destroy({ where: { groupMessageId: p.groupMessageId } });
         }
         continue;
       }

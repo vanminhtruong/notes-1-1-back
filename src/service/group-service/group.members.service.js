@@ -1,4 +1,5 @@
-import { Group, GroupMember, User, Friendship, GroupInvite, GroupMessage, PinnedChat, Notification } from '../../models/index.js';
+import { Group, User } from '../../models/index.js';
+import { groupRepository, groupMemberRepository, userRepository, friendshipRepository, groupInviteRepository, groupMessageRepository, notificationRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { deleteMultipleFiles, hasUploadedFile } from '../../utils/fileHelper.js';
@@ -12,7 +13,7 @@ class GroupMembersChild {
 
   getGroupMemberIds = async (groupId) => {
     console.log(`[getGroupMemberIds] Querying for groupId: ${groupId} (type: ${typeof groupId})`);
-    const members = await GroupMember.findAll({ 
+    const members = await groupMemberRepository.findAll({ 
       where: { groupId: Number(groupId) }, 
       attributes: ['id', 'userId', 'groupId', 'role'] 
     });
@@ -35,12 +36,12 @@ class GroupMembersChild {
     console.log(`[InviteMembers] Starting invite process:`, { groupId, userId, normalizedIds });
 
     // Ensure group exists
-    const group = await Group.findByPk(groupId);
+    const group = await groupRepository.findByPk(groupId);
     if (!group) {
       return res.status(404).json({ success: false, message: 'Group not found' });
     }
 
-    const gm = await GroupMember.findOne({ where: { groupId, userId } });
+    const gm = await groupMemberRepository.findMembership(groupId, userId);
     if (!gm || gm.role !== 'owner') {
       return res.status(403).json({ success: false, message: 'Only group owner can invite members' });
     }
@@ -64,7 +65,7 @@ class GroupMembersChild {
         continue;
       }
       // Skip if somehow already a member (double-check to avoid race)
-      const exists = await GroupMember.findOne({ where: { groupId: Number(groupId), userId: Number(uid) } });
+      const exists = await groupMemberRepository.findMembership(Number(groupId), Number(uid));
       console.log(`[InviteMembers] Double-check membership for user ${uid}:`, exists ? 'EXISTS' : 'NOT_EXISTS');
       if (exists) {
         console.log(`[InviteMembers] User ${uid} already exists in group, skipping`);
@@ -72,7 +73,7 @@ class GroupMembersChild {
       }
 
       // Check friendship accepted between inviter (owner) and invitee
-      const friendship = await Friendship.findOne({
+      const friendship = await friendshipRepository.findOne({
         where: {
           status: 'accepted',
           [Op.or]: [
@@ -87,10 +88,10 @@ class GroupMembersChild {
       if (friendship) {
         // Already friends - add directly to group, no invite needed
         try {
-          console.log(`[InviteMembers] Attempting GroupMember.create with:`, { groupId: Number(groupId), userId: Number(uid), role: 'member' });
-          await GroupMember.create({ groupId: Number(groupId), userId: Number(uid), role: 'member' });
+          console.log(`[InviteMembers] Attempting groupMemberRepository.create with:`, { groupId: Number(groupId), userId: Number(uid), role: 'member' });
+          await groupMemberRepository.create({ groupId: Number(groupId), userId: Number(uid), role: 'member' });
           // Clean up any pending invite for this user in this group if exists
-          await GroupInvite.destroy({ where: { groupId, inviteeId: uid, status: 'pending' } });
+          await groupInviteRepository.destroy({ where: { groupId, inviteeId: uid, status: 'pending' } });
           added.push(uid);
           console.log(`[InviteMembers] User ${uid} added directly to group (friends)`);
           continue;
@@ -104,7 +105,7 @@ class GroupMembersChild {
           });
           if (err && (err.name === 'SequelizeUniqueConstraintError' || err.name === 'SequelizeForeignKeyConstraintError' || err.name === 'SequelizeValidationError')) {
             // Clean up pending invite if any
-            await GroupInvite.destroy({ where: { groupId, inviteeId: uid, status: 'pending' } });
+            await groupInviteRepository.destroy({ where: { groupId, inviteeId: uid, status: 'pending' } });
             continue;
           }
           continue;
@@ -113,12 +114,12 @@ class GroupMembersChild {
 
       // Not friends - create or update pending invite
       console.log(`[InviteMembers] User ${uid} not friends, creating invite`);
-      let invite = await GroupInvite.findOne({ where: { groupId, inviteeId: uid } });
+      let invite = await groupInviteRepository.findOne({ where: { groupId, inviteeId: uid } });
       
       try {
         if (!invite) {
           // Create new invite
-          invite = await GroupInvite.create({ 
+          invite = await groupInviteRepository.create({ 
             groupId, 
             inviteeId: uid, 
             inviterId: userId, 
@@ -157,7 +158,7 @@ class GroupMembersChild {
       if (pending.length) {
         // Prepare inviter and group info for richer payload
         let inviterInfo = null;
-        try { inviterInfo = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar', 'email'] }); } catch {}
+        try { inviterInfo = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'avatar', 'email'] }); } catch {}
         const groupInfo = group ? { id: group.id, name: group.name, avatar: group.avatar } : null;
         // Notify each invitee with their specific invite ID
         for (const item of pendingInvites) {
@@ -173,7 +174,7 @@ class GroupMembersChild {
           io.to(`user_${inviteeId}`).emit('group_invited', payload);
           // Persist notification for the invitee
           try {
-            const notif = await Notification.create({
+            const notif = await notificationRepository.create({
               userId: inviteeId,
               type: 'group_invite',
               fromUserId: userId,
@@ -204,11 +205,11 @@ class GroupMembersChild {
         try {
           const membersNow = await this.getGroupMemberIds(groupId);
           if (Array.isArray(membersNow) && membersNow.length > 0) {
-            const users = await User.findAll({ where: { id: { [Op.in]: added } }, attributes: ['id', 'name', 'avatar'] });
+            const users = await userRepository.findAll({ where: { id: { [Op.in]: added } }, attributes: ['id', 'name', 'avatar'] });
             for (const u of users) {
               const sysContent = `${u.name || 'A member'} joined the group`;
-              const sysMsg = await GroupMessage.create({ groupId, senderId: u.id, content: sysContent, messageType: 'system', status: 'sent' });
-              const messageWithData = await GroupMessage.findByPk(sysMsg.id, {
+              const sysMsg = await groupMessageRepository.create({ groupId, senderId: u.id, content: sysContent, messageType: 'system', status: 'sent' });
+              const messageWithData = await groupMessageRepository.findByPk(sysMsg.id, {
                 include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }]
               });
               const msgPayload = {
@@ -241,7 +242,7 @@ class GroupMembersChild {
     const { memberIds = [] } = req.body;
     const userId = req.user.id;
 
-    const owner = await GroupMember.findOne({ where: { groupId, userId } });
+    const owner = await groupMemberRepository.findMembership(groupId, userId);
     if (!owner || owner.role !== 'owner') {
       return res.status(403).json({ success: false, message: 'Only group owner can remove members' });
     }
@@ -253,19 +254,19 @@ class GroupMembersChild {
       return res.json({ success: true, data: { groupId: Number(groupId), removed: [] } });
     }
 
-    await GroupMember.destroy({ where: { groupId, userId: { [Op.in]: toRemove } } });
+    await groupMemberRepository.destroy({ where: { groupId, userId: { [Op.in]: toRemove } } });
 
     // If owner removed everyone (except maybe themselves), handle empty group
     const remaining = await this.getGroupMemberIds(groupId);
     if (remaining.length === 0) {
       // Xóa files trước khi xóa group
-      const group = await Group.findByPk(groupId);
+      const group = await groupRepository.findByPk(groupId);
       const filesToDelete = [];
       if (group?.avatar) filesToDelete.push(group.avatar);
       if (group?.background) filesToDelete.push(group.background);
       
       // Xóa files trong messages
-      const messages = await GroupMessage.findAll({ 
+      const messages = await groupMessageRepository.findAll({ 
         where: { groupId }, 
         attributes: ['id', 'content', 'messageType'] 
       });
@@ -279,8 +280,8 @@ class GroupMembersChild {
         deleteMultipleFiles(filesToDelete);
       }
       
-      await GroupMessage.destroy({ where: { groupId } });
-      await Group.destroy({ where: { id: groupId } });
+      await groupMessageRepository.destroy({ where: { groupId } });
+      await groupRepository.destroy({ where: { id: groupId } });
     }
 
     const io = req.app.get('io');
@@ -303,7 +304,7 @@ class GroupMembersChild {
     const { groupId } = req.params;
     const userId = req.user.id;
 
-    const gm = await GroupMember.findOne({ where: { groupId, userId } });
+    const gm = await groupMemberRepository.findMembership(groupId, userId);
     if (!gm) {
       return res.status(404).json({ success: false, message: 'Not in group' });
     }
@@ -313,14 +314,14 @@ class GroupMembersChild {
     const remaining = await this.getGroupMemberIds(groupId);
 
     // If owner left, handle ownership transfer or delete group if empty
-    const group = await Group.findByPk(groupId);
+    const group = await groupRepository.findByPk(groupId);
     if (group && group.ownerId === userId) {
       if (remaining.length === 0) {
-        await Group.destroy({ where: { id: groupId } });
+        await groupRepository.destroy({ where: { id: groupId } });
       } else {
         // Promote first remaining member to admin (not persisted as role change here for brevity)
-        await Group.update({ ownerId: remaining[0] }, { where: { id: groupId } });
-        await GroupMember.update({ role: 'owner' }, { where: { groupId, userId: remaining[0] } });
+        await groupRepository.update({ ownerId: remaining[0] }, { where: { id: groupId } });
+        await groupMemberRepository.update({ role: 'owner' }, { where: { groupId, userId: remaining[0] } });
       }
     }
 
@@ -336,10 +337,10 @@ class GroupMembersChild {
       try {
         // Only create if group still exists and there are remaining members
         if (remaining.length > 0) {
-          const leaver = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+          const leaver = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
           const sysContent = `${leaver?.name || 'A member'} left the group`;
-          const sysMsg = await GroupMessage.create({ groupId, senderId: userId, content: sysContent, messageType: 'system', status: 'sent' });
-          const messageWithData = await GroupMessage.findByPk(sysMsg.id, {
+          const sysMsg = await groupMessageRepository.create({ groupId, senderId: userId, content: sysContent, messageType: 'system', status: 'sent' });
+          const messageWithData = await groupMessageRepository.findByPk(sysMsg.id, {
             include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }]
           });
           const msgPayload = {
@@ -367,7 +368,7 @@ class GroupMembersChild {
 
   listMyInvites = asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const invites = await GroupInvite.findAll({
+    const invites = await groupInviteRepository.findAll({
       where: { inviteeId: userId, status: 'pending' },
       include: [
         { model: Group, as: 'group', attributes: ['id', 'name', 'avatar', 'background', 'ownerId'] },
@@ -408,7 +409,7 @@ class GroupMembersChild {
     const userId = req.user.id;
 
     // Validate invite
-    const invite = await GroupInvite.findOne({ where: { id: inviteId, groupId, inviteeId: userId, status: 'pending' } });
+    const invite = await groupInviteRepository.findPendingInvite(inviteId, groupId, userId);
     if (!invite) {
       return res.status(404).json({ success: false, message: 'Invite not found or already processed' });
     }
@@ -419,9 +420,9 @@ class GroupMembersChild {
     }
 
     // Add member if not already a member
-    const existing = await GroupMember.findOne({ where: { groupId, userId } });
+    const existing = await groupMemberRepository.findMembership(groupId, userId);
     if (!existing) {
-      await GroupMember.create({ groupId, userId, role: 'member' });
+      await groupMemberRepository.create({ groupId, userId, role: 'member' });
     }
 
     // Mark invite accepted
@@ -430,7 +431,7 @@ class GroupMembersChild {
 
     // Mark persisted notification as read for this invite
     try {
-      await Notification.update(
+      await notificationRepository.update(
         { isRead: true },
         {
           where: {
@@ -453,10 +454,10 @@ class GroupMembersChild {
 
       // Persist and broadcast a system message for the new member so it survives refresh
       try {
-        const u = await User.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+        const u = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
         const sysContent = `${u?.name || 'A member'} joined the group`;
-        const sysMsg = await GroupMessage.create({ groupId, senderId: userId, content: sysContent, messageType: 'system', status: 'sent' });
-        const messageWithData = await GroupMessage.findByPk(sysMsg.id, {
+        const sysMsg = await groupMessageRepository.create({ groupId, senderId: userId, content: sysContent, messageType: 'system', status: 'sent' });
+        const messageWithData = await groupMessageRepository.findByPk(sysMsg.id, {
           include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatar'] }]
         });
         const msgPayload = {
@@ -485,7 +486,7 @@ class GroupMembersChild {
     const { groupId, inviteId } = req.params;
     const userId = req.user.id;
 
-    const invite = await GroupInvite.findOne({ where: { id: inviteId, groupId, inviteeId: userId, status: 'pending' } });
+    const invite = await groupInviteRepository.findPendingInvite(inviteId, groupId, userId);
     if (!invite) {
       return res.status(404).json({ success: false, message: 'Invite not found or already processed' });
     }
@@ -495,7 +496,7 @@ class GroupMembersChild {
 
     // Mark persisted notification as read for this invite
     try {
-      await Notification.update(
+      await notificationRepository.update(
         { isRead: true },
         {
           where: {
@@ -518,13 +519,13 @@ class GroupMembersChild {
     const actorId = req.user.id;
 
     // Only owner can change roles
-    const actorMembership = await GroupMember.findOne({ where: { groupId, userId: actorId } });
+    const actorMembership = await groupMemberRepository.findMembership(groupId, actorId);
     if (!actorMembership || actorMembership.role !== 'owner') {
       return res.status(403).json({ success: false, message: 'Only group owner can update member roles' });
     }
 
     // Target must be a member
-    const target = await GroupMember.findOne({ where: { groupId, userId: memberId } });
+    const target = await groupMemberRepository.findMembership(groupId, memberId);
     if (!target) return res.status(404).json({ success: false, message: 'Target user is not a group member' });
 
     // Cannot change owner via this endpoint
@@ -533,7 +534,7 @@ class GroupMembersChild {
     }
 
     // Apply role change
-    await GroupMember.update({ role }, { where: { id: target.id } });
+    await groupMemberRepository.update({ role }, { where: { id: target.id } });
 
     // Notify all members
     const io = req.app.get('io') || global.io;
@@ -551,12 +552,12 @@ class GroupMembersChild {
     const { groupId } = req.params;
     const userId = req.user.id;
 
-    const membership = await GroupMember.findOne({ where: { groupId, userId } });
+    const membership = await groupMemberRepository.findMembership(groupId, userId);
     if (!membership) {
       return res.status(403).json({ success: false, message: 'Not a group member' });
     }
 
-    const rows = await GroupMember.findAll({
+    const rows = await groupMemberRepository.findAll({
       where: { groupId },
       attributes: ['userId', 'role'],
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar', 'email', 'phone', 'birthDate', 'gender', 'hidePhone', 'hideBirthDate'] }]

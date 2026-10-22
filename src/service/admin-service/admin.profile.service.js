@@ -1,5 +1,5 @@
 import asyncHandler from '../../middlewares/asyncHandler.js';
-import { User } from '../../models/index.js';
+import { userRepository } from '../../repositories/index.js';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
 import { deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
@@ -18,7 +18,7 @@ class AdminProfileChild {
         return res.status(403).json({ message: 'Bạn không có quyền xem hồ sơ' });
       }
     }
-    const me = await User.findByPk(req.user.id, {
+    const me = await userRepository.findByPk(req.user.id, {
       attributes: [
         'id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'isActive',
         'theme', 'language', 'rememberLogin', 'hidePhone', 'hideBirthDate',
@@ -42,7 +42,7 @@ class AdminProfileChild {
         return res.status(403).json({ message: 'Bạn không có quyền sửa hồ sơ' });
       }
     }
-    const me = await User.findByPk(req.user.id);
+    const me = await userRepository.findByPk(req.user.id);
     if (!me || me.role !== 'admin') {
       return res.status(403).json({ message: 'Không có quyền cập nhật hồ sơ admin' });
     }
@@ -107,7 +107,7 @@ class AdminProfileChild {
       deleteOldFileOnUpdate(oldAvatar, patch.avatar);
     }
 
-    const sanitized = await User.findByPk(me.id, {
+    const sanitized = await userRepository.findByPk(me.id, {
       attributes: [
         'id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'isActive',
         'theme', 'language', 'rememberLogin', 'hidePhone', 'hideBirthDate',
@@ -148,7 +148,7 @@ class AdminProfileChild {
       return res.status(403).json({ message: 'Chỉ Super Admin mới có thể xem hồ sơ admin khác' });
     }
 
-    const admin = await User.findByPk(adminId, {
+    const admin = await userRepository.findByPk(adminId, {
       attributes: [
         'id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'isActive',
         'theme', 'language', 'rememberLogin', 'hidePhone', 'hideBirthDate',
@@ -173,7 +173,7 @@ class AdminProfileChild {
       return res.status(403).json({ message: 'Chỉ Super Admin mới có thể đổi mật khẩu admin khác' });
     }
 
-    const admin = await User.findByPk(adminId);
+    const admin = await userRepository.findByPk(adminId);
     if (!admin || admin.role !== 'admin') {
       return res.status(404).json({ message: 'Admin không tồn tại' });
     }
@@ -219,7 +219,7 @@ class AdminProfileChild {
       return res.status(403).json({ message: 'Chỉ Super Admin mới có thể sửa hồ sơ admin khác' });
     }
 
-    const admin = await User.findByPk(adminId);
+    const admin = await userRepository.findByPk(adminId);
     if (!admin || admin.role !== 'admin') {
       return res.status(404).json({ message: 'Admin không tồn tại' });
     }
@@ -289,7 +289,7 @@ class AdminProfileChild {
       deleteOldFileOnUpdate(oldAvatar, patch.avatar);
     }
 
-    const sanitized = await User.findByPk(admin.id, {
+    const sanitized = await userRepository.findByPk(admin.id, {
       attributes: [
         'id', 'name', 'email', 'avatar', 'phone', 'birthDate', 'gender', 'isActive',
         'theme', 'language', 'rememberLogin', 'hidePhone', 'hideBirthDate',

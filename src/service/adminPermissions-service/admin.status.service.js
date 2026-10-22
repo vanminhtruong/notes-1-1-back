@@ -1,4 +1,4 @@
-import { User } from '../../models/index.js';
+import { userRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
 
@@ -11,9 +11,7 @@ class AdminStatusChild {
   toggleAdminStatus = asyncHandler(async (req, res) => {
     const { adminId } = req.params;
 
-    const targetAdmin = await User.findOne({
-      where: { id: adminId, role: 'admin' }
-    });
+    const targetAdmin = await userRepository.findAdminById(adminId);
 
     if (!targetAdmin) {
       return res.status(404).json({ message: 'Không tìm thấy admin' });

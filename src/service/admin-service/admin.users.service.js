@@ -1,4 +1,4 @@
-import { User, UserSession } from '../../models/index.js';
+import { userRepository, userSessionRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { emitToAllAdmins, isUserOnline, emitToUser } from '../../socket/socketHandler.js';
 import { deleteUploadedFile, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
@@ -70,7 +70,7 @@ class AdminUsersChild {
       whereClause.readStatusEnabled = readStatusEnabled === 'true' || readStatusEnabled === true;
     }
 
-    const users = await User.findAndCountAll({
+    const users = await userRepository.findAndCountAll({
       where: whereClause,
       attributes: [
         'id', 'name', 'email', 'password',
@@ -111,7 +111,7 @@ class AdminUsersChild {
   toggleUserStatus = asyncHandler(async (req, res) => {
     const { id } = req.params;
     
-    const user = await User.findByPk(id);
+    const user = await userRepository.findByPk(id);
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
@@ -174,7 +174,7 @@ class AdminUsersChild {
     }
 
     // Check if email already exists
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ 
         success: false,
@@ -187,7 +187,7 @@ class AdminUsersChild {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Create user
-    const newUser = await User.create({
+    const newUser = await userRepository.create({
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password: hashedPassword,
@@ -229,7 +229,7 @@ class AdminUsersChild {
       hidePhone, hideBirthDate
     } = req.body;
 
-    const user = await User.findByPk(id);
+    const user = await userRepository.findByPk(id);
     if (!user) {
       return res.status(404).json({ 
         success: false,
@@ -275,7 +275,7 @@ class AdminUsersChild {
 
     // Check if email already exists (kept as safety, but will not reach if email changed)
     if (email !== undefined && email !== user.email) {
-      const existingUser = await User.findOne({ 
+      const existingUser = await userRepository.findOne({ 
         where: { 
           email,
           id: { [Op.ne]: id }
@@ -411,7 +411,7 @@ class AdminUsersChild {
   deleteUserPermanently = asyncHandler(async (req, res) => {
     const { id } = req.params;
     
-    const user = await User.findByPk(id);
+    const user = await userRepository.findByPk(id);
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
@@ -438,7 +438,7 @@ class AdminUsersChild {
   getUserSessions = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
-    const user = await User.findByPk(userId);
+    const user = await userRepository.findByPk(userId);
     if (!user) {
       return res.status(404).json({ 
         success: false,
@@ -453,7 +453,7 @@ class AdminUsersChild {
       });
     }
 
-    const sessions = await UserSession.findAll({
+    const sessions = await userSessionRepository.findAll({
       where: { 
         userId,
         isActive: true 
@@ -475,7 +475,7 @@ class AdminUsersChild {
   logoutUserSession = asyncHandler(async (req, res) => {
     const { userId, sessionId } = req.params;
 
-    const user = await User.findByPk(userId);
+    const user = await userRepository.findByPk(userId);
     if (!user) {
       return res.status(404).json({ 
         success: false,
@@ -490,9 +490,7 @@ class AdminUsersChild {
       });
     }
 
-    const session = await UserSession.findOne({
-      where: { id: sessionId, userId }
-    });
+    const session = await userSessionRepository.findByIdForUser(sessionId, userId);
 
     if (!session) {
       return res.status(404).json({ 
@@ -536,7 +534,7 @@ class AdminUsersChild {
   logoutAllUserSessions = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
-    const user = await User.findByPk(userId);
+    const user = await userRepository.findByPk(userId);
     if (!user) {
       return res.status(404).json({ 
         success: false,
@@ -552,7 +550,7 @@ class AdminUsersChild {
     }
 
     // Mark all active sessions as inactive
-    const updatedCount = await UserSession.update(
+    const updatedCount = await userSessionRepository.update(
       { isActive: false },
       { 
         where: { 

@@ -13,6 +13,7 @@ class FriendshipController {
   getAllUsers = (...args) => this.managementChild.getAllUsers(...args);
   sendFriendRequest = (...args) => this.managementChild.sendFriendRequest(...args);
   removeFriend = (...args) => this.managementChild.removeFriend(...args);
+  bulkRemoveFriends = (...args) => this.managementChild.bulkRemoveFriends(...args);
   getFriendRequests = (...args) => this.requestsChild.getFriendRequests(...args);
   getSentRequests = (...args) => this.requestsChild.getSentRequests(...args);
   acceptFriendRequest = (...args) => this.requestsChild.acceptFriendRequest(...args);

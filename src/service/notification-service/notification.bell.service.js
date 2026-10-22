@@ -1,4 +1,5 @@
-import { Notification, User, Group, GroupMember, GroupMessage, GroupMessageRead } from '../../models/index.js';
+import { User, Group, GroupMessageRead } from '../../models/index.js';
+import { notificationRepository, groupRepository, groupMemberRepository, groupMessageRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 
@@ -28,7 +29,7 @@ class NotificationBellChild {
     };
 
     // Read dismiss preferences encoded as Notification rows (no schema changes needed)
-    const dismissRows = await Notification.findAll({
+    const dismissRows = await notificationRepository.findAll({
       where: { userId, type: 'bell_dismiss' },
       order: [['createdAt', 'DESC']],
       limit: 1000,
@@ -58,7 +59,7 @@ class NotificationBellChild {
     const items = [];
 
     // Friend requests
-    const frRows = await Notification.findAll({
+    const frRows = await notificationRepository.findAll({
       where: { userId, type: 'friend_request' },
       include: [
         { model: User, as: 'fromUser', attributes: ['id', 'name', 'avatar'] },
@@ -74,7 +75,7 @@ class NotificationBellChild {
     }
 
     // Group invitations (consistent with FE type 'group_invite')
-    const invites = await Notification.findAll({
+    const invites = await notificationRepository.findAll({
       where: { userId, type: 'group_invite' },
       include: [ { model: Group, as: 'group', attributes: ['id', 'name', 'avatar'] } ],
       order: [['updatedAt', 'DESC']],
@@ -90,7 +91,7 @@ class NotificationBellChild {
     }
 
     // Direct messages: collapse latest per other user
-    const dmRows = await Notification.findAll({
+    const dmRows = await notificationRepository.findAll({
       where: { userId, type: 'message' },
       include: [ { model: User, as: 'fromUser', attributes: ['id', 'name', 'avatar'] } ],
       order: [['updatedAt', 'DESC'], ['createdAt', 'DESC']],
@@ -116,14 +117,14 @@ class NotificationBellChild {
     }
 
     // Group messages: derive from membership and latest GroupMessage time
-    const memberships = await GroupMember.findAll({ where: { userId }, attributes: ['groupId'] });
+    const memberships = await groupMemberRepository.findAll({ where: { userId }, attributes: ['groupId'] });
     const groupIds = memberships.map((m) => m.groupId);
     if (groupIds.length > 0) {
-      const groups = await Group.findAll({ where: { id: groupIds }, attributes: ['id', 'name', 'avatar'] });
+      const groups = await groupRepository.findAll({ where: { id: groupIds }, attributes: ['id', 'name', 'avatar'] });
       for (const g of groups) {
         let lastMessageAt = null;
         try {
-          const recent = await GroupMessage.findAll({ where: { groupId: g.id }, attributes: ['id', 'createdAt', 'deletedForUserIds'], order: [['createdAt', 'DESC']], limit: 10 });
+          const recent = await groupMessageRepository.findAll({ where: { groupId: g.id }, attributes: ['id', 'createdAt', 'deletedForUserIds'], order: [['createdAt', 'DESC']], limit: 10 });
           for (const m of recent) {
             let del = m.deletedForUserIds;
             if (typeof del === 'string') { try { del = JSON.parse(del); } catch { del = null; } }
@@ -180,21 +181,21 @@ class NotificationBellChild {
         if (!Number.isFinite(Number(id))) return res.status(400).json({ success: false, error: 'Missing otherUserId' });
         meta.otherUserId = Number(id);
         // Optional: clear existing message notifications from this other user
-        await Notification.destroy({ where: { userId, type: 'message', fromUserId: meta.otherUserId } });
+        await notificationRepository.destroy({ where: { userId, type: 'message', fromUserId: meta.otherUserId } });
       } else if (scope === 'group') {
         if (!Number.isFinite(Number(id))) return res.status(400).json({ success: false, error: 'Missing groupId' });
         meta.groupId = Number(id);
         // We derive group items from messages; no destructive delete needed.
       } else if (scope === 'fr') {
         // Clear friend_request rows for this user
-        await Notification.destroy({ where: { userId, type: 'friend_request' } });
+        await notificationRepository.destroy({ where: { userId, type: 'friend_request' } });
       } else if (scope === 'inv') {
         // Clear group_invite rows for this user
-        await Notification.destroy({ where: { userId, type: 'group_invite' } });
+        await notificationRepository.destroy({ where: { userId, type: 'group_invite' } });
       }
     } catch {}
 
-    const notification = await Notification.create({ userId, type: 'bell_dismiss', metadata: meta, isRead: true });
+    const notification = await notificationRepository.create({ userId, type: 'bell_dismiss', metadata: meta, isRead: true });
     return res.json({ success: true, data: { id: notification.id } });
   });
 
@@ -203,20 +204,20 @@ class NotificationBellChild {
     const userId = req.user.id;
     try {
       // Direct messages: count unread Notification rows
-      const dmCount = await Notification.count({ where: { userId, type: 'message', isRead: false } });
+      const dmCount = await notificationRepository.count({ where: { userId, type: 'message', isRead: false } });
 
       // Friend requests and group invites
-      const frCount = await Notification.count({ where: { userId, type: 'friend_request', isRead: false } });
-      const invCount = await Notification.count({ where: { userId, type: 'group_invite', isRead: false } });
+      const frCount = await notificationRepository.count({ where: { userId, type: 'friend_request', isRead: false } });
+      const invCount = await notificationRepository.count({ where: { userId, type: 'group_invite', isRead: false } });
 
       // Group messages unread: derive by checking GroupMessageRead
-      const memberships = await GroupMember.findAll({ where: { userId }, attributes: ['groupId'] });
+      const memberships = await groupMemberRepository.findAll({ where: { userId }, attributes: ['groupId'] });
       const groupIds = memberships.map((m) => m.groupId);
       let groupUnread = 0;
       if (groupIds.length > 0) {
         // For each group, count messages not read by this user
         for (const gid of groupIds) {
-          const rows = await GroupMessage.findAll({
+          const rows = await groupMessageRepository.findAll({
             where: {
               groupId: gid,
               senderId: { [Op.ne]: userId },

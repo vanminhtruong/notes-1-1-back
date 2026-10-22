@@ -2,10 +2,11 @@ import express from 'express';
 import friendshipController from '../../controllers/friendship.controller.js';
 import authenticate from '../../middlewares/auth.js';
 import validate from '../../middlewares/validate.js';
-import { 
+import {
   sendFriendRequestSchema,
   friendshipIdSchema,
-  getUsersSchema
+  getUsersSchema,
+  bulkRemoveFriendsSchema
 } from '../../validators/friendship.validator.js';
 
 const router = express.Router();
@@ -33,6 +34,9 @@ router.delete('/requests/:friendshipId/reject', validate(friendshipIdSchema), fr
 
 // Get friends list
 router.get('/', friendshipController.getFriends);
+
+// Bulk remove friends
+router.delete('/bulk', validate(bulkRemoveFriendsSchema), friendshipController.bulkRemoveFriends);
 
 // Remove friend
 router.delete('/:friendshipId', validate(friendshipIdSchema), friendshipController.removeFriend);

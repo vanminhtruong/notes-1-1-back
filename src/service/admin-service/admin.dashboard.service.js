@@ -1,4 +1,5 @@
-import { User, Note, NoteFolder } from '../../models/index.js';
+import { User } from '../../models/index.js';
+import { userRepository, noteRepository, noteFolderRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isUserOnline } from '../../socket/socketHandler.js';
@@ -14,10 +15,10 @@ class AdminDashboardService {
   getTopNotesCreators = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
-    const topUsers = await Note.findAll({
+    const topUsers = await noteRepository.findAll({
       attributes: [
         'userId',
-        [Note.sequelize.fn('COUNT', Note.sequelize.col('Note.id')), 'notesCount']
+        [noteRepository.sequelize.fn('COUNT', noteRepository.sequelize.col('Note.id')), 'notesCount']
       ],
       include: [{
         model: User,
@@ -29,7 +30,7 @@ class AdminDashboardService {
         }
       }],
       group: ['userId', 'user.id'],
-      order: [[Note.sequelize.literal('notesCount'), 'DESC']],
+      order: [[noteRepository.sequelize.literal('notesCount'), 'DESC']],
       limit: limit,
       subQuery: false
     });
@@ -54,7 +55,7 @@ class AdminDashboardService {
   getRecentOnlineUsers = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
-    const recentUsers = await User.findAll({
+    const recentUsers = await userRepository.findAll({
       attributes: ['id', 'name', 'email', 'avatar', 'lastSeenAt'],
       where: {
         isActive: true,
@@ -91,12 +92,12 @@ class AdminDashboardService {
   getTopCategoriesCreators = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
-    const { NoteCategory } = await import('../../models/index.js');
+    const { noteCategoryRepository } = await import('../../repositories/index.js');
 
-    const topUsers = await NoteCategory.findAll({
+    const topUsers = await noteCategoryRepository.findAll({
       attributes: [
         'userId',
-        [NoteCategory.sequelize.fn('COUNT', NoteCategory.sequelize.col('NoteCategory.id')), 'categoriesCount']
+        [noteCategoryRepository.sequelize.fn('COUNT', noteCategoryRepository.sequelize.col('NoteCategory.id')), 'categoriesCount']
       ],
       include: [{
         model: User,
@@ -108,7 +109,7 @@ class AdminDashboardService {
         }
       }],
       group: ['userId', 'user.id'],
-      order: [[NoteCategory.sequelize.literal('categoriesCount'), 'DESC']],
+      order: [[noteCategoryRepository.sequelize.literal('categoriesCount'), 'DESC']],
       limit: limit,
       subQuery: false
     });
@@ -133,13 +134,13 @@ class AdminDashboardService {
   getTopChatUsers = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
-    const { Message, GroupMessage } = await import('../../models/index.js');
+    const { messageRepository, groupMessageRepository } = await import('../../repositories/index.js');
 
     // Đếm tin nhắn 1-1
-    const dmCounts = await Message.findAll({
+    const dmCounts = await messageRepository.findAll({
       attributes: [
         'senderId',
-        [Message.sequelize.fn('COUNT', Message.sequelize.col('Message.id')), 'messageCount']
+        [messageRepository.sequelize.fn('COUNT', messageRepository.sequelize.col('Message.id')), 'messageCount']
       ],
       include: [{
         model: User,
@@ -156,10 +157,10 @@ class AdminDashboardService {
     });
 
     // Đếm tin nhắn nhóm
-    const groupCounts = await GroupMessage.findAll({
+    const groupCounts = await groupMessageRepository.findAll({
       attributes: [
         'senderId',
-        [GroupMessage.sequelize.fn('COUNT', GroupMessage.sequelize.col('GroupMessage.id')), 'messageCount']
+        [groupMessageRepository.sequelize.fn('COUNT', groupMessageRepository.sequelize.col('GroupMessage.id')), 'messageCount']
       ],
       include: [{
         model: User,
@@ -225,12 +226,12 @@ class AdminDashboardService {
   getTopNoteSharers = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
-    const { SharedNote } = await import('../../models/index.js');
+    const { sharedNoteRepository } = await import('../../repositories/index.js');
 
-    const topUsers = await SharedNote.findAll({
+    const topUsers = await sharedNoteRepository.findAll({
       attributes: [
         'sharedByUserId',
-        [SharedNote.sequelize.fn('COUNT', SharedNote.sequelize.col('SharedNote.id')), 'sharedCount']
+        [sharedNoteRepository.sequelize.fn('COUNT', sharedNoteRepository.sequelize.col('SharedNote.id')), 'sharedCount']
       ],
       include: [{
         model: User,
@@ -242,7 +243,7 @@ class AdminDashboardService {
         }
       }],
       group: ['sharedByUserId', 'sharedByUser.id'],
-      order: [[SharedNote.sequelize.literal('sharedCount'), 'DESC']],
+      order: [[sharedNoteRepository.sequelize.literal('sharedCount'), 'DESC']],
       limit: limit,
       subQuery: false
     });
@@ -267,7 +268,7 @@ class AdminDashboardService {
   getTopOfflineUsers = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
-    const offlineUsers = await User.findAll({
+    const offlineUsers = await userRepository.findAll({
       attributes: ['id', 'name', 'email', 'avatar', 'lastSeenAt'],
       where: {
         isActive: true,
@@ -308,22 +309,22 @@ class AdminDashboardService {
    */
   getDashboardStats = asyncHandler(async (req, res) => {
     const [totalUsers, allActiveUsers, totalNotes, totalFolders, notesInFolders] = await Promise.all([
-      User.count({
+      userRepository.count({
         where: { 
           isActive: true,
           role: 'user' // Chỉ đếm user, không bao gồm admin
         }
       }),
-      User.findAll({
+      userRepository.findAll({
         attributes: ['id'],
         where: { 
           isActive: true,
           role: 'user' // Chỉ đếm user, không bao gồm admin
         }
       }),
-      Note.count(),
-      NoteFolder.count(),
-      Note.count({
+      noteRepository.count(),
+      noteFolderRepository.count(),
+      noteRepository.count({
         where: {
           folderId: { [Op.ne]: null }
         }

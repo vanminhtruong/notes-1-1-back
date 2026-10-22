@@ -1,4 +1,4 @@
-import { User, Message, Friendship, ChatPreference, PinnedChat, PinnedMessage, GroupMember } from '../../models/index.js';
+import { messageRepository, friendshipRepository, chatPreferenceRepository, pinnedChatRepository, pinnedMessageRepository, groupMemberRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
@@ -12,7 +12,7 @@ class ChatPreferencesChild {
     const currentUserId = req.user.id;
     const { userId } = req.params;
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -22,14 +22,14 @@ class ChatPreferencesChild {
     });
     let shareGroup = false;
     if (!friendship) {
-      const myGroups = await GroupMember.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] });
-      const otherGroups = await GroupMember.findAll({ where: { userId }, attributes: ['groupId'] });
+      const myGroups = await groupMemberRepository.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] });
+      const otherGroups = await groupMemberRepository.findAll({ where: { userId }, attributes: ['groupId'] });
       const mySet = new Set(myGroups.map((g) => g.groupId));
       shareGroup = otherGroups.some((g) => mySet.has(g.groupId));
       if (!shareGroup) return res.status(403).json({ success: false, message: 'You can only view preferences with friends or group members' });
     }
 
-    const pref = await ChatPreference.findOne({ where: { userId: currentUserId, otherUserId: userId } });
+    const pref = await chatPreferenceRepository.findBetween(currentUserId, userId);
     return res.json({ success: true, data: { nickname: pref?.nickname || null } });
   });
 
@@ -39,7 +39,7 @@ class ChatPreferencesChild {
     let { nickname } = req.body || {};
     if (nickname !== null && nickname !== undefined) nickname = String(nickname).trim();
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -48,14 +48,14 @@ class ChatPreferencesChild {
       }
     });
     if (!friendship) {
-      const myGroups = await GroupMember.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] });
-      const otherGroups = await GroupMember.findAll({ where: { userId }, attributes: ['groupId'] });
+      const myGroups = await groupMemberRepository.findAll({ where: { userId: currentUserId }, attributes: ['groupId'] });
+      const otherGroups = await groupMemberRepository.findAll({ where: { userId }, attributes: ['groupId'] });
       const mySet = new Set(myGroups.map((g) => g.groupId));
       const shareGroup = otherGroups.some((g) => mySet.has(g.groupId));
       if (!shareGroup) return res.status(403).json({ success: false, message: 'You can only set preferences with friends or group members' });
     }
 
-    const [pref] = await ChatPreference.findOrCreate({
+    const [pref] = await chatPreferenceRepository.findOrCreate({
       where: { userId: currentUserId, otherUserId: userId },
       defaults: { userId: currentUserId, otherUserId: userId, nickname: nickname || null }
     });
@@ -77,7 +77,7 @@ class ChatPreferencesChild {
     const currentUserId = req.user.id;
     const { userId } = req.params;
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -90,8 +90,8 @@ class ChatPreferencesChild {
     }
 
     const [myPref, theirPref] = await Promise.all([
-      ChatPreference.findOne({ where: { userId: currentUserId, otherUserId: userId } }),
-      ChatPreference.findOne({ where: { userId: userId, otherUserId: currentUserId } })
+      chatPreferenceRepository.findBetween(currentUserId, userId),
+      chatPreferenceRepository.findBetween(userId, currentUserId)
     ]);
 
     const backgroundUrl = myPref?.backgroundUrl || theirPref?.backgroundUrl || null;
@@ -103,7 +103,7 @@ class ChatPreferencesChild {
     const { userId } = req.params;
     const { backgroundUrl } = req.body || {};
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -115,7 +115,7 @@ class ChatPreferencesChild {
       return res.status(403).json({ success: false, message: 'You can only set preferences with friends' });
     }
 
-    const [pref, created] = await ChatPreference.findOrCreate({
+    const [pref, created] = await chatPreferenceRepository.findOrCreate({
       where: { userId: currentUserId, otherUserId: userId },
       defaults: { userId: currentUserId, otherUserId: userId, backgroundUrl: backgroundUrl || null }
     });
@@ -146,7 +146,7 @@ class ChatPreferencesChild {
     const { userId } = req.params;
     const { pinned } = req.body;
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -163,7 +163,7 @@ class ChatPreferencesChild {
     }
 
     if (pinned) {
-      const [pinnedChat, created] = await PinnedChat.findOrCreate({
+      const [pinnedChat, created] = await pinnedChatRepository.findOrCreate({
         where: { userId: currentUserId, pinnedUserId: userId },
         defaults: { userId: currentUserId, pinnedUserId: userId }
       });
@@ -174,7 +174,7 @@ class ChatPreferencesChild {
         data: { pinned: true }
       });
     } else {
-      const deleted = await PinnedChat.destroy({
+      const deleted = await pinnedChatRepository.destroy({
         where: { userId: currentUserId, pinnedUserId: userId }
       });
       
@@ -190,9 +190,7 @@ class ChatPreferencesChild {
     const currentUserId = req.user.id;
     const { userId } = req.params;
 
-    const pinnedChat = await PinnedChat.findOne({
-      where: { userId: currentUserId, pinnedUserId: userId }
-    });
+    const pinnedChat = await pinnedChatRepository.findPinnedUser(currentUserId, userId);
 
     return res.json({
       success: true,
@@ -205,7 +203,7 @@ class ChatPreferencesChild {
     const { messageId } = req.params;
     const { pinned } = req.body;
 
-    const msg = await Message.findByPk(messageId);
+    const msg = await messageRepository.findByPk(messageId);
     if (!msg) return res.status(404).json({ success: false, message: 'Message not found' });
 
     if (msg.senderId !== currentUserId && msg.receiverId !== currentUserId) {
@@ -213,12 +211,12 @@ class ChatPreferencesChild {
     }
 
     if (pinned) {
-      await PinnedMessage.findOrCreate({
+      await pinnedMessageRepository.findOrCreate({
         where: { userId: currentUserId, messageId },
         defaults: { userId: currentUserId, messageId },
       });
     } else {
-      await PinnedMessage.destroy({ where: { messageId } });
+      await pinnedMessageRepository.destroy({ where: { messageId } });
     }
 
     try {
@@ -242,7 +240,7 @@ class ChatPreferencesChild {
     const currentUserId = req.user.id;
     const { userId } = req.params;
 
-    const friendship = await Friendship.findOne({
+    const friendship = await friendshipRepository.findOne({
       where: {
         [Op.or]: [
           { requesterId: currentUserId, addresseeId: userId, status: 'accepted' },
@@ -252,7 +250,7 @@ class ChatPreferencesChild {
     });
     if (!friendship) return res.status(403).json({ success: false, message: 'You can only view pinned with friends' });
 
-    const msgs = await Message.findAll({
+    const msgs = await messageRepository.findAll({
       where: {
         [Op.or]: [
           { senderId: currentUserId, receiverId: userId },
@@ -263,7 +261,7 @@ class ChatPreferencesChild {
       order: [['createdAt', 'ASC']],
     });
     const msgIdSet = new Set(msgs.map((m) => m.id));
-    const pinned = await PinnedMessage.findAll({ where: { messageId: { [Op.in]: Array.from(msgIdSet) } }, order: [['pinnedAt', 'DESC']] });
+    const pinned = await pinnedMessageRepository.findAll({ where: { messageId: { [Op.in]: Array.from(msgIdSet) } }, order: [['pinnedAt', 'DESC']] });
     const pinnedMap = new Map(msgs.map((m) => [m.id, m]));
     const seen = new Set();
     const data = [];
@@ -278,12 +276,12 @@ class ChatPreferencesChild {
       const isHiddenForOther = deletedFor.includes(otherId);
       if (m.isDeletedForAll || isHiddenForMe) {
         if (m.isDeletedForAll) {
-          await PinnedMessage.destroy({ where: { messageId: p.messageId } });
+          await pinnedMessageRepository.destroy({ where: { messageId: p.messageId } });
         }
         continue;
       }
       if (isHiddenForOther) {
-        await PinnedMessage.destroy({ where: { messageId: p.messageId } });
+        await pinnedMessageRepository.destroy({ where: { messageId: p.messageId } });
         continue;
       }
       data.push({ id: p.messageId, content: m.content, messageType: m.messageType, createdAt: m.createdAt });

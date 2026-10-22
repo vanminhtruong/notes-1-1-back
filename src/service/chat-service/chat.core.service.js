@@ -1,4 +1,5 @@
-import { User, Message, Friendship, MessageRead, ChatPreference, PinnedChat, Notification, MessageReaction } from '../../models/index.js';
+import { User, MessageReaction } from '../../models/index.js';
+import { userRepository, messageRepository, friendshipRepository, messageReadRepository, chatPreferenceRepository, pinnedChatRepository, notificationRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
 import { isUserOnline } from '../../socket/socketHandler.js';
@@ -11,7 +12,7 @@ class ChatCoreChild {
   getChatList = asyncHandler(async (req, res) => {
     const userId = req.user.id;
 
-    const friendships = await Friendship.findAll({
+    const friendships = await friendshipRepository.findAll({
       where: {
         [Op.or]: [
           { requesterId: userId, status: 'accepted' },
@@ -32,7 +33,7 @@ class ChatCoreChild {
         : friendship.requester;
 
       // Fetch a batch of recent messages and select the latest one visible to this user
-      const recentMessages = await Message.findAll({
+      const recentMessages = await messageRepository.findAll({
         where: {
           [Op.or]: [
             { senderId: userId, receiverId: friend.id },
@@ -56,7 +57,7 @@ class ChatCoreChild {
       const mostRecent = recentMessages && recentMessages.length > 0 ? recentMessages[0] : null;
       const mostRecentAt = mostRecent ? mostRecent.createdAt : null;
 
-      const unreadCount = await Message.count({
+      const unreadCount = await messageRepository.count({
         where: {
           senderId: friend.id,
           receiverId: userId,
@@ -66,7 +67,7 @@ class ChatCoreChild {
 
       let nickname = null;
       try {
-        const pref = await ChatPreference.findOne({ where: { userId, otherUserId: friend.id } });
+        const pref = await chatPreferenceRepository.findBetween(userId, friend.id);
         nickname = pref?.nickname || null;
       } catch (e) {
         // ignore preference errors; nickname stays null
@@ -85,7 +86,7 @@ class ChatCoreChild {
       });
     }
 
-    const pinnedChats = await PinnedChat.findAll({
+    const pinnedChats = await pinnedChatRepository.findAll({
       where: { userId, pinnedUserId: { [Op.not]: null } }
     });
     const pinnedUserIds = new Set(pinnedChats.map(p => p.pinnedUserId));
@@ -113,7 +114,7 @@ class ChatCoreChild {
     const { senderId } = req.params;
     const receiverId = req.user.id;
 
-    const toMarkRead = await Message.findAll({
+    const toMarkRead = await messageRepository.findAll({
       where: {
         senderId,
         receiverId,
@@ -121,7 +122,7 @@ class ChatCoreChild {
       }
     });
 
-    await Message.update(
+    await messageRepository.update(
       { isRead: true },
       {
         where: {
@@ -134,19 +135,19 @@ class ChatCoreChild {
 
     // Also mark related message notifications as read for this pair
     try {
-      await Notification.update(
+      await notificationRepository.update(
         { isRead: true },
         { where: { userId: receiverId, type: 'message', fromUserId: senderId, isRead: false } }
       );
     } catch (e) { /* noop */ }
 
     if (toMarkRead.length > 0) {
-      const currentUser = await User.findByPk(receiverId);
-      const otherUser = await User.findByPk(senderId);
+      const currentUser = await userRepository.findByPk(receiverId);
+      const otherUser = await userRepository.findByPk(senderId);
       if (currentUser && otherUser && currentUser.readStatusEnabled && otherUser.readStatusEnabled) {
         const io = req.app.get('io');
         for (const m of toMarkRead) {
-          const [readRecord] = await MessageRead.findOrCreate({
+          const [readRecord] = await messageReadRepository.findOrCreate({
             where: { messageId: m.id, userId: receiverId },
             defaults: {
               messageId: m.id,
@@ -181,7 +182,7 @@ class ChatCoreChild {
   getUnreadCount = asyncHandler(async (req, res) => {
     const userId = req.user.id;
 
-    const unreadCount = await Message.count({
+    const unreadCount = await messageRepository.count({
       where: {
         receiverId: userId,
         isRead: false

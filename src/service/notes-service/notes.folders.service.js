@@ -1,4 +1,5 @@
 import { NoteFolder, Note, User, NoteCategory, NoteTag } from '../../models/index.js';
+import { noteFolderRepository, noteRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 
@@ -23,7 +24,7 @@ class NotesFoldersChild {
       }
 
       // Order: Ghim folders lên đầu, sau đó sắp xếp theo sortBy
-      const folders = await NoteFolder.findAll({
+      const folders = await noteFolderRepository.findAll({
         where: whereClause,
         include: [{
           model: Note,
@@ -62,7 +63,7 @@ class NotesFoldersChild {
 
       const offset = (page - 1) * limit;
 
-      const folder = await NoteFolder.findOne({
+      const folder = await noteFolderRepository.findOne({
         where: { id, userId },
       });
 
@@ -71,7 +72,7 @@ class NotesFoldersChild {
       }
 
       // Get notes in folder with pagination
-      const { count, rows: notes } = await Note.findAndCountAll({
+      const { count, rows: notes } = await noteRepository.findAndCountAll({
         where: { 
           folderId: id,
           userId,
@@ -125,7 +126,7 @@ class NotesFoldersChild {
       const { name, color, icon } = req.body;
       const userId = req.user.id;
 
-      const folder = await NoteFolder.create({
+      const folder = await noteFolderRepository.create({
         name,
         color: color || 'blue',
         icon: icon || '📁',
@@ -153,9 +154,7 @@ class NotesFoldersChild {
       const { name, color, icon } = req.body;
       const userId = req.user.id;
 
-      const folder = await NoteFolder.findOne({
-        where: { id, userId }
-      });
+      const folder = await noteFolderRepository.findByIdForUser(id, userId);
 
       if (!folder) {
         return res.status(404).json({ message: 'Không tìm thấy thư mục' });
@@ -187,16 +186,14 @@ class NotesFoldersChild {
       const { id } = req.params;
       const userId = req.user.id;
 
-      const folder = await NoteFolder.findOne({
-        where: { id, userId }
-      });
+      const folder = await noteFolderRepository.findByIdForUser(id, userId);
 
       if (!folder) {
         return res.status(404).json({ message: 'Không tìm thấy thư mục' });
       }
 
       // Remove folderId from all notes in this folder
-      await Note.update(
+      await noteRepository.update(
         { folderId: null },
         { where: { folderId: id, userId } }
       );
@@ -233,7 +230,7 @@ class NotesFoldersChild {
       const searchTerm = search.trim();
 
       // Search folders by name
-      const folders = await NoteFolder.findAll({
+      const folders = await noteFolderRepository.findAll({
         where: {
           userId,
           name: { [Op.like]: `%${searchTerm}%` }
@@ -257,7 +254,7 @@ class NotesFoldersChild {
       });
 
       // Search notes inside folders by title or content
-      const notes = await Note.findAll({
+      const notes = await noteRepository.findAll({
         where: {
           userId,
           folderId: { [Op.not]: null }, // Only notes in folders
@@ -313,9 +310,7 @@ class NotesFoldersChild {
       const { folderId } = req.body;
       const userId = req.user.id;
 
-      const note = await Note.findOne({
-        where: { id: noteId, userId }
-      });
+      const note = await noteRepository.findByIdForUser(noteId, userId);
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
@@ -323,9 +318,7 @@ class NotesFoldersChild {
 
       // Verify folder belongs to user if folderId is provided
       if (folderId) {
-        const folder = await NoteFolder.findOne({
-          where: { id: folderId, userId }
-        });
+        const folder = await noteFolderRepository.findByIdForUser(folderId, userId);
         if (!folder) {
           return res.status(404).json({ message: 'Không tìm thấy thư mục' });
         }
@@ -340,7 +333,7 @@ class NotesFoldersChild {
 
       await note.update(updateData);
 
-      const noteWithUser = await Note.findByPk(note.id, {
+      const noteWithUser = await noteRepository.findByPk(note.id, {
         include: [
           {
             model: User,
@@ -375,9 +368,7 @@ class NotesFoldersChild {
       const { id } = req.params;
       const userId = req.user.id;
 
-      const folder = await NoteFolder.findOne({
-        where: { id, userId }
-      });
+      const folder = await noteFolderRepository.findByIdForUser(id, userId);
 
       if (!folder) {
         return res.status(404).json({ message: 'Không tìm thấy thư mục' });
@@ -386,7 +377,7 @@ class NotesFoldersChild {
       await folder.update({ isPinned: true });
 
       // Lấy lại folder data sau khi update
-      const updatedFolder = await NoteFolder.findByPk(id);
+      const updatedFolder = await noteFolderRepository.findByPk(id);
 
       // Emit socket event for real-time update
       emitToUser(userId, 'folder_pinned', updatedFolder.toJSON());
@@ -408,9 +399,7 @@ class NotesFoldersChild {
       const { id } = req.params;
       const userId = req.user.id;
 
-      const folder = await NoteFolder.findOne({
-        where: { id, userId }
-      });
+      const folder = await noteFolderRepository.findByIdForUser(id, userId);
 
       if (!folder) {
         return res.status(404).json({ message: 'Không tìm thấy thư mục' });
@@ -419,7 +408,7 @@ class NotesFoldersChild {
       await folder.update({ isPinned: false });
 
       // Lấy lại folder data sau khi update
-      const updatedFolder = await NoteFolder.findByPk(id);
+      const updatedFolder = await noteFolderRepository.findByPk(id);
 
       // Emit socket event for real-time update
       emitToUser(userId, 'folder_unpinned', updatedFolder.toJSON());

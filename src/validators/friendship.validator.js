@@ -19,8 +19,15 @@ const getUsersSchema = {
   })
 };
 
+const bulkRemoveFriendsSchema = {
+  body: Joi.object({
+    friendshipIds: Joi.array().items(Joi.number().integer().positive()).min(1).max(50).required()
+  })
+};
+
 export {
   sendFriendRequestSchema,
   friendshipIdSchema,
-  getUsersSchema
+  getUsersSchema,
+  bulkRemoveFriendsSchema
 };

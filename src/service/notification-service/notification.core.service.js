@@ -1,4 +1,5 @@
-import { Notification, User, Group } from '../../models/index.js';
+import { User, Group } from '../../models/index.js';
+import { notificationRepository, userRepository, groupRepository } from '../../repositories/index.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 
@@ -14,7 +15,7 @@ class NotificationCoreChild {
     const where = { userId };
     if (String(unreadOnly) === 'true') where.isRead = false;
 
-    const rows = await Notification.findAll({
+    const rows = await notificationRepository.findAll({
       where,
       include: [
         { model: User, as: 'fromUser', attributes: ['id', 'name', 'avatar'] },
@@ -35,11 +36,11 @@ class NotificationCoreChild {
     let userMap = new Map();
     let groupMap = new Map();
     if (missingUserIds.size > 0) {
-      const us = await User.findAll({ where: { id: Array.from(missingUserIds) }, attributes: ['id', 'name', 'avatar'] });
+      const us = await userRepository.findAll({ where: { id: Array.from(missingUserIds) }, attributes: ['id', 'name', 'avatar'] });
       userMap = new Map(us.map((u) => [u.id, u]));
     }
     if (missingGroupIds.size > 0) {
-      const gs = await Group.findAll({ where: { id: Array.from(missingGroupIds) }, attributes: ['id', 'name', 'avatar'] });
+      const gs = await groupRepository.findAll({ where: { id: Array.from(missingGroupIds) }, attributes: ['id', 'name', 'avatar'] });
       groupMap = new Map(gs.map((g) => [g.id, g]));
     }
 
@@ -102,7 +103,7 @@ class NotificationCoreChild {
 
   markAllRead = asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const [count] = await Notification.update({ isRead: true }, { where: { userId, isRead: false } });
+    const [count] = await notificationRepository.update({ isRead: true }, { where: { userId, isRead: false } });
     try {
       // Thông báo cho tất cả admin để reload realtime tab Notifications của user này
       emitToAllAdmins && emitToAllAdmins('admin_notifications_marked_all_read', { userId });
