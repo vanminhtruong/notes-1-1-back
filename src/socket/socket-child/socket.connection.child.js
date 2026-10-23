@@ -112,6 +112,8 @@ class SocketConnectionChild {
 
   handleDisconnection = async (socket, userId) => {
     console.log(`User ${socket.user.name} disconnected (ID: ${userId})`);
+    // A user remains online until their last tab/device disconnects.
+    if ((global.io?.sockets?.adapter?.rooms?.get(`user_${userId}`)?.size ?? 0) > 0) return;
     this.parent.connectedUsers.delete(userId);
 
     // Update user's lastSeenAt timestamp

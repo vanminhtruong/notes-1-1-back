@@ -129,6 +129,8 @@ class AdminPermissionsChild {
     // Thông báo cho admin bị xóa quyền
     emitToUser(targetAdmin.id, 'permission_revoked', {
       permission,
+      permissions: currentPermissions,
+      adminLevel: targetAdmin.adminLevel,
       message: `Quyền "${permission}" của bạn đã bị thu hồi`,
       timestamp: new Date().toISOString()
     });

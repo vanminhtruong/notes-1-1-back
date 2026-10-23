@@ -71,3 +71,36 @@ backend. Bản sao chỉ chứa dữ liệu SQLite, không chứa file tải lê
 
 Kiểm tra snapshot WAL, khôi phục và giới hạn bản sao bằng `npm run test:backup`
 (chỉ dùng database thử trong thư mục tạm).
+
+## Email đặt lại mật khẩu
+
+Frontend gọi API Forgot Password; backend gửi mã OTP đến email của tài khoản đã
+đăng ký và còn hoạt động. Tài khoản gửi được cấu hình riêng trong `.env` bằng
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
+Không commit `.env` hoặc thông tin xác thực SMTP. `SMTP_FROM` phải là địa chỉ gửi đã được dịch vụ xác minh, không phải SMTP login kỹ thuật.
+
+Chạy `npm run email:verify` để kiểm tra kết nối và xác thực SMTP (không gửi thư).
+Chạy `npm run test:email` để kiểm tra xử lý cấu hình và kết quả gửi thư bằng
+transport giả. Thiếu cấu hình hoặc gửi thất bại sẽ trả lỗi, không giả lập đã gửi
+qua console. SMTP chấp nhận email chưa đảm bảo thư đã vào Inbox; kiểm tra cả
+Spam khi thử gửi thật. Sau khi đổi `.env`, khởi động lại backend.
+
+### Thiết lập bằng Brevo (không dùng mật khẩu Gmail)
+
+1. Đăng ký/đăng nhập tại https://onboarding.brevo.com và hoàn tất thông tin tài khoản.
+2. Trong Settings > Senders, Domains, IPs > Senders, thêm người gửi PlantHub và
+   xác minh địa chỉ email bằng mã được gửi đến hộp thư của bạn.
+3. Trong Settings > SMTP & API > SMTP, lấy SMTP login và SMTP key của Brevo.
+   SMTP key khác API key và khác mật khẩu đăng nhập Gmail.
+4. Điền vào `.env`: `SMTP_HOST=smtp-relay.brevo.com`, `SMTP_PORT=587`,
+   `SMTP_SECURE=false`, `SMTP_USER=<SMTP login>`, `SMTP_PASS=<SMTP key>`,
+   `SMTP_FROM="PlantHub <địa chỉ gửi đã xác minh>"`.
+5. Chạy `npm run email:verify`, khởi động lại backend rồi thử Forgot Password
+   bằng email của tài khoản PlantHub đã đăng ký. Kiểm tra cả Inbox và Spam.
+
+Địa chỉ nhận OTP là email của người dùng trong database, không cố định là
+email quản trị viên. Không cần bật xác minh hai bước của Gmail cho cách này.
+Brevo có thể yêu cầu xét duyệt tài khoản và xác thực tên miền trước khi cho
+phép gửi; SMTP verify thành công chưa đảm bảo thư được giao đến người nhận.
+Hướng dẫn: https://developers.brevo.com/docs/smtp-integration và
+https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email

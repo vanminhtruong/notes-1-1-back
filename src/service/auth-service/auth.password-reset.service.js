@@ -2,6 +2,7 @@ import { userRepository, passwordResetRepository } from '../../repositories/inde
 import bcrypt from 'bcryptjs';
 import { sendEmail } from '../../utils/email.js';
 import { sendSms } from '../../utils/sms.js';
+import { randomInt } from 'node:crypto';
 
 // Helper to resolve user by email or phone
 const findUserByIdentifier = async ({ email, phone }) => {
@@ -29,11 +30,11 @@ class AuthPasswordResetChild {
       }
 
       // Generate 6-digit OTP
-      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const otp = String(randomInt(100000, 1000000));
       const otpHash = await bcrypt.hash(otp, 10);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-      await passwordResetRepository.create({
+      const resetRecord = await passwordResetRepository.create({
         userId: user.id,
         email: user.email,
         otpHash,
@@ -42,17 +43,21 @@ class AuthPasswordResetChild {
         attempts: 0,
       });
 
-      // Send OTP via SMS if phone is used, otherwise via email
-      if (phone) {
-        const smsBody = `Ma OTP cua ban la ${otp}. Het han sau 10 phut.`;
-        const normalized = String(phone).replace(/[\s\-()]/g, '').trim();
-        await sendSms({ to: normalized, body: smsBody });
-      } else {
-        // Email fallback
-        const subject = 'Mã OTP đặt lại mật khẩu';
-        const text = `Mã OTP của bạn là ${otp}. Mã sẽ hết hạn sau 10 phút.`;
-        const html = `<p>Chào ${user.name || ''},</p><p>Mã OTP đặt lại mật khẩu của bạn là <b>${otp}</b>. Mã sẽ hết hạn sau <b>10 phút</b>.</p>`;
-        await sendEmail({ to: user.email, subject, text, html });
+      try {
+        // Send OTP via SMS if phone is used, otherwise via email
+        if (phone) {
+          const smsBody = `Ma OTP cua ban la ${otp}. Het han sau 10 phut.`;
+          const normalized = String(phone).replace(/[\s\-()]/g, '').trim();
+          await sendSms({ to: normalized, body: smsBody });
+        } else {
+          const subject = 'PlantHub — Mã xác minh đặt lại mật khẩu';
+          const text = `Mã xác minh đặt lại mật khẩu PlantHub của bạn: ${otp}. Mã có hiệu lực trong 10 phút. Không chia sẻ mã này. Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.`;
+          const html = `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:32px;color:#111827"><h2>PlantHub</h2><h3>Đặt lại mật khẩu</h3><p>Sử dụng mã xác minh bên dưới để tiếp tục:</p><p style="font-size:32px;letter-spacing:8px;font-weight:bold;background:#f3f4f6;padding:20px;text-align:center;border-radius:12px">${otp}</p><p>Mã có hiệu lực trong <strong>10 phút</strong>. Không chia sẻ mã này với bất kỳ ai.</p><p style="color:#6b7280">Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.</p></div>`;
+          await sendEmail({ to: user.email, subject, text, html });
+        }
+        } catch {
+        await resetRecord.update({ used: true });
+        return res.status(503).json({ message: 'Chưa thể gửi mã xác minh. Vui lòng thử lại sau hoặc liên hệ quản trị viên.' });
       }
 
       return res.json({ message: genericMsg });

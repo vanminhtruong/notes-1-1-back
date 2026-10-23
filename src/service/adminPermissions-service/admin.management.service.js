@@ -1,7 +1,7 @@
 import { userRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
-import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
+import { emitToAllAdmins, emitToUser, isUserOnline } from '../../socket/socketHandler.js';
 import { AdminPermissionsController } from '../../controllers/adminPermissions.controller.js';
 
 class AdminManagementChild {
@@ -40,7 +40,10 @@ class AdminManagementChild {
 
     res.json({
       success: true,
-      admins,
+      admins: admins.map(admin => ({
+        ...admin.toJSON(),
+        isOnline: Boolean(admin.isActive && isUserOnline(admin.id)),
+      })),
       pagination: {
         total: count,
         page: pageNum,

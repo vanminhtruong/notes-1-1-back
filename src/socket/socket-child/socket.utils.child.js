@@ -19,7 +19,9 @@ class SocketUtilsChild {
   };
 
   isUserOnline = (userId) => {
-    return this.parent.connectedUsers.has(userId);
+    const rooms = global.io?.sockets?.adapter?.rooms;
+    if (rooms) return (rooms.get(`user_${userId}`)?.size ?? 0) > 0;
+    return this.parent.connectedUsers.has(Number(userId));
   };
 }
 

@@ -10,6 +10,8 @@
   "scripts": {
     "predev": "node scripts/prepareDev.js",
     "db:backup": "node scripts/backupDatabase.js",
+    "email:verify": "node scripts/verifyEmail.js",
+    "test:email": "node --test tests/email.node-test.js",
     "test:backup": "node --test tests/backupDatabase.node-test.js",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
