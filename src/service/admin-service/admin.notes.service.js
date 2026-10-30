@@ -239,8 +239,8 @@ class AdminNotesChild {
           whereClause.folderId = fid;
         }
       }
-    } else {
-      // Default: only show notes not in any folder (like user app behavior)
+    } else if (whereClause.isArchived !== true) {
+      // Archived notes remain accessible even when they belong to a folder.
       whereClause.folderId = null;
     }
     
@@ -268,6 +268,7 @@ class AdminNotesChild {
     }
 
     const { count, rows: notes } = await noteRepository.findAndCountAll({
+      distinct: true,
       where: whereClause,
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'] },
@@ -289,7 +290,7 @@ class AdminNotesChild {
 
     // Count total folders and notes in folders for dashboard stats
     const totalFolders = await noteFolderRepository.count();
-    const notesInFolders = await noteRepository.count({ where: { folderId: { [Op.ne]: null } } });
+    const notesInFolders = await noteRepository.count({ where: { folderId: { [Op.ne]: null }, isArchived: false } });
 
     res.json({
       notes,
@@ -999,6 +1000,7 @@ class AdminNotesChild {
     }
 
     const { count, rows: folders } = await noteFolderRepository.findAndCountAll({
+      distinct: true,
       where: whereClause,
       include: [
         { 

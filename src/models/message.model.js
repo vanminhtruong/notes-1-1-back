@@ -77,6 +77,7 @@ export default (sequelize, DataTypes) => {
     }
   }, {
     indexes: [
+      { name: 'chat_dm_delivery_cursor', fields: ['receiverId', 'status', 'id'] },
       {
         fields: ['senderId', 'receiverId', 'createdAt']
       },

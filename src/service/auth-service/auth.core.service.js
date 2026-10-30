@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { Op } from 'sequelize';
 import { userRepository, userSessionRepository } from '../../repositories/index.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 import { parseDeviceInfo } from '../../utils/deviceParser.js';
@@ -129,7 +130,7 @@ class AuthCoreChild {
         await userSessionRepository.destroy({
           where: {
             userId: user.id,
-            expiresAt: { [require('sequelize').Op.lt]: new Date() }
+            expiresAt: { [Op.lt]: new Date() }
           }
         });
       } catch (sessionErr) {

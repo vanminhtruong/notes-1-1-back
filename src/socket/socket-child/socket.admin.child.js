@@ -6,20 +6,7 @@ class SocketAdminChild {
   }
 
   emitToAllAdmins = async (event, data) => {
-    try {
-      const adminUsers = await User.findAll({
-        where: { role: 'admin', isActive: true },
-        attributes: ['id', 'adminLevel', 'adminPermissions']
-      });
-      
-      for (const admin of adminUsers) {
-        if (this.parent.connectedUsers.has(admin.id)) {
-          global.io.to(`user_${admin.id}`).emit(event, data);
-        }
-      }
-    } catch (error) {
-      console.error('Error emitting to all admins:', error);
-    }
+    global.io?.to('chat_admins').emit(event, data);
   };
 
   emitToAdminsWithPermission = async (event, data, requiredPermission) => {

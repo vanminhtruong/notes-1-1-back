@@ -122,6 +122,7 @@ class AdminUsersChild {
 
     const newStatus = !user.isActive;
     await user.update({ isActive: newStatus });
+    if (!newStatus) global.io?.in(`user_${user.id}`).socketsLeave('chat_admins');
 
     emitToAllAdmins('user_status_changed', {
       userId: user.id,

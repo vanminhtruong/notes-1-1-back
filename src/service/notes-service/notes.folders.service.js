@@ -73,6 +73,7 @@ class NotesFoldersChild {
 
       // Get notes in folder with pagination
       const { count, rows: notes } = await noteRepository.findAndCountAll({
+        distinct: true,
         where: { 
           folderId: id,
           userId,

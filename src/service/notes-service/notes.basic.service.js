@@ -178,7 +178,8 @@ class NotesBasicChild {
         search, 
         isArchived = false,
         sortBy = 'createdAt',
-        sortOrder = 'DESC'
+        sortOrder = 'DESC',
+        scope
       } = req.query;
 
       // Coerce query params to proper types
@@ -187,10 +188,11 @@ class NotesBasicChild {
       const archivedBool = typeof isArchived === 'string' ? isArchived.toLowerCase() === 'true' : !!isArchived;
 
       const offset = (pageNum - 1) * limitNum;
-      const whereClause = { 
-        userId, 
-        isArchived: archivedBool,
-        folderId: null // Only show notes that are NOT in any folder
+      const categoryScope = scope === 'category' && !!category;
+      const whereClause = {
+        userId,
+        ...(!categoryScope ? { isArchived: archivedBool } : {}),
+        ...(!categoryScope && !archivedBool ? { folderId: null } : {})
       };
 
       // Add filters
@@ -210,6 +212,7 @@ class NotesBasicChild {
       const { count, rows: notes } = await noteRepository.findAndCountAll({
         where: whereClause,
         include: NOTE_INCLUDES,
+        distinct: true,
         order: [
           ['isPinned', 'DESC'], // Ghim notes lên đầu
           [sortBy, sortOrder]    // Sau đó sắp xếp theo tiêu chí đã chọn

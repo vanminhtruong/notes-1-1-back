@@ -10,16 +10,16 @@ class NotesStatsChild {
     try {
       const userId = req.user.id;
 
-      // Only count notes that are NOT in any folder
-      const totalNotes = await noteRepository.count({ where: { userId, folderId: null } });
-      const archivedNotes = await noteRepository.count({ where: { userId, isArchived: true, folderId: null } });
+      // Match the Active and Archived lists and active folder contents.
+      const totalNotes = await noteRepository.count({ where: { userId, [Op.or]: [{ folderId: null }, { isArchived: true }] } });
+      const archivedNotes = await noteRepository.count({ where: { userId, isArchived: true } });
       const activeNotes = await noteRepository.count({ where: { userId, isArchived: false, folderId: null } });
 
       // Count folders
       const totalFolders = await noteFolderRepository.count({ where: { userId } });
 
       // Count notes in folders
-      const notesInFolders = await noteRepository.count({ where: { userId, folderId: { [Op.ne]: null } } });
+      const notesInFolders = await noteRepository.count({ where: { userId, isArchived: false, folderId: { [Op.ne]: null } } });
 
       const notesByPriority = await noteRepository.findAll({
         where: { userId, isArchived: false, folderId: null },
@@ -34,10 +34,10 @@ class NotesStatsChild {
       const notesByCategory = await noteRepository.findAll({
         where: { userId, isArchived: false, folderId: null },
         attributes: [
-          'category',
+          ['categoryId', 'category'],
           [noteRepository.sequelize.fn('COUNT', noteRepository.sequelize.col('id')), 'count']
         ],
-        group: ['category'],
+        group: ['categoryId'],
         raw: true,
       });
 

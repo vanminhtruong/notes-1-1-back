@@ -1,5 +1,6 @@
 import express from 'express';
 import authenticate from '../../middlewares/auth.js';
+import { chatCapacity } from '../../middlewares/chatCapacity.js';
 import validate from '../../middlewares/validate.js';
 import groupController from '../../controllers/group.controller.js';
 // Moderation operations (subclassed controller)
@@ -27,6 +28,7 @@ import {
 const router = express.Router();
 
 router.use(authenticate);
+router.use(chatCapacity);
 
 router.get('/', groupController.listMyGroups);
 router.get('/user/:userId', validate(userIdParamSchema), groupController.listUserGroups);

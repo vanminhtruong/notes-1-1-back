@@ -18,6 +18,8 @@ const server = http.createServer(app);
 
 // Initialize Socket.IO
 const io = new Server(server, {
+  maxHttpBufferSize: 256 * 1024,
+  perMessageDeflate: false,
   cors: {
     // In development, allow all origins to avoid LAN/IP CORS mismatches
     // Consider tightening this for production using an explicit allowlist
@@ -35,7 +37,13 @@ app.set('io', io);
 
 // Socket.IO middleware and handlers
 io.use(authenticateSocket);
-io.on('connection', handleConnection);
+io.on('connection', socket => {
+  void handleConnection(socket).catch(error => {
+    console.error('Socket initialization failed:', error);
+    socket.releaseChatSetup?.();
+    socket.disconnect(true);
+  });
+});
 
 // Reminder scheduler: check periodically for due reminders and emit events
 const startReminderScheduler = () => {

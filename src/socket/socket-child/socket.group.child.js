@@ -1,3 +1,4 @@
+import { registerChatEvent } from '../../utils/chatCapacity.js';
 import { User, GroupMember, GroupMessage, GroupMessageRead } from '../../models/index.js';
 
 class SocketGroupChild {
@@ -7,12 +8,12 @@ class SocketGroupChild {
 
   registerHandlers = (socket, userId) => {
     // Group typing indicator: broadcast to all group members except the sender
-    socket.on('group_typing', async (data) => {
+    registerChatEvent(socket, 'group_typing', async (data) => {
       await this.handleGroupTyping(socket, userId, data);
     });
 
     // Handle group message read receipts
-    socket.on('group_message_read', async (data) => {
+    registerChatEvent(socket, 'group_message_read', async (data) => {
       await this.handleGroupMessageRead(socket, userId, data);
     });
   };
@@ -38,11 +39,8 @@ class SocketGroupChild {
       // Notify admins as well for monitoring UI
       try {
         if (global.io) {
-          const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
           const payload = { groupId: Number(groupId), userId, userName: socket.user?.name, isTyping: !!isTyping, at: new Date() };
-          for (const admin of admins) {
-            global.io.to(`user_${admin.id}`).emit('admin_group_typing', payload);
-          }
+          global.io.to('chat_admins').volatile.emit('admin_group_typing', payload);
         }
       } catch (e) {
         console.error('Error emitting admin_group_typing:', e);

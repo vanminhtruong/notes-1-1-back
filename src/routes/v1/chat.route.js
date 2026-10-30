@@ -1,6 +1,7 @@
 import express from 'express';
 import chatController from '../../controllers/chat.controller.js';
 import authenticate from '../../middlewares/auth.js';
+import { chatCapacity } from '../../middlewares/chatCapacity.js';
 import validate from '../../middlewares/validate.js';
 import { 
   sendMessageSchema,
@@ -18,6 +19,7 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
+router.use(chatCapacity);
 
 // Get chat list (recent conversations)
 router.get('/', chatController.getChatList);

@@ -311,7 +311,6 @@ class AdminDashboardService {
     const [totalUsers, allActiveUsers, totalNotes, totalFolders, notesInFolders] = await Promise.all([
       userRepository.count({
         where: { 
-          isActive: true,
           role: 'user' // Chỉ đếm user, không bao gồm admin
         }
       }),
@@ -326,7 +325,8 @@ class AdminDashboardService {
       noteFolderRepository.count(),
       noteRepository.count({
         where: {
-          folderId: { [Op.ne]: null }
+          folderId: { [Op.ne]: null },
+          isArchived: false
         }
       })
     ]);

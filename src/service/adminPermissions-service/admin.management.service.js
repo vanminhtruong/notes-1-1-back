@@ -137,6 +137,7 @@ class AdminManagementChild {
       adminLevel: null,
       adminPermissions: null
     });
+    global.io?.in(`user_${targetAdmin.id}`).socketsLeave('chat_admins');
 
     // Emit real-time events
     emitToAllAdmins('admin_removed', {

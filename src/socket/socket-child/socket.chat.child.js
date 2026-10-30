@@ -1,3 +1,4 @@
+import { registerChatEvent } from '../../utils/chatCapacity.js';
 import { User, Message, MessageRead, BlockedUser } from '../../models/index.js';
 import { Op } from 'sequelize';
 
@@ -7,35 +8,35 @@ class SocketChatChild {
   }
 
   registerHandlers = (socket, userId) => {
-    socket.on('join_chat', async (data) => {
+    registerChatEvent(socket, 'join_chat', async (data) => {
       await this.handleJoinChat(socket, userId, data);
     });
 
-    socket.on('leave_chat', (data) => {
+    registerChatEvent(socket, 'leave_chat', (data) => {
       this.handleLeaveChat(socket, userId, data);
     });
 
-    socket.on('message_sent', async (data) => {
+    registerChatEvent(socket, 'message_sent', async (data) => {
       await this.handleMessageSent(socket, userId, data);
     });
 
-    socket.on('typing_start', async (data) => {
+    registerChatEvent(socket, 'typing_start', async (data) => {
       await this.handleTypingStart(socket, userId, data);
     });
 
-    socket.on('typing_stop', async (data) => {
+    registerChatEvent(socket, 'typing_stop', async (data) => {
       await this.handleTypingStop(socket, userId, data);
     });
 
-    socket.on('chat_background_update', async (payload) => {
+    registerChatEvent(socket, 'chat_background_update', async (payload) => {
       await this.handleChatBackgroundUpdate(socket, userId, payload);
     });
 
-    socket.on('message_read', async (data) => {
+    registerChatEvent(socket, 'message_read', async (data) => {
       await this.handleMessageRead(socket, userId, data);
     });
 
-    socket.on('get_online_status', () => {
+    registerChatEvent(socket, 'get_online_status', () => {
       this.handleGetOnlineStatus(socket, userId);
     });
   };
@@ -154,7 +155,7 @@ class SocketChatChild {
         },
       });
       if (blocked) return;
-      socket.to(`user_${receiverId}`).emit('user_typing', {
+      socket.to(`user_${receiverId}`).volatile.emit('user_typing', {
         userId: userId,
         userName: socket.user.name,
         isTyping: true
@@ -173,10 +174,7 @@ class SocketChatChild {
         };
         // Reuse helper to emit to all admins if available at runtime
         if (global.io) {
-          const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
-          for (const admin of admins) {
-            global.io.to(`user_${admin.id}`).emit('admin_user_typing', adminPayload);
-          }
+          global.io.to('chat_admins').volatile.emit('admin_user_typing', adminPayload);
         }
       } catch (e) {
         console.error('Error emitting admin_user_typing (start):', e);
@@ -217,7 +215,6 @@ class SocketChatChild {
           at: new Date(),
         };
         if (global.io) {
-          const admins = await User.findAll({ where: { role: 'admin', isActive: true }, attributes: ['id'] });
           for (const admin of admins) {
             global.io.to(`user_${admin.id}`).emit('admin_user_typing', adminPayload);
           }

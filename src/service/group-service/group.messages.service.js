@@ -58,17 +58,18 @@ class GroupMessagesChild {
     const toMarkRead = filtered.filter(m => m.senderId !== userId && !m.isRead);
     
     if (toMarkRead.length > 0) {
+      const currentUser = await userRepository.findByPk(userId);
+      const senderIds = [...new Set(toMarkRead.map(m => m.senderId))];
+      const senders = await userRepository.findAll({ where: { id: { [Op.in]: senderIds } } });
+      const senderById = new Map(senders.map(user => [user.id, user]));
+      const members = await this.parent.membersChild.getGroupMemberIds(groupId);
+      await groupMessageRepository.update({ isRead: true }, { where: { id: { [Op.in]: toMarkRead.map(m => m.id) } } });
       // Always mark messages as read for unread count purposes
       for (const message of toMarkRead) {
-        // Set isRead flag
-        await groupMessageRepository.update(
-          { isRead: true },
-          { where: { id: message.id } }
-        );
         
         // Only create read receipts if BOTH users have read status enabled
-        const currentUser = await userRepository.findByPk(userId);
-        const senderUser = await userRepository.findByPk(message.senderId);
+
+        const senderUser = senderById.get(message.senderId);
         
         if (currentUser && senderUser && currentUser.readStatusEnabled && senderUser.readStatusEnabled) {
           // Create GroupMessageRead record for read receipts with retry
@@ -95,9 +96,9 @@ class GroupMessagesChild {
 
           // Notify sender and other group members about read receipt via socket
           const io = req.app.get('io');
-          if (io) {
-            const members = await this.parent.membersChild.getGroupMemberIds(groupId);
-            const userInfo = await userRepository.findByPk(userId, { attributes: ['id', 'name', 'avatar'] });
+          if (io && readRecord) {
+
+            const userInfo = { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar };
             for (const memberId of members) {
               if (memberId !== userId) {
                 io.to(`user_${memberId}`).emit('group_message_read', {
