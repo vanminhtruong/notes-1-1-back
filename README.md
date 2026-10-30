@@ -1,49 +1,46 @@
-# Express.js Starter
+# PlantHub backend
 
-A fully configured Express.js project with best practices: routing, middlewares, env handling, linting, Prettier, tests, Docker, and a Sequelize + SQLite database.
+Backend dùng chung cho dự án Front và admin: Express, Socket.IO, Sequelize và SQLite. Mã nguồn dùng ES modules.
 
-## Scripts
-- dev: Start dev server with nodemon
-- start: Start production server
-- lint / lint:fix: ESLint
-- format: Prettier
-- test / test:watch: Jest tests
+## Khởi động và kiểm tra
 
-## Getting Started
-1. Copy `.env.example` to `.env` and adjust values.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run in dev:
-   ```bash
-   npm run dev
-   ```
-4. Run tests:
-   ```bash
-   npm test
-   ```
+- Sao chép cấu hình từ `.env.example` sang `.env`; không commit thông tin xác thực.
+- `npm ci`: cài đúng phiên bản trong lockfile.
+- `npm run dev`: chuẩn bị dependency, khôi phục/backup database theo cấu hình rồi chạy nodemon.
+- `npm start`: chạy server; server khởi tạo schema qua `scripts/modelManager.js` và bật scheduler nhắc việc.
+- `npm test`: chạy toàn bộ test qua Node test runner, tự đặt `NODE_ENV=test` trước khi import để dùng database bộ nhớ.
+- `npm run test:watch`: theo dõi và chạy lại test khi sửa mã.
+- `npm run test:email` / `npm run test:backup`: chạy riêng nhóm test.
+- `npm run lint`: kiểm tra ESLint; các cảnh báo cũ không đồng nghĩa API không hoạt động.
 
-## Database (Sequelize + SQLite)
-- Config is in `src/db/index.js` using SQLite by default.
-- Storage path is controlled by `SQLITE_STORAGE` in `.env` (default: `./data/app.sqlite`).
-- In tests (`NODE_ENV=test`), an in-memory database `:memory:` is used automatically.
-- Models live under `src/models/`. Example model: `Sample` in `src/models/sample.model.js`.
-- DB is synced on server start in `src/server.js` via `sequelize.sync()`.
+## Phân chia trách nhiệm
 
-Example API using DB:
+- `src/routes`: khai báo URL, middleware xác thực/phân quyền và validation.
+- `src/controllers`: đầu vào HTTP và điều phối tới service; không thêm truy vấn nghiệp vụ mới ở route.
+- `src/service/<domain>-service`: nghiệp vụ theo nhóm chức năng. Giữ tên đường dẫn hiện có để tránh làm hỏng import.
+- `src/repositories`: truy cập dữ liệu dùng chung; `src/models` chứa schema và liên kết Sequelize.
+- `src/socket`: quản lý kết nối và signaling realtime, chia handler theo chat/group/call/notes/friends/admin.
+- `src/middlewares`, `src/validators`, `src/utils`: xử lý xuyên suốt và helper.
+- `src/db`, `src/migrations`, `scripts`: vận hành database, backup, SMTP và tác vụ dòng lệnh; không xóa chỉ vì giao diện không gọi trực tiếp.
+- `tests`: regression test bằng `node:test`, chạy độc lập theo file.
 
-## API
-- GET `/api/health` — health check
-- GET `/api/v1/sample` — list sample items
-- POST `/api/v1/sample` — create item `{ name: string }`
+Đây là phân lớp hiện có, chưa phải cấu trúc domain module hoàn toàn: một số controller/service cũ vẫn gọi model trực tiếp. Các đợt sửa tiếp theo nên chuyển từng luồng sang repository kèm test, tránh đổi đồng loạt khi chưa có test đầy đủ cho toàn bộ nghiệp vụ.
+
+## API và realtime
+
+- `GET /api/health`: trạng thái ứng dụng.
+- `/api/v1` có các nhóm `auth`, `notes`, `friends`, `chat`, `uploads`, `groups`, `settings`, `blocks`, `notifications`, `admin`, `sessions`.
+- Route chi tiết nằm ở `src/routes/v1`. Admin chat settings đang nằm trong `admin.route.js` và service admin; không phụ thuộc các file placeholder rỗng đã dọn.
+- Socket.IO gắn vào cùng HTTP server trong `src/server.js`. Các sự kiện gọi điện, E2EE, chat, presence và thông báo vẫn thuộc nghiệp vụ cần giữ.
+- Dữ liệu SQLite nằm tại `SQLITE_STORAGE` (mặc định `data/app.sqlite`); tệp đính kèm tại `public/uploads`. Không đưa chúng lên Git.
+- Chỉ chạy lệnh sync/migration/reset khi đã backup và hiểu tác động. Test không khởi chạy server production hay migration lên dữ liệu thật.
 
 ## Docker
-Build and run:
-```bash
-docker build -t expressjs-starter .
-docker run -p 3000:3000 --env-file .env expressjs-starter
-```
+
+`docker build -t planthub-back .` rồi chạy với file môi trường và volume bền vững cho database/uploads. Không dùng filesystem tạm của container để giữ dữ liệu thật.
+
+Xem [cấu hình và giới hạn mở rộng chat](docs/chat-scaling.md).
+
 # Sao lưu SQLite khi phát triển
 
 Mỗi lần chạy `npm run dev`, npm tự chạy `predev`: nếu thiếu thư viện thì tự chạy

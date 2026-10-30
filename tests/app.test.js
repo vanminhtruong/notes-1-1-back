@@ -1,33 +1,25 @@
-process.env.NODE_ENV = 'test';
-const request = require('supertest');
-const app = require('../src/app');
-const { sequelize } = require('../src/db');
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import request from 'supertest';
 
-describe('Health check', () => {
-  it('GET /api/health should return ok', async () => {
-    const res = await request(app).get('/api/health');
-    expect(res.statusCode).toBe(200);
-    expect(res.body.status).toBe('ok');
-  });
+process.env.NODE_ENV = 'test';
+const { default: app } = await import('../src/app.js');
+
+test('health endpoint returns application metadata', async () => {
+  const response = await request(app).get('/api/health');
+  assert.equal(response.status, 200);
+  assert.equal(response.body.status, 'ok');
+  assert.equal(typeof response.body.version, 'string');
 });
 
-describe('Sample routes', () => {
-  beforeAll(async () => {
-    await sequelize.sync({ force: true });
-  });
+test('Front and admin API families retain authentication', async () => {
+  for (const url of ['/notes', '/friends', '/chat', '/groups', '/blocks', '/notifications', '/sessions', '/admin/me']) {
+    const response = await request(app).get(`/api/v1${url}`);
+    assert.equal(response.status, 401, url);
+  }
+});
 
-  beforeEach(async () => {
-    await sequelize.truncate({ cascade: true });
-  });
-  it('POST /api/v1/sample validates body', async () => {
-    const res = await request(app).post('/api/v1/sample').send({});
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('POST /api/v1/sample creates item', async () => {
-    const res = await request(app).post('/api/v1/sample').send({ name: 'A' });
-    expect(res.statusCode).toBe(201);
-    expect(res.body.data.name).toBe('A');
-    expect(res.body.data.id).toBeTruthy();
-  });
+test('unknown endpoint retains 404 behavior', async () => {
+  const response = await request(app).get('/api/v1/unknown-endpoint');
+  assert.equal(response.status, 404);
 });
