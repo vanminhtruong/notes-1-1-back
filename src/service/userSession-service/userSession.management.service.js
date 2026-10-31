@@ -30,6 +30,7 @@ class UserSessionManagementChild {
         },
         order: [['lastActivityAt', 'DESC']],
         attributes: [
+          'token', // Used only for isCurrent; never sent back to the client
           'id',
           'deviceType',
           'deviceName',
@@ -46,10 +47,11 @@ class UserSessionManagementChild {
       // Mark current session
       const sessionsWithCurrent = sessions.map(session => {
         const sessionData = session.toJSON();
-        // Check if this is the current session by comparing token
+        // Never expose stored JWTs through the sessions endpoint.
+        const { token: storedToken, ...publicSession } = sessionData;
         return {
-          ...sessionData,
-          isCurrent: session.token === currentToken,
+          ...publicSession,
+          isCurrent: storedToken === currentToken,
         };
       });
 

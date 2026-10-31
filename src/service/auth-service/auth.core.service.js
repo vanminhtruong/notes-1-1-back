@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
 import { Op } from 'sequelize';
 import { userRepository, userSessionRepository } from '../../repositories/index.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
@@ -7,7 +8,7 @@ import { parseDeviceInfo } from '../../utils/deviceParser.js';
 const generateToken = (user, options = {}) => {
   const expiresIn = options.expiresIn || process.env.JWT_EXPIRES_IN || '7d';
   return jwt.sign(
-    { id: user.id, email: user.email },
+    { id: user.id, email: user.email, jti: randomUUID() },
     process.env.JWT_SECRET,
     { expiresIn }
   );
@@ -97,7 +98,7 @@ class AuthCoreChild {
         return res.status(401).json({ message: 'Tài khoản đã bị vô hiệu hóa' });
       }
 
-      const token = generateToken(user);
+      const token = generateToken(user, { expiresIn: remember ? '30d' : '7d' });
 
       // Parse device information
       const userAgent = req.headers['user-agent'] || '';
@@ -105,7 +106,8 @@ class AuthCoreChild {
       const ipAddress = req.ip || req.connection.remoteAddress || '';
 
       // Calculate token expiration
-      const expiresInDays = remember ? 30 : 1;
+      // Keep the session record valid for the same lifetime as the JWT.
+      const expiresInDays = remember ? 30 : 7;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
