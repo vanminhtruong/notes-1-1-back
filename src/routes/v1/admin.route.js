@@ -4,6 +4,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { adminAuth, requirePermission, superAdminOnly } from '../../middlewares/adminAuth.middleware.js';
 import adminController from '../../controllers/admin.controller.js';
+import { trashController } from '../../service/notes-service/notes.trash.service.js';
 import * as permissionsController from '../../controllers/adminPermissions.controller.js'; 
 const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -101,6 +102,13 @@ router.delete('/users/:id/permanent', requirePermission('manage_users.delete_per
 router.get('/users/:userId/sessions', requirePermission('manage_users.sessions.view'), adminController.getUserSessions);
 router.delete('/users/:userId/sessions/:sessionId', requirePermission('manage_users.sessions.logout'), adminController.logoutUserSession);
 router.delete('/users/:userId/sessions', requirePermission('manage_users.sessions.logout_all'), adminController.logoutAllUserSessions);
+
+// Note trash: user data across accounts, subject to granular notes permissions
+router.get('/notes-trash', requirePermission('manage_notes.view'), trashController.adminList);
+router.delete('/notes-trash', requirePermission('manage_notes.delete'), trashController.adminClear);
+router.post('/notes-trash/delete-selected', requirePermission('manage_notes.delete'), trashController.adminBatch);
+router.post('/notes-trash/:id/restore', requirePermission('manage_notes.create'), trashController.adminRestore);
+router.delete('/notes-trash/:id', requirePermission('manage_notes.delete'), trashController.adminDelete);
 
 // Notes management (require specific manage_notes permissions)
 router.get('/notes', requirePermission('manage_notes.view'), adminController.getAllUsersNotes);

@@ -1,6 +1,7 @@
 import { User, NoteCategory, NoteTag, Group, GroupMember } from '../../models/index.js';
 import { noteRepository, sharedNoteRepository, noteCategoryRepository, groupSharedNoteRepository, groupMessageRepository, messageRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
+import { moveNoteToTrash } from './notes.trash.service.js';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
@@ -627,108 +628,8 @@ class NotesBasicChild {
         return res.status(403).json({ message: 'Bạn không có quyền xóa ghi chú này' });
       }
 
-      // Store necessary data before deleting
-      const folderId = note.folderId;
-      const noteUserId = note.userId;
-      const noteId = note.id;
-      const imageUrl = note.imageUrl;
-      const videoUrl = note.videoUrl;
-
-      // Delete note immediately (critical operation)
-      await note.destroy();
-
-      // Emit WebSocket events immediately for real-time UI updates (critical)
-      emitToUser(noteUserId, 'note_deleted', { id: Number(id), folderId });
-      
-      // If deleter is not owner, also emit to deleter
-      if (userId !== noteUserId) {
-        emitToUser(userId, 'note_deleted', { id: Number(id), folderId });
-      }
-      
-      // Emit to all admins for real-time admin panel updates
-      emitToAllAdmins('user_note_deleted', { id: noteId, userId: noteUserId, folderId });
-
-      // Response immediately for best UX
-      res.json({ message: 'Xóa ghi chú thành công' });
-
-      // Perform cleanup operations asynchronously (fire and forget)
-      setImmediate(async () => {
-        try {
-          // Collect and cleanup all shares
-          const shares = await sharedNoteRepository.findAll({ 
-            where: { noteId: id },
-            attributes: ['id', 'noteId', 'messageId', 'sharedWithUserId', 'sharedByUserId']
-          });
-          
-          const messageIdsToDelete = [];
-          // Emit to each receiver to remove the shared message in realtime
-          for (const share of shares) {
-            try {
-              if (share.messageId) {
-                messageIdsToDelete.push(share.messageId);
-              }
-              
-              const payload = { id: share.id, noteId: id, messageId: share.messageId };
-              emitToUser(share.sharedWithUserId, 'shared_note_removed', payload);
-              emitToUser(userId, 'shared_note_removed', payload);
-            } catch (e) {
-              // ignore
-            }
-          }
-          
-          // Delete share records and messages
-          await sharedNoteRepository.destroy({ where: { noteId: id } });
-          if (messageIdsToDelete.length > 0) {
-            await messageRepository.destroy({ where: { id: messageIdsToDelete } });
-          }
-
-          // Cleanup group shares
-          const groupShares = await groupSharedNoteRepository.findAll({
-            where: { noteId: id },
-            include: [{
-              model: Group,
-              as: 'group',
-              include: [{
-                model: GroupMember,
-                as: 'members',
-                attributes: ['userId']
-              }]
-            }],
-            attributes: ['id', 'groupMessageId', 'noteId']
-          });
-          
-          const groupMessageIdsToDelete = [];
-          for (const groupShare of groupShares) {
-            try {
-              if (groupShare.groupMessageId) {
-                groupMessageIdsToDelete.push(groupShare.groupMessageId);
-              }
-              
-              for (const member of groupShare.group.members) {
-                emitToUser(member.userId, 'group_note_removed', { id: groupShare.id });
-              }
-            } catch (e) {
-              // ignore
-            }
-          }
-          
-          // Delete group share records and messages
-          await groupSharedNoteRepository.destroy({ where: { noteId: id } });
-          if (groupMessageIdsToDelete.length > 0) {
-            await groupMessageRepository.destroy({ where: { id: groupMessageIdsToDelete } });
-          }
-
-          // Delete files
-          const filesToDelete = [];
-          if (imageUrl) filesToDelete.push(imageUrl);
-          if (videoUrl) filesToDelete.push(videoUrl);
-          if (filesToDelete.length > 0) {
-            deleteMultipleFiles(filesToDelete);
-          }
-        } catch (error) {
-          console.error('Error in async delete cleanup:', error);
-        }
-      });
+      await moveNoteToTrash(note, userId);
+      return res.json({ message: 'Đã chuyển ghi chú vào thùng rác (30 ngày)' });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

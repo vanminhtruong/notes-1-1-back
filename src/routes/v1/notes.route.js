@@ -8,6 +8,14 @@ const router = Router();
 // All routes require authentication
 router.use(authMiddleware);
 
+import { trashController } from '../../service/notes-service/notes.trash.service.js';
+router.get('/trash', trashController.userList);
+router.delete('/trash', trashController.userClear);
+router.post('/trash/move-selected', trashController.userMoveSelected);
+router.post('/trash/delete-selected', trashController.userBatch);
+router.post('/trash/:id/restore', trashController.userRestore);
+router.delete('/trash/:id', trashController.userDelete);
+
 // Notes CRUD
 router.post('/', validateCreateNote, notesController.createNote);
 router.get('/', notesController.getNotes);

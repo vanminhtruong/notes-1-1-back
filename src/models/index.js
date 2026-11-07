@@ -2,6 +2,7 @@ import { DataTypes } from 'sequelize';
 import { sequelize } from '../db/index.js';
 import defineUser from './user.model.js';
 import defineNote from './note.model.js';
+import defineNoteTrash from './noteTrash.model.js';
 import defineNoteFolder from './noteFolder.model.js';
 import defineFriendship from './friendship.model.js';
 import defineMessage from './message.model.js';
@@ -28,6 +29,7 @@ import defineBackground from './background.model.js';
 
 const User = defineUser(sequelize, DataTypes);
 const Note = defineNote(sequelize, DataTypes);
+const NoteTrash = defineNoteTrash(sequelize, DataTypes);
 const NoteFolder = defineNoteFolder(sequelize, DataTypes);
 const Friendship = defineFriendship(sequelize, DataTypes);
 const Message = defineMessage(sequelize, DataTypes);
@@ -331,6 +333,7 @@ export {
   sequelize,
   User,
   Note,
+  NoteTrash,
   NoteFolder,
   NoteCategory,
   NoteTag,

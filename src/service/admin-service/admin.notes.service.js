@@ -2,6 +2,7 @@ import { User, Note, Group, GroupMember, NoteCategory, NoteTag } from '../../mod
 import { userRepository, noteRepository, messageRepository, groupMemberRepository, groupMessageRepository, notificationRepository, sharedNoteRepository, groupSharedNoteRepository, noteFolderRepository, noteCategoryRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
 import { Op } from 'sequelize';
+import { moveNoteToTrash } from '../notes-service/notes.trash.service.js';
 import { emitToAllAdmins, emitToUser } from '../../socket/socketHandler.js';
 import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 
@@ -477,25 +478,8 @@ class AdminNotesChild {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
     }
 
-    const userId = note.user.id;
-    
-    // Xóa các file liên quan đến note
-    const filesToDelete = [];
-    if (note.imageUrl) filesToDelete.push(note.imageUrl);
-    if (note.videoUrl) filesToDelete.push(note.videoUrl);
-    if (filesToDelete.length > 0) {
-      deleteMultipleFiles(filesToDelete);
-    }
-    
-    await note.destroy();
-
-    // KHÔNG giảm selectionCount khi xóa note
-    // Logic "once hot, always hot" - category đã hot phải giữ nguyên vị trí
-
-    emitToUser(userId, 'admin_note_deleted', { id: note.id });
-    emitToAllAdmins('note_deleted_by_admin', { id: note.id, userId });
-
-    res.json({ message: 'Xóa ghi chú thành công' });
+    await moveNoteToTrash(note, req.user.id);
+    res.json({ message: 'Đã chuyển ghi chú vào thùng rác (30 ngày)' });
   });
 
   // Move note to folder (admin)

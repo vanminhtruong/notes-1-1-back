@@ -10,6 +10,7 @@ import app from './app.js';
 import { sequelize } from './db/index.js';
 import { authenticateSocket, handleConnection, emitToUser } from './socket/socketHandler.js';
 import { Note, User } from './models/index.js';
+import { purgeExpiredTrash } from './service/notes-service/notes.trash.service.js';
 import { Op } from 'sequelize';
 import ModelManager from '../scripts/modelManager.js';
 
@@ -114,6 +115,10 @@ const startReminderScheduler = () => {
       console.log(`WebSocket server ready for connections`);
       // Start reminder scheduler after server is up
       startReminderScheduler();
+      // Sweep expired notes now and hourly. Expiration is based on deletion time.
+      const sweepTrash = () => purgeExpiredTrash().catch(err => console.error('Trash cleanup failed:', err));
+      void sweepTrash();
+      setInterval(sweepTrash, 60 * 60 * 1000);
     });
   } catch (err) {
     // eslint-disable-next-line no-console
