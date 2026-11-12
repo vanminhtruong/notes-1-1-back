@@ -1,6 +1,6 @@
 import { User, NoteCategory, NoteTag, Group, GroupMember } from '../../models/index.js';
 import { noteRepository, sharedNoteRepository, noteCategoryRepository, groupSharedNoteRepository, groupMessageRepository, messageRepository } from '../../repositories/index.js';
-import { Op } from 'sequelize';
+import { Op, literal } from 'sequelize';
 import { moveNoteToTrash } from './notes.trash.service.js';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
 import { deleteMultipleFiles, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
@@ -187,6 +187,12 @@ class NotesBasicChild {
       const pageNum = parseInt(page, 10) || 1;
       const limitNum = parseInt(limit, 10) || 10;
       const archivedBool = typeof isArchived === 'string' ? isArchived.toLowerCase() === 'true' : !!isArchived;
+      const allowedSortColumns = ['createdAt', 'updatedAt', 'title', 'priority'];
+      const safeSortBy = allowedSortColumns.includes(sortBy) ? sortBy : 'createdAt';
+      const safeSortOrder = String(sortOrder).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      const sortExpression = safeSortBy === 'priority'
+        ? literal("CASE \"Note\".\"priority\" WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END")
+        : safeSortBy === 'title' ? literal('LOWER("Note"."title")') : safeSortBy;
 
       const offset = (pageNum - 1) * limitNum;
       const categoryScope = scope === 'category' && !!category;
@@ -215,8 +221,9 @@ class NotesBasicChild {
         include: NOTE_INCLUDES,
         distinct: true,
         order: [
-          ['isPinned', 'DESC'], // Ghim notes lên đầu
-          [sortBy, sortOrder]    // Sau đó sắp xếp theo tiêu chí đã chọn
+          ['isPinned', 'DESC'],
+          [sortExpression, safeSortOrder],
+          ['id', 'DESC'],
         ],
         limit: limitNum,
         offset: offset,
