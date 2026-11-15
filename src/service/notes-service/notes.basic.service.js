@@ -449,6 +449,10 @@ class NotesBasicChild {
         return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa ghi chú này' });
       }
 
+      if (note.isEncrypted && (title !== undefined || content !== undefined || imageUrl !== undefined || videoUrl !== undefined || youtubeUrl !== undefined || backgroundImage !== undefined)) {
+        return res.status(409).json({ message: 'Ghi chú đã mã hóa; hãy mở khóa để chỉnh sửa nội dung.' });
+      }
+
       // Determine if reminderAt changed; normalize to Date or null
       let nextReminderAt = (reminderAt === undefined)
         ? note.reminderAt

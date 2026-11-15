@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import * as notesController from '../../controllers/notes.controller.js';
 import authMiddleware from '../../middlewares/auth.js';
+import { changeNoteEncryption } from '../../controllers/notes.encryption.controller.js';
+import { uploadEncryptedMedia, downloadEncryptedMedia } from '../../controllers/notes.encrypted-media.controller.js';
 import { validateCreateNote, validateUpdateNote, validateShareNote, validateShareNoteToGroup, validateCreateFolder, validateUpdateFolder, validateMoveNoteToFolder, validateCreateCategory, validateUpdateCategory, validateCreateTag, validateUpdateTag, validateAddTagToNote } from '../../validators/notes.validator.js';
 
 const router = Router();
@@ -68,6 +70,9 @@ router.put('/shared/groups/:id/permissions', notesController.updateGroupSharedNo
 // Note by ID and operations - Must be after specific routes
 router.get('/:id', notesController.getNoteById);
 router.put('/:id', validateUpdateNote, notesController.updateNote);
+router.patch('/:id/encryption', changeNoteEncryption);
+router.post('/:id/encrypted-media/:kind', uploadEncryptedMedia);
+router.get('/:id/encrypted-media/:kind/:assetId', downloadEncryptedMedia);
 router.patch('/:id/ack-reminder', notesController.acknowledgeReminder);
 router.patch('/:id/archive', notesController.archiveNote);
 router.patch('/:id/pin', notesController.pinNote);

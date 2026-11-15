@@ -25,6 +25,10 @@ class NotesSharingChild {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú hoặc bạn không có quyền chia sẻ ghi chú này' });
       }
 
+      if (note.isEncrypted) {
+        return res.status(409).json({ message: 'Ghi chú mã hóa đầu cuối chưa hỗ trợ chia sẻ vì chưa có trao đổi khóa.' });
+      }
+
       // Check if already shared with this user
       const existingShare = await sharedNoteRepository.findByNoteAndUser(id, sharedWithUserId);
 
@@ -527,6 +531,10 @@ class NotesSharingChild {
 
       if (!note) {
         return res.status(404).json({ message: 'Không tìm thấy ghi chú hoặc bạn không có quyền chia sẻ ghi chú này' });
+      }
+
+      if (note.isEncrypted) {
+        return res.status(409).json({ message: 'Ghi chú mã hóa đầu cuối chưa hỗ trợ chia sẻ nhóm.' });
       }
 
       // Check if target group exists and user is a member, and get all members

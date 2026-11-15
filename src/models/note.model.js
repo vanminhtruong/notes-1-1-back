@@ -16,6 +16,7 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    isEncrypted: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     imageUrl: {
       type: DataTypes.STRING,
       allowNull: true,

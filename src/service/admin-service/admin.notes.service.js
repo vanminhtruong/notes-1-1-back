@@ -377,6 +377,10 @@ class AdminNotesChild {
       return res.status(404).json({ message: 'Không tìm thấy ghi chú' });
     }
 
+    if (note.isEncrypted && (title !== undefined || content !== undefined || imageUrl !== undefined || videoUrl !== undefined || youtubeUrl !== undefined)) {
+      return res.status(409).json({ message: 'Không thể chỉnh sửa nội dung ghi chú đã mã hóa đầu cuối.' });
+    }
+
     // Lưu giá trị cũ TRƯỚC khi update
     const oldImageUrl = note.imageUrl;
     const oldVideoUrl = note.videoUrl;

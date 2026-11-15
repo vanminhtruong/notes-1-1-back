@@ -60,25 +60,6 @@ class SocketConnectionChild {
         void this.handleDisconnection(socket, userId).catch(error => console.error('Socket cleanup failed:', error));
       });
 
-      // E2EE status sync across user's devices
-      socket.on('e2ee_status', (payload) => {
-        try {
-          const enabled = !!(payload && payload.enabled);
-          socket.to(`user_${userId}`).emit('e2ee_status', { enabled });
-        } catch (e) {
-          // ignore
-        }
-      });
-
-      socket.on('e2ee_pin_updated', (payload) => {
-        try {
-          const pinHash = payload ? payload.pinHash || null : null;
-          socket.to(`user_${userId}`).emit('e2ee_pin_updated', { pinHash });
-        } catch (e) {
-          // ignore
-        }
-      });
-
       // Only log for new connections, not reconnections
       if (!wasConnected) {
         console.log(`User ${socket.user.name} connected (ID: ${userId})`);

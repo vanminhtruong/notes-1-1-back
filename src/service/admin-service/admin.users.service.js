@@ -18,7 +18,6 @@ class AdminUsersChild {
       search,
       role,
       isActive,
-      e2eeEnabled,
       readStatusEnabled,
       sortBy = 'createdAt',
       sortOrder = 'DESC'
@@ -60,11 +59,6 @@ class AdminUsersChild {
       } catch {}
     }
 
-    // Filter by E2EE status
-    if (e2eeEnabled !== undefined) {
-      whereClause.e2eeEnabled = e2eeEnabled === 'true' || e2eeEnabled === true;
-    }
-
     // Filter by Read Status
     if (readStatusEnabled !== undefined) {
       whereClause.readStatusEnabled = readStatusEnabled === 'true' || readStatusEnabled === true;
@@ -81,7 +75,7 @@ class AdminUsersChild {
         // Account & role
         'role', 'isActive',
         // Settings
-        'theme', 'language', 'e2eeEnabled', 'e2eePinHash', 'readStatusEnabled',
+        'theme', 'language', 'readStatusEnabled',
         // Privacy
         'hidePhone', 'hideBirthDate', 'allowMessagesFromNonFriends',
         // Timestamps
@@ -226,7 +220,7 @@ class AdminUsersChild {
     const { 
       name, email, phone, birthDate, gender, avatar, password,
       // Chat settings
-      e2eeEnabled, readStatusEnabled, allowMessagesFromNonFriends,
+      readStatusEnabled, allowMessagesFromNonFriends,
       hidePhone, hideBirthDate
     } = req.body;
 
@@ -304,7 +298,6 @@ class AdminUsersChild {
     if (gender !== undefined) updateData.gender = gender || 'unspecified';
 
     // Chat settings (only if provided)
-    if (e2eeEnabled !== undefined) updateData.e2eeEnabled = Boolean(e2eeEnabled);
     if (readStatusEnabled !== undefined) updateData.readStatusEnabled = Boolean(readStatusEnabled);
     if (allowMessagesFromNonFriends !== undefined) updateData.allowMessagesFromNonFriends = Boolean(allowMessagesFromNonFriends);
     if (hidePhone !== undefined) updateData.hidePhone = Boolean(hidePhone);
@@ -363,8 +356,6 @@ class AdminUsersChild {
       role: user.role,
       isActive: user.isActive,
       // Chat settings
-      e2eeEnabled: user.e2eeEnabled,
-      e2eePinHash: user.e2eePinHash,
       readStatusEnabled: user.readStatusEnabled,
       allowMessagesFromNonFriends: user.allowMessagesFromNonFriends,
       hidePhone: user.hidePhone,
@@ -382,7 +373,6 @@ class AdminUsersChild {
 
     // Also emit to user if chat settings were changed
     const chatSettingsChanged = 
-      e2eeEnabled !== undefined || 
       readStatusEnabled !== undefined || 
       allowMessagesFromNonFriends !== undefined ||
       hidePhone !== undefined ||
@@ -390,7 +380,6 @@ class AdminUsersChild {
 
     if (chatSettingsChanged && global.io) {
       global.io.to(`user_${user.id}`).emit('user_settings_updated', {
-        e2eeEnabled: user.e2eeEnabled,
         readStatusEnabled: user.readStatusEnabled,
         allowMessagesFromNonFriends: user.allowMessagesFromNonFriends,
         hidePhone: user.hidePhone,
