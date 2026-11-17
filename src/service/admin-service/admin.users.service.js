@@ -4,6 +4,37 @@ import { emitToAllAdmins, isUserOnline, emitToUser } from '../../socket/socketHa
 import { deleteUploadedFile, deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
 import { Op } from 'sequelize';
 import bcrypt from 'bcryptjs';
+import { sequelize } from '../../db/index.js';
+
+// Các bảng tham chiếu Users/Notes/Groups bằng FOREIGN KEY "NO ACTION" (không tự CASCADE),
+// nên phải xóa tay theo đúng thứ tự trước khi xóa user, nếu không SQLite báo
+// "SQLITE_CONSTRAINT: FOREIGN KEY constraint failed".
+const purgeUserBlockingReferences = async (userId, transaction) => {
+  const run = (sql) => sequelize.query(sql, { replacements: { userId }, transaction });
+  const tableExists = async (name) => {
+    const [rows] = await sequelize.query(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name = :name",
+      { replacements: { name }, transaction }
+    );
+    return rows.length > 0;
+  };
+
+  const ownNotes = 'SELECT id FROM Notes WHERE userId = :userId';
+  const ownGroups = 'SELECT id FROM Groups WHERE ownerId = :userId';
+  const groupShares = `SELECT id FROM GroupSharedNotes WHERE sharedByUserId = :userId
+    OR groupId IN (${ownGroups}) OR noteId IN (${ownNotes})`;
+
+  await run(`DELETE FROM GroupSharedNotePermissions WHERE userId = :userId
+    OR groupSharedNoteId IN (${groupShares})`);
+  await run(`DELETE FROM GroupSharedNotes WHERE id IN (${groupShares})`);
+  await run(`DELETE FROM SharedNotes WHERE sharedByUserId = :userId
+    OR sharedWithUserId = :userId OR noteId IN (${ownNotes})`);
+  await run('DELETE FROM PasswordResets WHERE userId = :userId');
+  await run('DELETE FROM notifications WHERE user_id = :userId');
+  if (await tableExists('Notes_backup')) {
+    await run('DELETE FROM Notes_backup WHERE userId = :userId');
+  }
+};
 
 class AdminUsersChild {
   constructor(parent) {
@@ -411,13 +442,17 @@ class AdminUsersChild {
     }
 
     const userData = { id: user.id, name: user.name, email: user.email };
+    const avatarPath = user.avatar;
 
-    // Xóa avatar khi xóa user
-    if (user.avatar) {
-      deleteUploadedFile(user.avatar);
+    await sequelize.transaction(async (transaction) => {
+      await purgeUserBlockingReferences(user.id, transaction);
+      await user.destroy({ transaction });
+    });
+
+    // Chỉ xóa avatar sau khi xóa DB thành công
+    if (avatarPath) {
+      deleteUploadedFile(avatarPath);
     }
-
-    await user.destroy();
 
     emitToAllAdmins('user_deleted_permanently', userData);
 

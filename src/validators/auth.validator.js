@@ -128,6 +128,7 @@ const validateResetPassword = (req, res, next) => {
       'string.max': 'Mật khẩu mới không được quá 100 ký tự',
       'any.required': 'Mật khẩu mới là bắt buộc',
     }),
+    resetToken: Joi.string().pattern(/^[a-f0-9]{64}$/i).optional(),
   }).or('email', 'phone');
 
   const { error } = schema.validate(req.body, { abortEarly: true });

@@ -36,6 +36,7 @@ class NotesController {
   getSharedWithMe = (...args) => this.sharingChild.getSharedWithMe(...args);
   getSharedByMe = (...args) => this.sharingChild.getSharedByMe(...args);
   removeSharedNote = (...args) => this.sharingChild.removeSharedNote(...args);
+  removeReceivedSharedNote = (...args) => this.sharingChild.removeReceivedSharedNote(...args);
   getUsers = (...args) => this.sharingChild.getUsers(...args);
   getSharedNotePermissions = (...args) => this.sharingChild.getSharedNotePermissions(...args);
   getCreatePermissions = (...args) => this.sharingChild.getCreatePermissions(...args);
@@ -44,6 +45,7 @@ class NotesController {
   updateSharedNotePermissions = (...args) => this.sharingChild.updateSharedNotePermissions(...args);
   updateGroupSharedNotePermissions = (...args) => this.sharingChild.updateGroupSharedNotePermissions(...args);
   removeGroupSharedNote = (...args) => this.sharingChild.removeGroupSharedNote(...args);
+  dismissGroupSharedNote = (...args) => this.sharingChild.dismissGroupSharedNote(...args);
   
   // Folder operations - delegate to foldersChild
   getFolders = (...args) => this.foldersChild.getFolders(...args);
@@ -95,6 +97,7 @@ export const shareNote = notesController.shareNote;
 export const getSharedWithMe = notesController.getSharedWithMe;
 export const getSharedByMe = notesController.getSharedByMe;
 export const removeSharedNote = notesController.removeSharedNote;
+export const removeReceivedSharedNote = notesController.removeReceivedSharedNote;
 export const getUsers = notesController.getUsers;
 export const getSharedNotePermissions = notesController.getSharedNotePermissions;
 export const getCreatePermissions = notesController.getCreatePermissions;
@@ -103,6 +106,7 @@ export const getGroupSharedNotes = notesController.getGroupSharedNotes;
 export const updateSharedNotePermissions = notesController.updateSharedNotePermissions;
 export const updateGroupSharedNotePermissions = notesController.updateGroupSharedNotePermissions;
 export const removeGroupSharedNote = notesController.removeGroupSharedNote;
+export const dismissGroupSharedNote = notesController.dismissGroupSharedNote;
 export const getFolders = notesController.getFolders;
 export const getFolderById = notesController.getFolderById;
 export const createFolder = notesController.createFolder;

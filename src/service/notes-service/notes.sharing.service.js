@@ -1,4 +1,4 @@
-import { Note, User, Group, GroupMember, NoteCategory } from '../../models/index.js';
+import { Note, User, Group, GroupMember, GroupSharedNoteDismissal, NoteCategory } from '../../models/index.js';
 import { noteRepository, userRepository, sharedNoteRepository, groupRepository, groupSharedNoteRepository, groupMemberRepository } from '../../repositories/index.js';
 import { Op } from 'sequelize';
 import { emitToUser, emitToAllAdmins } from '../../socket/socketHandler.js';
@@ -199,6 +199,21 @@ class NotesSharingChild {
       });
     } catch (error) {
       res.status(400).json({ message: error.message });
+    }
+  };
+
+  // A receiver may discard a received share regardless of canEdit/canDelete/canCreate.
+  // This removes access to the share, NOT the original note owned by the sender.
+  removeReceivedSharedNote = async (req, res) => {
+    try {
+      const sharedNote = await sharedNoteRepository.findOne({
+        where: { id: req.params.id, sharedWithUserId: req.user.id, isActive: true },
+      });
+      if (!sharedNote) return res.status(404).json({ message: 'Không tìm thấy ghi chú đã nhận' });
+      // Reuse the existing deletion and socket notifications to both parties.
+      return this.removeSharedNote(req, res);
+    } catch (error) {
+      return res.status(400).json({ message: 'Không thể xóa ghi chú đã nhận' });
     }
   };
 
@@ -465,9 +480,15 @@ class NotesSharingChild {
         });
       }
 
-      const whereClause = { 
+      const dismissed = await GroupSharedNoteDismissal.findAll({
+        where: { userId }, attributes: ['groupSharedNoteId'],
+      });
+      const dismissedIds = dismissed.map(row => row.groupSharedNoteId);
+      // Exclude dismissed items BEFORE count and pagination.
+      const whereClause = {
         groupId: { [Op.in]: groupIds },
-        isActive: true 
+        isActive: true,
+        ...(dismissedIds.length ? { id: { [Op.notIn]: dismissedIds } } : {}),
       };
 
       // Search in note title or content
@@ -746,6 +767,32 @@ class NotesSharingChild {
     } catch (error) {
       console.error('Error updating shared note permissions:', error);
       res.status(400).json({ message: error.message });
+    }
+  };
+
+  // A group member can dismiss a shared note from their OWN group tab.
+  // This never deletes the original note or removes the group-wide share.
+  dismissGroupSharedNote = async (req, res) => {
+    try {
+      const share = await groupSharedNoteRepository.findOne({
+        where: { id: req.params.id, isActive: true },
+        attributes: ['id', 'groupId', 'sharedByUserId'],
+      });
+      if (!share) return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ nhóm' });
+      const userId = req.user.id;
+      const membership = await GroupMember.findOne({ where: { groupId: share.groupId, userId } });
+      if (!membership) return res.status(404).json({ message: 'Không tìm thấy ghi chú chia sẻ trong nhóm của bạn' });
+      if (share.sharedByUserId === userId) {
+        return res.status(403).json({ message: 'Người chia sẻ sử dụng chức năng xóa chia sẻ của nhóm' });
+      }
+      await GroupSharedNoteDismissal.findOrCreate({
+        where: { groupSharedNoteId: share.id, userId },
+        defaults: { groupSharedNoteId: share.id, userId },
+      });
+      emitToUser(userId, 'group_note_dismissed', { id: share.id });
+      return res.json({ message: 'Đã xóa ghi chú khỏi danh sách nhóm của bạn' });
+    } catch (error) {
+      return res.status(400).json({ message: 'Không thể xóa ghi chú khỏi danh sách nhóm' });
     }
   };
 

@@ -21,6 +21,7 @@ import defineMessageReaction from './messageReaction.model.js';
 import defineNotification from './notification.model.js';
 import defineSharedNote from './sharedNote.model.js';
 import defineGroupSharedNote from './groupSharedNote.model.js';
+import defineGroupSharedNoteDismissal from './groupSharedNoteDismissal.model.js';
 import defineUserSession from './userSession.model.js';
 import defineNoteCategory from './noteCategory.model.js';
 import defineNoteTag from './noteTag.model.js';
@@ -48,6 +49,7 @@ const MessageReaction = defineMessageReaction(sequelize, DataTypes);
 const Notification = defineNotification(sequelize, DataTypes);
 const SharedNote = defineSharedNote(sequelize, DataTypes);
 const GroupSharedNote = defineGroupSharedNote(sequelize, DataTypes);
+const GroupSharedNoteDismissal = defineGroupSharedNoteDismissal(sequelize, DataTypes);
 const UserSession = defineUserSession(sequelize, DataTypes);
 const NoteCategory = defineNoteCategory(sequelize, DataTypes);
 const NoteTag = defineNoteTag(sequelize, DataTypes);
@@ -191,6 +193,9 @@ GroupSharedNote.belongsTo(User, { foreignKey: 'sharedByUserId', as: 'sharedByUse
 Note.hasMany(GroupSharedNote, { foreignKey: 'noteId', as: 'groupSharedNotes' });
 Group.hasMany(GroupSharedNote, { foreignKey: 'groupId', as: 'sharedNotes' });
 User.hasMany(GroupSharedNote, { foreignKey: 'sharedByUserId', as: 'sentGroupSharedNotes' });
+GroupSharedNoteDismissal.belongsTo(GroupSharedNote, { foreignKey: 'groupSharedNoteId', as: 'groupSharedNote', onDelete: 'CASCADE' });
+GroupSharedNote.hasMany(GroupSharedNoteDismissal, { foreignKey: 'groupSharedNoteId', as: 'dismissals', onDelete: 'CASCADE' });
+GroupSharedNoteDismissal.belongsTo(User, { foreignKey: 'userId', as: 'user', onDelete: 'CASCADE' });
 
 // --- Admin realtime hooks (do NOT modify other controllers) ---
 const emitToAdmins = async (event, data) => {
@@ -356,6 +361,7 @@ export {
   Notification,
   SharedNote,
   GroupSharedNote,
+  GroupSharedNoteDismissal,
   UserSession,
 };
 

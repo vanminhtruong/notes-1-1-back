@@ -11,7 +11,7 @@ test('SMTP requires real configuration and secure transport', () => {
   assert.equal(config.from, 'PlantHub <sender@example.com>');
   assert.equal(getSmtpConfig({ ...env, SMTP_PORT: '465' }).transport.secure, true);
   assert.throws(() => getSmtpConfig({ ...env, SMTP_PORT: 'invalid' }), /SMTP/);
-  assert.throws(() => getSmtpConfig({ ...env, SMTP_FROM: '' }), /SMTP_FROM/);
+  assert.equal(getSmtpConfig({ ...env, SMTP_FROM: '' }).from, 'PlantHub <sender@example.com>');
   assert.equal(getSmtpConfig({ ...env, SMTP_HOST: 'smtp-relay.brevo.com', SMTP_USER: 'technical@smtp-brevo.com' }).from, env.SMTP_FROM);
 });
 
@@ -28,7 +28,7 @@ test('sendEmail only succeeds when SMTP accepts the message', async () => {
     } }));
     assert.equal(result.accepted[0], message.to);
     assert.deepEqual(sent, { from: process.env.SMTP_FROM, ...message, html: undefined });
-    await assert.rejects(sendEmail(message, () => ({ sendMail: async () => ({ accepted: [], rejected: [message.to] }) })), /không chấp nhận/);
+    await assert.rejects(sendEmail(message, () => ({ sendMail: async () => ({ accepted: [], rejected: [message.to] }) })), /SMTP did not accept/);
     await assert.rejects(sendEmail(message, () => ({ sendMail: async () => { throw new Error('SMTP offline'); } })), /SMTP offline/);
     delete process.env.SMTP_HOST;
     await assert.rejects(sendEmail(message), /SMTP/);

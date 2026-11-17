@@ -18,6 +18,8 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    providerRequestId: { type: DataTypes.STRING, allowNull: true },
+    resetTokenHash: { type: DataTypes.STRING, allowNull: true },
     expiresAt: {
       type: DataTypes.DATE,
       allowNull: false,
