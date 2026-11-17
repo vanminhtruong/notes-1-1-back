@@ -5,12 +5,15 @@ import cors from 'cors';
 import compression from 'compression';
 
 import routes from './routes/index.js';
+import { mountSwagger } from './docs/swagger.js';
 import { notFound, errorHandler } from './middlewares/error.js';
 
 const FRONT_ORIGIN = process.env.FRONT_ORIGIN || 'http://localhost:5173';
 const isDev = process.env.NODE_ENV !== 'production';
 
 const app = express();
+
+mountSwagger(app);
 
 // Allow loading resources like images from other origins (e.g., frontend dev server on a different port)
 app.use(helmet({

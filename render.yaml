@@ -26,3 +26,10 @@ services:
         value: 7d
       - key: GOOGLE_CLIENT_ID
         sync: false
+      # Swagger UI is enabled on Render only with HTTP Basic protection.
+      - key: SWAGGER_ENABLED
+        value: 'true'
+      - key: SWAGGER_USERNAME
+        value: swagger
+      - key: SWAGGER_PASSWORD
+        generateValue: true
