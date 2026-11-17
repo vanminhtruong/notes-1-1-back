@@ -24,8 +24,6 @@ const purgeUserBlockingReferences = async (userId, transaction) => {
   const groupShares = `SELECT id FROM GroupSharedNotes WHERE sharedByUserId = :userId
     OR groupId IN (${ownGroups}) OR noteId IN (${ownNotes})`;
 
-  await run(`DELETE FROM GroupSharedNotePermissions WHERE userId = :userId
-    OR groupSharedNoteId IN (${groupShares})`);
   await run(`DELETE FROM GroupSharedNotes WHERE id IN (${groupShares})`);
   await run(`DELETE FROM SharedNotes WHERE sharedByUserId = :userId
     OR sharedWithUserId = :userId OR noteId IN (${ownNotes})`);

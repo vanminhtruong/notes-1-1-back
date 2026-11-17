@@ -30,13 +30,7 @@ class AdminAuthChild {
     }
 
     const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        adminLevel: user.adminLevel,
-        adminPermissions: user.adminPermissions || []
-      },
+      { id: user.id },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -60,13 +54,7 @@ class AdminAuthChild {
     const user = req.user; // từ adminAuth middleware
 
     const newToken = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        adminLevel: user.adminLevel,
-        adminPermissions: user.adminPermissions || []
-      },
+      { id: user.id },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );

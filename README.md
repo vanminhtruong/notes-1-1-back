@@ -101,3 +101,12 @@ Brevo có thể yêu cầu xét duyệt tài khoản và xác thực tên miền
 phép gửi; SMTP verify thành công chưa đảm bảo thư được giao đến người nhận.
 Hướng dẫn: https://developers.brevo.com/docs/smtp-integration và
 https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email
+## Phone number encryption (database)
+
+The phone field is encrypted by the backend at rest using AES-256-GCM. A separate keyed HMAC-SHA-256 lookup digest (phoneHash) supports SMS password reset without querying cleartext in SQLite. Registration, profile editing, and admin updates continue to accept plaintext over HTTPS; the backend encrypts before saving and decrypts only when authorized APIs need it.
+
+**Required backend configuration:** set PHONE_ENCRYPTION_KEY to 64 hexadecimal characters representing 32 random bytes. Keep it only in the backend secret environment, never in the Front app, source control, or frontend VITE_ variables. For a new deployment generate one with Node's crypto.randomBytes(32).toString('hex') and put the value in the deployment provider's secret environment. A distinct local development key was generated in the ignored back/.env. Preserve this key in a secure secret manager; losing or changing it makes existing encrypted phone numbers unreadable. Key rotation requires a dedicated migration.
+
+On backend startup, after model schema setup and **before opening the HTTP listener**, an idempotent transactional migration encrypts legacy plaintext Users.phone values and fills Users.phoneHash. The process intentionally refuses startup if the key is missing, invalid, or unable to decrypt existing encrypted values. No phone number is emitted into migration logs. The normal API still displays numbers as before for authorized viewers.
+
+**Important:** Historical SQLite backups, WAL snapshots, exports, older logs and third-party copies may still contain previously stored plaintext phone numbers. Audit and securely expire/replace these separately, after verifying the encrypted database and recovery plan. Do not automatically delete pre-migration backups before data recovery is verified. The change does not encrypt other personal fields or hide phone numbers from endpoints intentionally permitted to show them.

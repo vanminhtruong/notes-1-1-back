@@ -1,0 +1,4973 @@
+{
+  "note": "Read-only static analysis; absence of a direct call is NOT proof of an unused endpoint or schema column.",
+  "scannedFiles": 554,
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "verdict": "no static match",
+      "matchedFiles": [],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts",
+        "Front/src/store/slices/authSlice.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts",
+        "Front/src/store/slices/authSlice.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/google",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/verify-otp",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/api.ts",
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/remember-pref",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/authService.ts",
+        "Front/src/store/slices/authSlice.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/profile",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/auth/profile",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/profile/phone",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/profile/private",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/auth/change-password",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/auth/account",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/authService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/authService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/trash",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts",
+        "admin/src/layouts/AdminLayout.tsx"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts",
+        "admin/src/layouts/AdminLayout.tsx",
+        "admin/src/routes/index.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/trash",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts",
+        "admin/src/layouts/AdminLayout.tsx"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts",
+        "admin/src/layouts/AdminLayout.tsx",
+        "admin/src/routes/index.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/trash/move-selected",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/trash/delete-selected",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts",
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/trash/{id}/restore",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/trash/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts",
+        "admin/src/layouts/AdminLayout.tsx",
+        "admin/src/routes/index.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "admin/src/layouts/AdminLayout.tsx",
+        "admin/src/middlewares/PermissionRoute.tsx",
+        "admin/src/pages/NoPermission/NoPermission.tsx"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "admin/src/layouts/AdminLayout.tsx",
+        "admin/src/middlewares/PermissionRoute.tsx",
+        "admin/src/pages/NoPermission/NoPermission.tsx"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/search/autocomplete",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/stats",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/users",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts",
+        "Front/src/services/userService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/userService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/folders",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/folders",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/folders/search/all",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/folders/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/notes/folders/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/folders/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/folders/{id}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/folders/{id}/unpin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/categories/search",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts",
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/categories",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/categories",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/categories/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/notes/categories/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/categories/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/categories/{id}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/categories/{id}/unpin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/tags",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/tags",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/tags/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/notes/tags/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/tags/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/tags/{id}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/tags/{tagId}/notes",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/{noteId}/tags",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/{noteId}/tags/{tagId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/shared/with-me",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/shared/by-me",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/shared/groups",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/shared/permissions/{noteId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/shared/create-permissions",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/shared/received/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/shared/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/shared/groups/{id}/dismiss",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/shared/groups/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/notes/shared/{id}/permissions",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/notes/shared/groups/{id}/permissions",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts",
+        "Front/src/services/userService.ts",
+        "admin/src/layouts/AdminLayout.tsx"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/notes/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts",
+        "admin/src/layouts/AdminLayout.tsx"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/notes/{id}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/offline/offlineNotes.ts",
+        "Front/src/services/notesService.ts",
+        "admin/src/layouts/AdminLayout.tsx"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/{id}/encryption",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/{id}/encrypted-media/{kind}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notes/{id}/encrypted-media/{kind}/{assetId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/{id}/ack-reminder",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/{id}/archive",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/store/slices/notesSlice.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/{id}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/{id}/unpin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/{id}/share",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notes/{id}/share-group",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notes/{noteId}/move-to-folder",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notesService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/friends/users",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/pages/Dashboard/hooks/Manager-Effects/useChatSocketEffects.ts",
+        "Front/src/pages/Dashboard/hooks/Manager-handle/useChatComputationsHandler.ts",
+        "Front/src/services/chatService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/friends/request",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/friends/requests",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/friends/requests/sent",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/friends/requests/{friendshipId}/accept",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/friends/requests/{friendshipId}/reject",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/friends",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/components/ShareNoteModal.tsx",
+        "Front/src/pages/Dashboard/components/ChatWindow.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatList.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/GroupMembersPanel.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/GroupsTab.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/friends/bulk",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/friends/{friendshipId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/components/ShareNoteModal.tsx",
+        "Front/src/pages/Dashboard/components/ChatWindow.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatList.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/GroupMembersPanel.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/GroupsTab.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/unread-count",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/{userId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/{userId}/search",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/message",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/message/recall",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/groupService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/chat/message/{messageId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/message/{messageId}/react",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/chat/message/{messageId}/react",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/chat/{senderId}/read",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/chat/{userId}/messages",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/{userId}/background",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/chat/{userId}/background",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/{userId}/nickname",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/chat/{userId}/nickname",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/chat/{userId}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/{userId}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/chat/message/{messageId}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/{userId}/pins",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/image",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/uploadService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/uploadService.ts",
+        "admin/src/services/uploadService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/file",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/uploadService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/uploadService.ts",
+        "admin/src/services/uploadService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/components/ShareNoteModal.tsx",
+        "Front/src/hooks/useMessageNotifications.ts",
+        "Front/src/pages/Dashboard/components/ChatWindow.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatHeader.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatView.tsx"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/components/ShareNoteModal.tsx",
+        "Front/src/hooks/useMessageNotifications.ts",
+        "Front/src/pages/Dashboard/components/ChatWindow.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatHeader.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatView.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups/user/{userId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/groupService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups/common/{userId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/groupService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups/invites",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/groupService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups/{groupId}/messages",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/groups/{groupId}/messages",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups/{groupId}/messages/search",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/groupService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/{groupId}/message",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/groups/{groupId}/message/{messageId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/{groupId}/message/{messageId}/react",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/groups/{groupId}/message/{messageId}/react",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/groups/{groupId}/read",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/{groupId}/message/recall",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/chatService.ts",
+        "Front/src/services/groupService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/{groupId}/invite",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/groupService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/{groupId}/remove",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/{groupId}/leave",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/{groupId}/invites/{inviteId}/accept",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/groups/{groupId}/invites/{inviteId}/decline",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/groups/{groupId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/components/ShareNoteModal.tsx",
+        "Front/src/hooks/useMessageNotifications.ts",
+        "Front/src/pages/Dashboard/components/ChatWindow.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatHeader.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatView.tsx"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/groups/{groupId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/components/ShareNoteModal.tsx",
+        "Front/src/hooks/useMessageNotifications.ts",
+        "Front/src/pages/Dashboard/components/ChatWindow.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatHeader.tsx",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/ChatView.tsx"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/groups/{groupId}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups/{groupId}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/groups/{groupId}/message/{messageId}/pin",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups/{groupId}/pins",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/groups/{groupId}/members",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/groups/{groupId}/members/{memberId}/role",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/groupService.ts",
+        "Front/src/services/pinService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/read-status",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/read-status",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/theme",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/theme",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/language",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts",
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts",
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/language",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts",
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts",
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/privacy",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/privacy",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/animated-background",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/animated-background",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/settingsService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/settingsService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/background/colors",
+      "verdict": "suffix mention",
+      "matchedFiles": [],
+      "suffixMentions": [
+        "Front/src/services/api.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/background/images",
+      "verdict": "suffix mention",
+      "matchedFiles": [],
+      "suffixMentions": [
+        "Front/src/services/api.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/blocks",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/blockService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/pages/auth/components/PasswordStrength.tsx",
+        "Front/src/services/blockService.ts",
+        "Front/src/utils/htmlUtils.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/blocks",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/blockService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/pages/auth/components/PasswordStrength.tsx",
+        "Front/src/services/blockService.ts",
+        "Front/src/utils/htmlUtils.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/blocks/bulk",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/blockService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/blockService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/blocks/{targetId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/blockService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/pages/auth/components/PasswordStrength.tsx",
+        "Front/src/services/blockService.ts",
+        "Front/src/utils/htmlUtils.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/blocks/status",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/blockService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/blockService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notificationService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/hooks/useMessageNotifications.ts",
+        "Front/src/pages/Dashboard/components/component-child/ChatWindow-child/GroupsTab.tsx",
+        "Front/src/pages/Dashboard/components/NotificationBell.tsx",
+        "Front/src/pages/Dashboard/hooks/Manager-Effects/useChatSocketEffects.ts",
+        "Front/src/pages/Dashboard/hooks/Manager-handle/useChatComputationsHandler.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/bell",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notificationService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notificationService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/bell/badge",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notificationService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notificationService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/notifications/bell/dismiss",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notificationService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notificationService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/notifications/read-all",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/notificationService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notificationService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/login",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard/stats",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard/top-notes-creators",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard/recent-online-users",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard/top-offline-users",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard/top-categories-creators",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard/top-chat-users",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard/top-note-sharers",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/refresh-token",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/me",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/me",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/upload/image",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/admins/{adminId}/profile",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/admins/{adminId}/profile",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/admins/{adminId}/change-password",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/permissions/me",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/admins",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/admins",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/admins/{adminId}/permissions",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/admins/{adminId}/permissions",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/admins/{adminId}/toggle-status",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/admins/{adminId}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/users/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/users/{id}/chat-settings",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/layouts/AdminLayout.tsx",
+        "admin/src/pages/NoPermission/NoPermission.tsx",
+        "admin/src/routes/index.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{userId}/activity",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/layouts/AdminLayout.tsx",
+        "admin/src/pages/Dashboard/Dashboard.tsx",
+        "admin/src/pages/NoPermission/NoPermission.tsx",
+        "admin/src/routes/index.tsx"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{userId}/notifications",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/users/{userId}/notifications",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/users/{userId}/notifications/{notificationId}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{userId}/dm/{otherUserId}/messages",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{userId}/dm/{otherUserId}/pinned-messages",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{userId}/blocked-users",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/groups/{groupId}/messages",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/groups/{groupId}/pinned-messages",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/groups/{groupId}/members",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/messages/{messageId}/recall",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/messages/{messageId}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/messages/{messageId}/edit",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/group-messages/{messageId}/recall",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/group-messages/{messageId}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/group-messages/{messageId}/edit",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/users/{id}/toggle-status",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/users/{id}/permanent",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{userId}/sessions",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/users/{userId}/sessions",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/users/{userId}/sessions/{sessionId}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/notes-trash",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/notes-trash",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/notes-trash/delete-selected",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/notes-trash/{id}/restore",
+      "verdict": "no static match",
+      "matchedFiles": [],
+      "suffixMentions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/notes-trash/{id}",
+      "verdict": "suffix mention",
+      "matchedFiles": [],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/notes",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/notes",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/notes/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/notes/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/notes/{noteId}/move-to-folder",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/notes/{id}/pin",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/notes/{id}/unpin",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/shared-notes",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/shared-notes/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/shared-notes/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/shared-notes/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/folders",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/folders",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/folders/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/folders/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/folders/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/categories/search",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/notesService.ts",
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/categories/stats",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/categories",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/categories",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/categories/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/categories/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/categories/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/categories/{id}/pin",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/categories/{id}/unpin",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/tags",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/tags",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/tags/stats",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/tags/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/tags/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/tags/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/tags/{id}/pin",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/tags/assign",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/tags/{noteId}/{tagId}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sessions",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/sessionService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/components/DevicesModal.tsx",
+        "Front/src/components/EditSharedNoteModal.tsx",
+        "Front/src/services/sessionService.ts",
+        "Front/src/services/socket.ts",
+        "Front/src/store/slices/authSlice.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/sessions/{sessionId}",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/sessionService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/components/DevicesModal.tsx",
+        "Front/src/components/EditSharedNoteModal.tsx",
+        "Front/src/services/sessionService.ts",
+        "Front/src/services/socket.ts",
+        "Front/src/store/slices/authSlice.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/sessions/others/all",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/sessionService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/sessionService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/sessions/activity",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "Front/src/services/sessionService.ts"
+      ],
+      "suffixMentions": [
+        "Front/src/services/sessionService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/backgrounds/colors",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/backgrounds/colors",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/backgrounds/images",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/backgrounds/images",
+      "verdict": "URL literal",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/backgrounds/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/backgrounds/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/backgrounds/{id}",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": [
+        "admin/src/services/adminService.ts"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/backgrounds/{id}/toggle-active",
+      "verdict": "direct call",
+      "matchedFiles": [
+        "admin/src/services/adminService.ts"
+      ],
+      "suffixMentions": []
+    }
+  ],
+  "dbTables": [
+    {
+      "table": "Backgrounds",
+      "kind": "table",
+      "rows": 120,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "uniqueId",
+          "type": "VARCHAR(50)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "type",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "value",
+          "type": "VARCHAR(500)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "label",
+          "type": "VARCHAR(100)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "category",
+          "type": "VARCHAR(50)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isActive",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "sortOrder",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "table": "BlockedUsers",
+      "kind": "table",
+      "rows": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "blockedUserId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "blockedUserId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "ChatPreferences",
+      "kind": "table",
+      "rows": 1,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "otherUserId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "backgroundUrl",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "nickname",
+          "type": "VARCHAR(60)",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "otherUserId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "Friendships",
+      "kind": "table",
+      "rows": 20,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "requesterId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "addresseeId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "addresseeId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "requesterId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "GroupInvites",
+      "kind": "table",
+      "rows": 4,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "groupId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "inviterId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "inviteeId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "inviteeId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "inviterId",
+          "to": "id"
+        },
+        {
+          "references": "Groups",
+          "from": "groupId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "GroupMembers",
+      "kind": "table",
+      "rows": 10,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "groupId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "role",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        },
+        {
+          "references": "Groups",
+          "from": "groupId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "GroupMessageReads",
+      "kind": "table",
+      "rows": 73,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "messageId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "readAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        },
+        {
+          "references": "GroupMessages",
+          "from": "messageId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "GroupMessages",
+      "kind": "table",
+      "rows": 47,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "groupId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "senderId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "content",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "messageType",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isRead",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "isDeletedForAll",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "deletedForUserIds",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "replyToMessageId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "GroupMessages",
+          "from": "replyToMessageId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "senderId",
+          "to": "id"
+        },
+        {
+          "references": "Groups",
+          "from": "groupId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "GroupSharedNoteDismissals",
+      "kind": "table",
+      "rows": 2,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "groupSharedNoteId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        },
+        {
+          "references": "GroupSharedNotes",
+          "from": "groupSharedNoteId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "GroupSharedNotes",
+      "kind": "table",
+      "rows": 4,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "noteId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "groupId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "sharedByUserId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "message",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "sharedAt",
+          "type": "DATETIME",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isActive",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "groupMessageId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "canEdit",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "canDelete",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "canCreate",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "GroupMessages",
+          "from": "groupMessageId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "sharedByUserId",
+          "to": "id"
+        },
+        {
+          "references": "Groups",
+          "from": "groupId",
+          "to": "id"
+        },
+        {
+          "references": "Notes",
+          "from": "noteId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "Groups",
+      "kind": "table",
+      "rows": 5,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "ownerId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "avatar",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "background",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "adminsOnly",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "ownerId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "MessageReactions",
+      "kind": "table",
+      "rows": 2,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "messageId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "groupMessageId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "type",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "reactedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "count",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "GroupMessages",
+          "from": "groupMessageId",
+          "to": "id"
+        },
+        {
+          "references": "Messages",
+          "from": "messageId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "MessageReads",
+      "kind": "table",
+      "rows": 22,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "messageId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "readAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        },
+        {
+          "references": "Messages",
+          "from": "messageId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "Messages",
+      "kind": "table",
+      "rows": 41,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "senderId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "receiverId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "content",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "isRead",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "status",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "messageType",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isDeletedForAll",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "deletedForUserIds",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "replyToMessageId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Messages",
+          "from": "replyToMessageId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "receiverId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "senderId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "NoteCategories",
+      "kind": "table",
+      "rows": 7,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "color",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "icon",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isDefault",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "selectionCount",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "maxSelectionCount",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "isPinned",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "NoteFolders",
+      "kind": "table",
+      "rows": 5,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(100)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "color",
+          "type": "VARCHAR(20)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "icon",
+          "type": "VARCHAR(50)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "isPinned",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "NoteTagMappings",
+      "kind": "table",
+      "rows": 17,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "noteId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "tagId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "NoteTags",
+          "from": "tagId",
+          "to": "id"
+        },
+        {
+          "references": "Notes",
+          "from": "noteId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "NoteTags",
+      "kind": "table",
+      "rows": 8,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(50)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "color",
+          "type": "VARCHAR(7)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "isPinned",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "NoteTrashes",
+      "kind": "table",
+      "rows": 6,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "originalNoteId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "deletedById",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(200)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "snapshot",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "deletedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "expiresAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "Notes",
+      "kind": "table",
+      "rows": 60,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "content",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "imageUrl",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "category",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "priority",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isArchived",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "reminderAt",
+          "type": "DATETIME",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "reminderSent",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "reminderAcknowledged",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "videoUrl",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "youtubeUrl",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "folderId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isPinned",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "categoryId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "backgroundColor",
+          "type": "VARCHAR(20)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "backgroundImage",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isEncrypted",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "NoteCategories",
+          "from": "categoryId",
+          "to": "id"
+        },
+        {
+          "references": "NoteFolders",
+          "from": "folderId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "Notes_backup",
+      "kind": "table",
+      "rows": 35,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "content",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "imageUrl",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "priority",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isArchived",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "reminderAt",
+          "type": "DATETIME",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "reminderSent",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "reminderAcknowledged",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "videoUrl",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "youtubeUrl",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "folderId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isPinned",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "categoryId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "NoteCategories",
+          "from": "categoryId",
+          "to": "id"
+        },
+        {
+          "references": "NoteFolders",
+          "from": "folderId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "PasswordResets",
+      "kind": "table",
+      "rows": 2,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "otpHash",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "expiresAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "used",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "attempts",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "providerRequestId",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "resetTokenHash",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "PinnedChats",
+      "kind": "table",
+      "rows": 1,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "pinnedUserId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "pinnedGroupId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "pinnedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Groups",
+          "from": "pinnedGroupId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "pinnedUserId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "PinnedMessages",
+      "kind": "table",
+      "rows": 0,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "messageId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "groupMessageId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "pinnedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "GroupMessages",
+          "from": "groupMessageId",
+          "to": "id"
+        },
+        {
+          "references": "Messages",
+          "from": "messageId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "SharedNotes",
+      "kind": "table",
+      "rows": 4,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "noteId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "sharedWithUserId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "sharedByUserId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "canEdit",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "canDelete",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "message",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "sharedAt",
+          "type": "DATETIME",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "isActive",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "messageId",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "canCreate",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Messages",
+          "from": "messageId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "sharedByUserId",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "sharedWithUserId",
+          "to": "id"
+        },
+        {
+          "references": "Notes",
+          "from": "noteId",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "Users",
+      "kind": "table",
+      "rows": 10,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "password",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "phone",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "birthDate",
+          "type": "DATE",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "gender",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "isActive",
+          "type": "TINYINT(1)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "avatar",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "e2eeEnabled",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "e2eePinHash",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "readStatusEnabled",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "lastSeenAt",
+          "type": "DATETIME",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "theme",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "rememberLogin",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "hidePhone",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "hideBirthDate",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "allowMessagesFromNonFriends",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "role",
+          "type": "TEXT",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "adminLevel",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "adminPermissions",
+          "type": "JSON",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "darkTheme",
+          "type": "VARCHAR(255)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "animatedBackground",
+          "type": "JSON",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "phoneHash",
+          "type": "VARCHAR(64)",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "table": "notifications",
+      "kind": "table",
+      "rows": 410,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "user_id",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "type",
+          "type": "VARCHAR(50)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "from_user_id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "group_id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "metadata",
+          "type": "JSON",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "is_read",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "created_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Groups",
+          "from": "group_id",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "from_user_id",
+          "to": "id"
+        },
+        {
+          "references": "Users",
+          "from": "user_id",
+          "to": "id"
+        }
+      ]
+    },
+    {
+      "table": "user_sessions",
+      "kind": "table",
+      "rows": 32,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "userId",
+          "type": "INTEGER",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "token",
+          "type": "VARCHAR(500)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "deviceType",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "deviceName",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "browser",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "os",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "ipAddress",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "location",
+          "type": "VARCHAR(255)",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "userAgent",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "lastActivityAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "expiresAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "isActive",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "isCurrent",
+          "type": "TINYINT(1)",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "name": "updatedAt",
+          "type": "DATETIME",
+          "notNull": true,
+          "primaryKey": false
+        }
+      ],
+      "foreignKeys": [
+        {
+          "references": "Users",
+          "from": "userId",
+          "to": "id"
+        }
+      ]
+    }
+  ]
+}

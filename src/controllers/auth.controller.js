@@ -21,10 +21,12 @@ class AuthController {
 
   // Delegated methods - OAuth
   googleLogin = (...args) => this.oauthChild.googleLogin(...args);
-  facebookLogin = (...args) => this.oauthChild.facebookLogin(...args);
+
 
   // Delegated methods - Profile
   getProfile = (...args) => this.profileChild.getProfile(...args);
+  getProfilePhone = (...args) => this.profileChild.getProfilePhone(...args);
+  getPrivateProfile = (...args) => this.profileChild.getPrivateProfile(...args);
   updateProfile = (...args) => this.profileChild.updateProfile(...args);
   changePassword = (...args) => this.profileChild.changePassword(...args);
 
@@ -45,8 +47,10 @@ export const logout = authController.logout;
 export const getRememberPreference = authController.getRememberPreference;
 export const deleteAccount = authController.deleteAccount;
 export const googleLogin = authController.googleLogin;
-export const facebookLogin = authController.facebookLogin;
+
 export const getProfile = authController.getProfile;
+export const getProfilePhone = authController.getProfilePhone;
+export const getPrivateProfile = authController.getPrivateProfile;
 export const updateProfile = authController.updateProfile;
 export const changePassword = authController.changePassword;
 export const forgotPasswordRequest = authController.forgotPasswordRequest;

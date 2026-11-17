@@ -13,6 +13,7 @@ import { Note, User } from './models/index.js';
 import { purgeExpiredTrash } from './service/notes-service/notes.trash.service.js';
 import { Op } from 'sequelize';
 import ModelManager from '../scripts/modelManager.js';
+import { migratePhoneEncryption } from './db/phoneMigration.js';
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
@@ -107,6 +108,7 @@ const startReminderScheduler = () => {
     // Run automatic model migrations
     const modelManager = new ModelManager();
     await modelManager.runMigrations();
+    await migratePhoneEncryption();
 
     server.listen(PORT, '0.0.0.0', () => {
       // eslint-disable-next-line no-console

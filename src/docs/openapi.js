@@ -73,7 +73,7 @@ const specialBodies = {
 
 function publicEndpoint(group, route, method) {
   if (group === 'Authentication') {
-    return ['/register', '/login', '/google', '/facebook', '/forgot-password', '/verify-otp', '/reset-password', '/remember-pref'].includes(route)
+    return ['/register', '/login', '/google', '/forgot-password', '/verify-otp', '/reset-password', '/remember-pref'].includes(route)
       && method === 'post';
   }
   return group === 'Admin' && route === '/login' && method === 'post';

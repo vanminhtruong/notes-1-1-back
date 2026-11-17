@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs';
 import { sendEmail } from '../../utils/email.js';
 import { isTextbeeConfigured, sendTextbeeOtp } from '../../utils/textbee.js';
 import { randomInt, randomBytes, createHash } from 'node:crypto';
-import { Op, col, fn, where } from 'sequelize';
+import { Op } from 'sequelize';
+import { phoneLookupHash } from '../../utils/phoneCrypto.js';
 
 // Match saved phone formatting without changing the user's profile.
 const phoneVariants = (value) => {
@@ -25,11 +26,8 @@ const phoneVariants = (value) => {
 const findUserByIdentifier = async ({ email, phone }) => {
   if (email) return userRepository.findByEmail(email);
   if (!phone) return null;
-  const normalizedPhone = [' ', '-', '(', ')', '.'].reduce(
-    (expr, char) => fn('REPLACE', expr, char, ''), col('phone')
-  );
   return userRepository.findOne({
-    where: where(normalizedPhone, { [Op.in]: phoneVariants(phone) }),
+    where: { phoneHash: { [Op.in]: phoneVariants(phone).map(phoneLookupHash) } },
   });
 };
 

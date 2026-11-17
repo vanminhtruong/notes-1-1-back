@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { encryptPhone, decryptPhone, phoneLookupHash } from '../utils/phoneCrypto.js';
 
 export default (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
@@ -31,11 +32,18 @@ export default (sequelize, DataTypes) => {
     },
     // Optional contact info
     phone: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
+      get() { return decryptPhone(this.getDataValue('phone')); },
+      set(value) {
+        const clean = value === null || value === undefined ? null : String(value).trim() || null;
+        this.setDataValue('phone', encryptPhone(clean));
+        this.setDataValue('phoneHash', phoneLookupHash(clean));
+      },
       validate: {
         // Custom validator that only validates when phone is not empty
-        phoneFormat(value) {
+        phoneFormat() {
+          const value = this.phone;
           if (value && value.trim() !== '') {
             // Only validate if phone has value
             if (!/^[+\d][\d\s\-()]{5,20}$/.test(value)) {
@@ -44,6 +52,10 @@ export default (sequelize, DataTypes) => {
           }
         }
       },
+    },
+    phoneHash: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
     },
     // Optional birth date (no time component)
     birthDate: {
@@ -163,6 +175,7 @@ export default (sequelize, DataTypes) => {
 
   User.prototype.toJSON = function () {
     const values = Object.assign({}, this.get());
+    delete values.phoneHash;
     // Only delete password if not explicitly requested in attributes
     // Admin can see password hash if they include it in query
     if (!this._options?.attributes?.includes('password')) {

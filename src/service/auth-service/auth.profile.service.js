@@ -2,11 +2,36 @@ import { userRepository, friendshipRepository } from '../../repositories/index.j
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 import { Op } from 'sequelize';
 import { deleteOldFileOnUpdate, isUploadedFile } from '../../utils/fileHelper.js';
+import { serializeAuthUser, serializePrivateProfile } from '../../utils/authUserResponse.js';
 
 class AuthProfileChild {
   constructor(parentController) {
     this.parent = parentController;
   }
+
+  // Sensitive profile fields are available only through an authenticated, non-cacheable endpoint.
+  getPrivateProfile = async (req, res) => {
+    try {
+      const user = await userRepository.findByPk(req.user.id);
+      if (!user) return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
+      res.set('Cache-Control', 'private, no-store');
+      return res.json({ profile: serializePrivateProfile(user) });
+    } catch {
+      return res.status(500).json({ message: 'Không thể tải thông tin cá nhân' });
+    }
+  };
+
+  // Full number is returned only on an explicit authenticated account-page request.
+  getProfilePhone = async (req, res) => {
+    try {
+      const user = await userRepository.findByPk(req.user.id, { attributes: ['id', 'phone'] });
+      if (!user) return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
+      res.set('Cache-Control', 'private, no-store');
+      return res.json({ phone: user.phone ?? null });
+    } catch {
+      return res.status(500).json({ message: 'Không thể tải số điện thoại' });
+    }
+  };
 
   getProfile = async (req, res) => {
     try {
@@ -17,8 +42,9 @@ class AuthProfileChild {
         }],
       });
 
+      res.set('Cache-Control', 'private, no-store');
       res.json({
-        user,
+        user: serializeAuthUser(user),
         totalNotes: user.notes.length,
       });
     } catch (error) {
@@ -94,7 +120,7 @@ class AuthProfileChild {
                 id: user.id,
                 name: user.name,
                 avatar: user.avatar,
-                phone: user.phone,
+                phone: user.hidePhone ? null : user.phone,
                 birthDate: user.birthDate,
                 gender: user.gender,
                 email: user.email,
@@ -127,9 +153,10 @@ class AuthProfileChild {
         console.error('Error emitting admin_user_updated:', e);
       }
 
+      res.set('Cache-Control', 'private, no-store');
       res.json({
         message: 'Cập nhật thông tin thành công',
-        user,
+        user: serializeAuthUser(user),
       });
     } catch (error) {
       res.status(400).json({ message: error.message });

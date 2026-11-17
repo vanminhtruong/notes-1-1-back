@@ -1,4 +1,5 @@
 import BaseRepository from './base.repository.js';
+import { phoneLookupHash } from '../utils/phoneCrypto.js';
 import { User } from '../models/index.js';
 
 /**
@@ -18,7 +19,7 @@ class UserRepository extends BaseRepository {
 
   /** Tìm người dùng theo số điện thoại. */
   findByPhone(phone, options = {}) {
-    return this.findOne({ ...options, where: { ...(options.where || {}), phone } });
+    return this.findOne({ ...options, where: { ...(options.where || {}), phoneHash: phoneLookupHash(phone) } });
   }
 
   /** Tìm quản trị viên đang hoạt động theo id. */

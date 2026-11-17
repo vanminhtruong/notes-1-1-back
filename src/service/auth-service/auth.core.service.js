@@ -4,11 +4,12 @@ import { Op } from 'sequelize';
 import { userRepository, userSessionRepository } from '../../repositories/index.js';
 import { emitToAllAdmins } from '../../socket/socketHandler.js';
 import { parseDeviceInfo } from '../../utils/deviceParser.js';
+import { serializeAuthUser } from '../../utils/authUserResponse.js';
 
 const generateToken = (user, options = {}) => {
   const expiresIn = options.expiresIn || process.env.JWT_EXPIRES_IN || '7d';
   return jwt.sign(
-    { id: user.id, email: user.email, jti: randomUUID() },
+    { id: user.id, jti: randomUUID() },
     process.env.JWT_SECRET,
     { expiresIn }
   );
@@ -69,7 +70,7 @@ class AuthCoreChild {
 
       res.status(201).json({
         message: 'Đăng ký thành công',
-        user,
+        user: serializeAuthUser(user),
         token,
       });
     } catch (error) {
@@ -179,7 +180,7 @@ class AuthCoreChild {
 
       res.json({
         message: 'Đăng nhập thành công',
-        user,
+        user: serializeAuthUser(user),
         token,
       });
     } catch (error) {
