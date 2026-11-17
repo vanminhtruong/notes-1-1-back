@@ -4,3 +4,11 @@ Dockerfile
 .dockerignore
 .git
 coverage
+
+.env
+.env.*
+!.env.example
+data
+*.sqlite
+error.log
+tests
