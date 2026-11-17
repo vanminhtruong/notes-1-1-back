@@ -1,26 +1,22 @@
-# Render Blueprint: Express + Socket.IO + SQLite backend.
-# SQLite needs a persistent disk, so this service uses a paid plan (disks are not available on free).
-# Dashboard -> New -> Blueprint -> pick this repo -> fill the variables marked "sync: false".
+# Render Blueprint (FREE instance, no paid features).
+# WARNING: Free web services have an ephemeral filesystem and spin down after 15 minutes idle,
+# so the local SQLite database is wiped on every spin-down / restart / redeploy.
+# Use this only for demos. Data that must survive needs a host with a persistent volume
+# or the backend running on your own machine behind a tunnel.
 services:
   - type: web
     name: notes-backend
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
     autoDeploy: true
-    disk:
-      name: notes-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       # PORT is injected by Render; server.js already reads process.env.PORT.
       - key: SQLITE_STORAGE
-        value: /var/data/app.sqlite
-      - key: SQLITE_BACKUP_DIR
-        value: /var/data/backups
+        value: /tmp/app.sqlite
       # Browser origins only (no path). Comma-separated allowlist.
       - key: FRONT_ORIGIN
         value: https://vanminhtruong.github.io
@@ -30,4 +26,3 @@ services:
         value: 7d
       - key: GOOGLE_CLIENT_ID
         sync: false
-      # Optional: SMTP_*, TWILIO_*, EASYOTP_*, TEXTBEE_API_KEY (see .env.example). Add in the dashboard.
