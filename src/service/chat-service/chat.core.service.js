@@ -57,14 +57,6 @@ class ChatCoreChild {
       const mostRecent = recentMessages && recentMessages.length > 0 ? recentMessages[0] : null;
       const mostRecentAt = mostRecent ? mostRecent.createdAt : null;
 
-      const unreadCount = await messageRepository.count({
-        where: {
-          senderId: friend.id,
-          receiverId: userId,
-          isRead: false
-        }
-      });
-
       let nickname = null;
       try {
         const pref = await chatPreferenceRepository.findBetween(userId, friend.id);
@@ -79,7 +71,6 @@ class ChatCoreChild {
           isOnline: isUserOnline(friend.id)
         },
         lastMessage: lastVisible || null,
-        unreadCount,
         friendshipId: friendship.id,
         nickname,
         lastActivityAt: mostRecentAt
@@ -179,21 +170,6 @@ class ChatCoreChild {
     });
   });
 
-  getUnreadCount = asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-
-    const unreadCount = await messageRepository.count({
-      where: {
-        receiverId: userId,
-        isRead: false
-      }
-    });
-
-    res.json({
-      success: true,
-      data: { unreadCount }
-    });
-  });
 }
 
 export default ChatCoreChild;

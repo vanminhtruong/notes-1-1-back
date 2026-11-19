@@ -128,47 +128,6 @@ class GroupManagementChild {
       const memberIds = await this.parent.membersChild.getGroupMemberIds(g.id);
       // Determine my role in this group for convenience on the client
       const myMembership = await groupMemberRepository.findOne({ where: { groupId: g.id, userId }, attributes: ['role'] });
-      // Compute unread count per user using GroupMessageRead (per-user tracking)
-      let unreadCount = 0;
-      try {
-        const rows = await groupMessageRepository.findAll({
-          where: {
-            groupId: g.id,
-            senderId: { [Op.ne]: userId },
-            messageType: { [Op.ne]: 'system' },
-            [Op.or]: [
-              { isDeletedForAll: { [Op.not]: true } },
-              { isDeletedForAll: null },
-            ],
-          },
-          attributes: ['id', 'deletedForUserIds'],
-          include: [
-            {
-              model: GroupMessageRead,
-              as: 'GroupMessageReads',
-              attributes: ['userId'],
-              required: false,
-              where: { userId }
-            }
-          ]
-        });
-        const filtered = rows
-          .map(r => (typeof r.toJSON === 'function' ? r.toJSON() : r))
-          .filter(m => {
-            // Exclude messages I've deleted for me
-            let del = m.deletedForUserIds;
-            if (typeof del === 'string') {
-              try { del = JSON.parse(del); } catch { del = null; }
-            }
-            if (Array.isArray(del) && del.includes(userId)) return false;
-            // Count as unread if there is NO read record by me
-            const hasMyRead = Array.isArray(m.GroupMessageReads) && m.GroupMessageReads.some((gr) => Number(gr.userId) === Number(userId));
-            return !hasMyRead;
-          });
-        unreadCount = filtered.length;
-      } catch (e) {
-        unreadCount = 0;
-      }
       // Determine latest visible message time for current user (exclude system messages, and messages deleted-for-me)
       let lastMessageAt = null;
       try {
@@ -203,7 +162,6 @@ class GroupManagementChild {
         members: memberIds,
         isPinned: pinnedGroupIds.has(g.id),
         myRole: myMembership?.role || (g.ownerId === userId ? 'owner' : 'member'),
-        unreadCount,
         lastMessageAt
       });
     }

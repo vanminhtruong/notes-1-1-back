@@ -24,8 +24,6 @@ router.use(chatCapacity);
 // Get chat list (recent conversations)
 router.get('/', chatController.getChatList);
 
-// Get unread message count
-router.get('/unread-count', chatController.getUnreadCount);
 
 // Get chat messages with a specific user
 router.get('/:userId', validate(getChatMessagesSchema), chatController.getChatMessages);

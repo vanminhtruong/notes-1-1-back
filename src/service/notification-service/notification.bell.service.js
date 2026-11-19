@@ -1,7 +1,6 @@
-import { User, Group, GroupMessageRead } from '../../models/index.js';
+import { User, Group } from '../../models/index.js';
 import { notificationRepository, groupRepository, groupMemberRepository, groupMessageRepository } from '../../repositories/index.js';
 import asyncHandler from '../../middlewares/asyncHandler.js';
-import { Op } from 'sequelize';
 
 class NotificationBellChild {
   constructor(parent) {
@@ -199,67 +198,15 @@ class NotificationBellChild {
     return res.json({ success: true, data: { id: notification.id } });
   });
 
-  // Badge counter for the bell (DM + Group + Friend Requests + Group Invites)
+  // Badge only represents friend requests and group invitations.
+  // Chat message unread counts have been retired; chat notifications remain in the feed.
   bellBadge = asyncHandler(async (req, res) => {
     const userId = req.user.id;
     try {
-      // Direct messages: count unread Notification rows
-      const dmCount = await notificationRepository.count({ where: { userId, type: 'message', isRead: false } });
-
-      // Friend requests and group invites
       const frCount = await notificationRepository.count({ where: { userId, type: 'friend_request', isRead: false } });
       const invCount = await notificationRepository.count({ where: { userId, type: 'group_invite', isRead: false } });
-
-      // Group messages unread: derive by checking GroupMessageRead
-      const memberships = await groupMemberRepository.findAll({ where: { userId }, attributes: ['groupId'] });
-      const groupIds = memberships.map((m) => m.groupId);
-      let groupUnread = 0;
-      if (groupIds.length > 0) {
-        // For each group, count messages not read by this user
-        for (const gid of groupIds) {
-          const rows = await groupMessageRepository.findAll({
-            where: {
-              groupId: gid,
-              senderId: { [Op.ne]: userId },
-              messageType: { [Op.ne]: 'system' },
-              [Op.or]: [
-                { isDeletedForAll: { [Op.not]: true } },
-                { isDeletedForAll: null },
-              ],
-            },
-            attributes: ['id', 'deletedForUserIds'],
-            include: [
-              {
-                model: GroupMessageRead,
-                as: 'GroupMessageReads',
-                attributes: ['userId'],
-                required: false,
-              }
-            ],
-            order: [['createdAt', 'DESC']],
-            limit: 500,
-          });
-          const filtered = rows
-            .map(r => (typeof r.toJSON === 'function' ? r.toJSON() : r))
-            .filter(m => {
-              // Exclude messages I've deleted for me
-              let del = m.deletedForUserIds;
-              if (typeof del === 'string') {
-                try { del = JSON.parse(del); } catch { del = null; }
-              }
-              if (Array.isArray(del) && del.includes(userId)) return false;
-              // Count as unread if there is NO read record by me
-              const reads = Array.isArray(m.GroupMessageReads) ? m.GroupMessageReads : [];
-              const hasMyRead = reads.some((gr) => Number(gr.userId) === Number(userId));
-              return !hasMyRead;
-            });
-          groupUnread += filtered.length;
-        }
-      }
-
-      const total = Number(dmCount || 0) + Number(groupUnread || 0) + Number(frCount || 0) + Number(invCount || 0);
-      return res.json({ success: true, data: { total, dm: dmCount, group: groupUnread, fr: frCount, inv: invCount } });
-    } catch (e) {
+      return res.json({ success: true, data: { total: frCount + invCount, dm: 0, group: 0, fr: frCount, inv: invCount } });
+    } catch {
       return res.json({ success: true, data: { total: 0, dm: 0, group: 0, fr: 0, inv: 0 } });
     }
   });

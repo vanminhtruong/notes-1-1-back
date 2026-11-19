@@ -187,24 +187,6 @@ class ChatMessagesChild {
       });
     }
 
-    const friendship = await friendshipRepository.findOne({
-      where: {
-        [Op.or]: [
-          { requesterId: senderId, addresseeId: receiverId, status: 'accepted' },
-          { requesterId: receiverId, addresseeId: senderId, status: 'accepted' }
-        ]
-      }
-    });
-
-    if (!friendship) {
-      if (!receiver.allowMessagesFromNonFriends) {
-        return res.status(403).json({
-          success: false,
-          message: 'Recipient does not allow messages from non-friends'
-        });
-      }
-    }
-
     let replyToMessage = null;
     if (replyToMessageId) {
       replyToMessage = await messageRepository.findOne({

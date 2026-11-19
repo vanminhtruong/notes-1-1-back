@@ -24,7 +24,6 @@ class ChatController {
   getChatList = (...args) => this.coreChild.getChatList(...args);
 
   markMessagesAsRead = (...args) => this.coreChild.markMessagesAsRead(...args);
-  getUnreadCount = (...args) => this.coreChild.getUnreadCount(...args);
 
   deleteAllMessages = (...args) => this.messagesChild.deleteAllMessages(...args);
   searchChatMessages = (...args) => this.messagesChild.searchChatMessages(...args);
